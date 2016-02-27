@@ -12,6 +12,6 @@ module prog_board(
 	
 	assign nPORTOE = nPORTOEL & nPORTOEU;
 	
-	rom_p1 P1(M68K_ADDR[17:0], M68K_ADDR, nROMOE);
+	rom_p1 P1(M68K_ADDR[16:0], M68K_ADDR, nROMOE);
 
 endmodule
