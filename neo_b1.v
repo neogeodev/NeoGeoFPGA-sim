@@ -18,6 +18,12 @@ module neo_b1(
 
 	reg [7:0] SPR_PAL;
 	reg [3:0] FIX_PAL;
+	
+	wire [11:0] LBDATA1;
+	wire [11:0] LBDATA2;
+	wire [11:0] LBDATA3;
+	wire [11:0] LBDATA4;
+	
 
 	// Is WE used as OE when in output mode ? (=CK)
 

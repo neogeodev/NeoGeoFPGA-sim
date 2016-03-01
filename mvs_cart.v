@@ -1,7 +1,7 @@
 `timescale 10ns/10ns
 
 module mvs_cart(
-	input [19:0] PBUS,
+	input [23:0] PBUS,
 	input CA4,
 	input S2H1,
 	input PCK1B,

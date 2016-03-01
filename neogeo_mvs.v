@@ -11,24 +11,24 @@ module neogeo_mvs(
 	output reg [6:0] VIDEO_B,
 	output VIDEO_SYNC
 );
-
-	wire [3:0] GAD, GBD;
-	wire [11:0] PA;
-	wire [23:0] PBUS;
-	wire [7:0] FIXD;
-	wire [31:0] CR;
-	wire [15:0] PC;
+	
+	wire [22:0] M68K_ADDR;	// Really A23~A1
+	wire A22Z;
+	wire A23Z;
+	wire [15:0] M68K_DATA;
 	wire M68K_RW;
+	
 	wire nPAL, nPALWE;
 	wire nSROMOEU, nSROMOEL;
 	
-	wire [22:0] M68K_ADDR;
-	wire [15:0] M68K_DATA;
-	
-	wire A22Z;
-	wire A23Z;
-	
-	wire [15:0] G;		// SFIX address
+	wire [15:0] G;				// SFIX address
+	wire [7:0] FIXD;
+	wire [7:0] FIXD_CART;
+	wire [11:0] PA;			// Palette RAM address
+	wire [3:0] GAD, GBD;		// Pixel pair
+	wire [23:0] PBUS;
+	wire [31:0] CR;			// Raw sprite data
+	wire [15:0] PC;			// Palette RAM data
 	
 	wire S2H1;
 	wire nSYSTEMB;
@@ -39,16 +39,19 @@ module neogeo_mvs(
 	wire nVEC, SHADOW;
 	wire nBNKB;
 	
-	wire [3:0] WE;
-	wire [3:0] CK;
-	
-	// LSPC
+	wire [3:0] WE;				// LSPC/B1
+	wire [3:0] CK;				// LSPC/B1
 	
 	clocks CLK(CLK_24M, nRESETP, CLK_12M, CLK_68KCLK, CLK_68KCLKB, CLK_8M, CLK_6MB, CLK_4M, CLK_1MB);
 
-	mvs_cart CART(PBUS, CA4, S2H1, PCK1B, PCK2B, CR, FIXD_CART, M68K_ADDR[18:0], M68K_DATA, nROMOE, nPORTOEL, nPORTOEU);
+	mvs_cart CART(PBUS, CA4, S2H1, PCK1B, PCK2B, CR, FIXD_CART, M68K_ADDR[18:0], M68K_DATA, nROMOE,
+					nPORTOEL, nPORTOEU);
 
 	neo_zmc2 ZMC2(CLK_12M, EVEN, LOAD, H, CR, GAD, GBD, DOTA, DOTB);
+	
+	neo_c1 C1(M68K_ADDR[20:16], A22Z, A23Z, LDS, UDS, RW, AS, ROMOEL, ROMOEU, PORTOEL, PORTOEU, PORTWEL, PORTWEU,
+				PORTADRS, WRL, WRU, WWL, WWU, SROMOEL, SROMOEU, SRAMOEL, SRAMOEU, SRAMWEL, SRAMWEU, LSPOE, LSPWE,
+				CRDO, CRDW, CRDC);
 
 	lspc_a2 LSPC(CLK_24M, nRESET, PBUS, M68K_ADDR[2:0], M68K_DATA, nLSPOE, nLSPWE, DOTA, DOTB, CA4, S2H1,
 				S1H1, LOAD, H, EVEN1, EVEN2, IPL0, IPL1, CHG, LD1, LD1, PCK1, PCK2, WE[3:0], CK[3:0], SS1,
@@ -59,22 +62,22 @@ module neogeo_mvs(
 	rom_sps2 SP(M68K_ADDR[15:0], M68K_DATA[15:0], nSROMOE);
 	rom_sfix SFIX({G[15:3], S2H1, G[2:0]}, FIXD, nSYSTEM);
 
-	palram PRAML({PALBNK, PA}, PC[7:0], nPALWE, 0, 0);
-	palram PRAMU({PALBNK, PA}, PC[15:8], nPALWE, 0, 0);
+	palram PRAML({PALBNK, PA}, PC[7:0], nPALWE, 1'b0, 1'b0);
+	palram PRAMU({PALBNK, PA}, PC[15:8], nPALWE, 1'b0, 1'b0);
 	
 	// Gates
 	assign PCK1B = ~PCK1;
 	assign PCK2B = ~PCK2;
 	assign nSROMOE = nSROMOEU & nSROMOEL;
 	assign nPALWE = M68K_RW & nPAL;
-	assign SYSTEMB = nSYSTEM;
+	assign SYSTEMB = nSYSTEM;	// ?
 	
 	// Good job SNK ! Gates cart FIXD to avoid bus wreck with SFIX
 	assign FIXD = SYSTEM ? FIXD : FIXD_CART;
 	
 	// This is done by NEO-E0:
 	// A' = 1 if nVEC == 0 and A == 11000000000000000xxxxxxx
-	assign {A23Z, A22Z} = M68K_ADDR[23:22] ^ {2{~|{M68K_ADDR[21:7], ^M68K_ADDR[23:22], nVEC}}};
+	assign {A23Z, A22Z} = M68K_ADDR[22:21] ^ {2{~|{M68K_ADDR[20:6], ^M68K_ADDR[22:21], nVEC}}};
 	
 	// Palette data bidir buffer from/to 68k
 	assign M68K_DATA = (M68K_RW | ~nPAL) ? PC : 16'bzzzzzzzzzzzzzzzz;

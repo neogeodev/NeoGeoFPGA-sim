@@ -3,7 +3,7 @@
 module lspc_a2(
 	input CLK_24M,
 	input nRESET,
-	input [23:0] PBUS,
+	inout [23:0] PBUS,
 	input [2:0] M68K_ADDR,
 	inout [15:0] M68K_DATA,
 	input nLSPOE, nLSPWE,
@@ -27,62 +27,20 @@ module lspc_a2(
 	output CLK_6M
 );
 
-	parameter VIDEOMODE = 1;	// PAL
+	parameter VIDEO_MODE = 1;	// PAL
 
 	assign CLK_24MB = ~CLK_24M;
 	
-	assign PCK2 = (CYCLE_NEG == 0) ? 1 : 0;
-	assign PCK1 = (CYCLE_NEG == 8) ? 1 : 0;
-	assign LOAD = CYCLE_POS[2] & CYCLE_POS[1];	// 6 & 7
-	assign nVCS = (CYCLE_POS[2] & CYCLE_POS[1]) | ~CYCLE_POS[3];	// 9 ~ 13
-
-	reg [3:0] CYCLE_POS;		// 0 ~ 15
-	reg [3:0] CYCLE_NEG;		// 0 ~ 15
-	
-	reg [8:0] HCOUNT;			// 0 ~ 17F (is this really clocked by 24M ?)
-	reg [8:0] VCOUNT;			// F8 ~ 1FF
-	
-	reg [7:0] AATIMER;
-	reg [2:0] AACOUNT;
-	
-	wire VBLANK;
-	
-	// Auto animation
-	always @(posedge VBLANK)
-	begin
-		if (AATIMER)
-			AATIMER <= AATIMER + 1;
-		else
-		begin
-			AATIMER <= AASPEED;
-			AACOUNT <= AACOUNT + 1;
-		end
-	end
-	
 	wire [15:0] SPR_TILEATTR;
-	
 	assign SPR_TILEATTR = E;
 	
-	wire [19:0] SPR_TILENB;	// Wire ? Concat 4 bits from SPR_TILEATTR
-	
-	assign SPR_TILENB = AA_DISABLE ? SPR_TILENB :
-								SPR_TILEATTR[4] ? {SPR_TILENB[19:3], AACOUNT} :
-								SPR_TILEATTR[3] ? {SPR_TILENB[19:2], AACOUNT[1:0]} :
-								SPR_TILENB;
+	wire [8:0] VCOUNT;
 	
 	reg [31:0] TIMERLOAD;
 	reg [31:0] TIMER;
 	
 	// VBL, HBL, COLDBOOT
-	reg [2:0] IRQ;
-	
-	// Interrupt priority encoder
-	// xx1: 11
-	// x10: 10
-	// 100: 01
-	// 000: 00
-	assign IPL0 = (IRQ[2] & ~IRQ[1]) + IRQ[0];
-	assign IPL1 = IRQ[1] + IRQ[0];
+	reg [2:0] IRQS;
 	
 	// VRAM CPU I/O
 	reg VRAMADDR_U;					// Top bit of VRAM address (low/high indicator)
@@ -102,70 +60,20 @@ module lspc_a2(
 	
 	reg TIMERSTOP;
 	
-	// Read only
-	assign REG_LSPCMODE = {VCOUNT, 3'b000, VIDEOMODE, AACOUNT};
+	wire [19:0] SPR_TILENB_OUT;
+	wire [19:0] SPR_TILENB_IN;
+	wire [2:0] AACOUNT;
 	
-	/*
-	if (HCOUNT == 9'h17F)
-	begin
-		if (VCOUNT == 9'h1FF)
-		begin
-			VCOUNT <= 9'hF8;				// VSSTART	F8:VSync start
-			VSYNC <= 1;
-		end
-		else
-			VCOUNT <= VCOUNT + 1;
-		
-		if (VCOUNT == 9'h100)			// VBEND		100:VBlank end
-			VBLANK <= 0;
-		if (VCOUNT == 9'h1F0)			// VBSTART	1F0:VBlank start
-			VBLANK <= 1;
-	end
-	else
-		HCOUNT <= HCOUNT + 1;
-	*/
-	
-	// -------------------------------- Unreadable notes follow --------------------------------
-	// HSYNC = 0 28	0~1B		000000000	000011011
-	// HSYNC = 1 356	1C~17F	000011100	101111111
-	// HSYNC = 1 		29
-	// HSYNC = (2&3&4)|5|6|7|8
-	// VSYNC = 1 F8~FF
-	// CHBL = 0			38~177	000111000	101110111
-	//                              |0
-	//			    118     1280     27  111
-	// nHSYNC  |''''''''''''''''''''|_____|''''''''''''''''''''|______
-	// nHBLANK ______|'''''''''''|______________|'''''''''''|_________
-	//													nHSYNC	nHBLANK
-	// 0~110:		00000000000 00001101110		0			0
-	// 111~228:		00001101111 00011100100		1			0
-	// 229~1508:	00011100101	10111100100		1			1
-	// 1509~1535:	10111100101	10111111111		1			0
-	
-	// Probably wrong:
-	assign HSYNC = &{HCOUNT[4:2]} | |{HCOUNT[8:5]};
-	assign VSYNC = ~VCOUNT[8];
-	assign SYNC = VSYNC ^ HSYNC;
-	// Stuff happens 14px after HSYNC rises: VSYNC and nBNKB
-	// Not sure about this at all...
-	assign HTRIG = (HSYNC == 42) ? 1 : 0;
-	/*always @(posedge HTRIG)
-	begin
-	end*/
-
-	// -------------------------------- Cycle gen / sequencing --------------------------------
- 
-	always @(posedge CLK_24M)
-	begin
-		CYCLE_POS <= CYCLE_POS + 1;
-	end
-	
-	always @(negedge CLK_24M)
-	begin
-		CYCLE_NEG <= CYCLE_NEG + 1;
-	end
+	autoanim AA(VBLANK, AASPEED, SPR_TILENB_IN, AA_DISABLE, SPR_TILEATTR[4:3], SPR_TILENB_OUT, AACOUNT);
+	irq IRQ(IRQS, IPL0, IPL1);
+	videosync VS(CLK_6M, VCOUNT, SYNC);
+	videocycle VC(CLK_24M, PCK1, PCK2, LOAD, nVCS);
 	
 	// -------------------------------- Register access --------------------------------
+	
+	// Read only
+	assign REG_LSPCMODE = {VCOUNT, 3'b000, VIDEO_MODE, AACOUNT};
+	
 	// Read
 	assign M68K_DATA = (nLSPOE | ~nLSPWE) ? 16'bzzzzzzzzzzzzzzzz :
 								(M68K_ADDR[2:0] == 3'b000) ? VRAM_READ_BUFFER :	// 3C0000
@@ -209,7 +117,7 @@ module lspc_a2(
 				if (TIMERINT_MODE[0]) TIMER <= TIMERLOAD;
 			end
 			// 3C000C
-			3'b110 : IRQ <= IRQ & ~(M68K_DATA[2:0]);
+			3'b110 : IRQS <= IRQS & ~(M68K_DATA[2:0]);
 			// 3C000E
 			3'b111 : TIMERSTOP <= M68K_DATA[0];
 		endcase
@@ -222,24 +130,24 @@ module lspc_a2(
 	// 100 ~ 10F	1		0			1			100000000	100001111
 	// 110 ~ 1EF	1		1			1			100010000	111101111
 	// 1F0 ~ 1FF	1		0			1			111110000	111111111
-	assign VPALSTOP = VIDEOMODE & TIMERSTOP;
+	assign VPALSTOP = VIDEO_MODE & TIMERSTOP;
 	assign BORDER_TOP = ~(VCOUNT[7] + VCOUNT[6] + VCOUNT[5] + VCOUNT[4]);
 	assign BORDER_BOT = VCOUNT[7] & VCOUNT[6] & VCOUNT[5] & VCOUNT[4];
 	assign BORDERS = BORDER_TOP + BORDER_BOT;
-	assign TIMERRUNn = (VPALSTOP & BORDERS) | ~VCOUNT[8];
+	assign nTIMERRUN = (VPALSTOP & BORDERS) | ~VCOUNT[8];
 	
 	// TIMERINT_MODE[1] is used in vblank !
 	
 	// Pixel timer
 	always @(posedge CLK_6M)
 	begin
-		if (!TIMERRUNn)
+		if (!nTIMERRUN)
 		begin
 			if (TIMER)
 				TIMER <= TIMER - 1;
 			else
 			begin
-				if (TIMERINT_EN) IRQ[1] = 1;	// IRQ2 plz
+				if (TIMERINT_EN) IRQS[1] = 1;	// IRQ2 plz
 				if (TIMERINT_MODE[2]) TIMER <= TIMERLOAD;
 			end
 		end
@@ -263,9 +171,9 @@ module lspc_a2(
 	wire [15:0] E;		// Low VRAM data
 	wire [15:0] F;		// High VRAM data
 
-	vram_l VRAMLL(B, E[7:0], nBWE, nBOE, 0);
-	vram_l VRAMLU(B, E[15:8], nBWE, nBOE, 0);
-	vram_u VRAMUL(C, F[7:0], nCWE, 0, 0);
-	vram_u VRAMUU(C, F[15:8], nCWE, 0, 0);
+	vram_l VRAMLL(B, E[7:0], nBWE, nBOE, 1'b0);
+	vram_l VRAMLU(B, E[15:8], nBWE, nBOE, 1'b0);
+	vram_u VRAMUL(C, F[7:0], nCWE, 1'b0, 1'b0);
+	vram_u VRAMUU(C, F[15:8], nCWE, 1'b0, 1'b0);
 	
 endmodule
