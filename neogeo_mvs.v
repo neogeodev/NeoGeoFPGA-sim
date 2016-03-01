@@ -1,11 +1,15 @@
 `timescale 10ns/10ns
 
+// SNK NeoGeo FPGA hardware definitions (for simulation only)
+// furrtek, Charles MacDonald, Kyuusaku and neogeodev contributors ~ 2016
+// https://github.com/neogeodev/NeoGeoFPGA-sim
+
 module neogeo_mvs(
 	input RESET_BTN,
 	input [9:0] P1_IN,
 	input [9:0] P2_IN,
-	output [2:0] P1_OUT,
-	output [2:0] P2_OUT,
+	output [2:0] P1_OUT,		// NEO-D0
+	output [2:0] P2_OUT,		// NEO-D0
 	output reg [6:0] VIDEO_R,
 	output reg [6:0] VIDEO_G,
 	output reg [6:0] VIDEO_B,
@@ -51,7 +55,7 @@ module neogeo_mvs(
 	
 	neo_c1 C1(M68K_ADDR[20:16], A22Z, A23Z, LDS, UDS, RW, AS, ROMOEL, ROMOEU, PORTOEL, PORTOEU, PORTWEL, PORTWEU,
 				PORTADRS, WRL, WRU, WWL, WWU, SROMOEL, SROMOEU, SRAMOEL, SRAMOEU, SRAMWEL, SRAMWEU, LSPOE, LSPWE,
-				CRDO, CRDW, CRDC);
+				CRDO, CRDW, CRDC, P1_IN, P2_IN);
 
 	lspc_a2 LSPC(CLK_24M, nRESET, PBUS, M68K_ADDR[2:0], M68K_DATA, nLSPOE, nLSPWE, DOTA, DOTB, CA4, S2H1,
 				S1H1, LOAD, H, EVEN1, EVEN2, IPL0, IPL1, CHG, LD1, LD1, PCK1, PCK2, WE[3:0], CK[3:0], SS1,

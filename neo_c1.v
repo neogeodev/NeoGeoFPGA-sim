@@ -15,8 +15,13 @@ module neo_c1(
 	output nSRAMOEL, nSRAMOEU,
 	output nSRAMWEL, nSRAMWEU,
 	output nLSPOE, nLSPWE,
-	output nCRDO, nCRDW, nCRDC
+	output nCRDO, nCRDW, nCRDC,
+	input [9:0] P1_IN,
+	input [9:0] P2_IN
 );
+
+	// M68 data = P1_IN when nCTRL1ZONE even access
+	// M68 data = P2_IN when nCTRL2ZONE even access
 
 	// Address decoding, is everything in sync with AS ?
 	
