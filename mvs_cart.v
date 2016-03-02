@@ -13,7 +13,8 @@ module mvs_cart(
 	inout [15:0] M68K_DATA,
 	input nROMOE,
 	input nPORTOEL,
-	input nPORTOEU
+	input nPORTOEU,
+	input nSLOTCS
 );
 
 	cha_board CHA(PBUS, CA4, S2H1, PCK1B, PCK2B, CR, FIXD);

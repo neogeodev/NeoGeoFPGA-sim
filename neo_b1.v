@@ -13,8 +13,18 @@ module neo_b1(
 	input LD2,
 	input SS1,
 	input SS2,
-	output [11:0] PA
+	input A23Z, A22Z,
+	output [11:0] PA,
+	input nLDS,
+	input RW,
+	input [20:16] M68K_ADDR_WD,
+	input [11:0] M68K_ADDR_PAL,
+	output nHALT,
+	output nRESET,
+	input VCCON
 );
+
+	// TODO: Output M68K_ADDR_BOT to PA if palette i/o
 
 	reg [7:0] SPR_PAL;
 	reg [3:0] FIX_PAL;
@@ -24,6 +34,11 @@ module neo_b1(
 	wire [11:0] LBDATA3;
 	wire [11:0] LBDATA4;
 	
+	// $400000~$7FFFFF why not use nPAL ?
+	assign nPAL_ACCESS = |{A23Z, ~A22Z};
+	
+	// TODO: CLK
+	watchdog WD(nLDS, RW, A23Z, A22Z, M68K_ADDR_WD, CLK, nHALT, nRESET, VCCON);
 
 	// Is WE used as OE when in output mode ? (=CK)
 
@@ -33,7 +48,7 @@ module neo_b1(
 	linebuffer LB4(CK[3], WE[3], PCK2, PBUS[15:8], LBDATA4, ~TMS0);
 	
 	// if FIXD !=0, replace output
-	assign PA = (|FIXD) ? {FIX_PAL, FIXD} : LBDATA1;
+	assign PA = nPAL_ACCESS ? (|{FIXD}) ? {FIX_PAL, FIXD} : LBDATA1 : M68K_ADDR_PAL;
 	
 	assign LBDATA1 = TMS0 ? {GAD, SPR_PAL} : 12'bzzzzzzzzzzzz;	// TODO
 	
