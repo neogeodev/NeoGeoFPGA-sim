@@ -6,10 +6,12 @@
 
 module neogeo_mvs(
 	input RESET_BTN,
+	input [7:0] DIPSW,
 	input [9:0] P1_IN,
 	input [9:0] P2_IN,
 	output [2:0] P1_OUT,		// NEO-D0
 	output [2:0] P2_OUT,		// NEO-D0
+	output [23:0] CDA,		// Memcard address
 	output reg [6:0] VIDEO_R,
 	output reg [6:0] VIDEO_G,
 	output reg [6:0] VIDEO_B,
@@ -28,6 +30,7 @@ module neogeo_mvs(
 	wire [15:0] G;				// SFIX address
 	wire [7:0] FIXD;
 	wire [7:0] FIXD_CART;
+	wire [7:0] FIXD_EMBED;
 	wire [11:0] PA;			// Palette RAM address
 	wire [3:0] GAD, GBD;		// Pixel pair
 	wire [23:0] PBUS;
@@ -35,8 +38,8 @@ module neogeo_mvs(
 	wire [15:0] PC;			// Palette RAM data
 	
 	wire S2H1;
-	wire nSYSTEMB;
-	wire SYSTEM;
+	wire SYSTEMB;
+	wire nSYSTEM;
 	
 	wire CLK_24M;
 	wire nRESETP;
@@ -46,6 +49,48 @@ module neogeo_mvs(
 	wire [3:0] WE;				// LSPC/B1
 	wire [3:0] CK;				// LSPC/B1
 	
+	wire [7:0] SDD;			// Z80 data bus
+	
+	wire nDTACK;
+	
+
+	// NEO-C1:nBITW0(38xxxx-39xxxx) -> NEO-F0:nBITWD0(A7~6=0) -> NEO-D0
+	assign nBITWD0 = nBITW0 & (M68K_ADDR[6] | M68K_ADDR[5]);
+	
+	//                     7654 3210
+	// NEO-D0 (nBITWD0)
+	// 0000 0000 0000 0000 000x 0000
+	
+	// NEO-F0
+	// 0000 0000 0000 0000 0101 xxxx
+	// 0000 0000 0000 0000 0100 xxxx
+	// 0000 0000 0000 0000 0011 xxxx
+	// 0000 0000 0000 0000 0010 xxxx
+	// 0000 0000 0000 0000 0001 xxxx
+	// 0000 0000 0000 0000 1101 xxxx ?
+	
+	/*
+	A7 low: output dipswitch states DIP00~DIP07 (read $300001)
+	A7 high: output IN01 to D7 (test switch) and TYPE to D6 (read $300081)
+	*/
+	
+	// $300001~?, odd bytes REG_DIPSW
+	// $300081~?, odd bytes TODO
+	assign M68K_DATA = (M68K_RW & nDIPRD0) ? (M68K_ADDR[6]) ? 8'b11111111 :
+															DIPSW : 8'bzzzzzzzz;
+	// REG_STATUS_A (NEO-F0) $320001~?, odd bytes TODO
+	// IN3: Output IN300~IN304 to D0~D4 and CALTP/CALDOUT to D6/D7 (read $320001)
+	assign M68K_DATA = (M68K_RW & nDIPRD1) ? 8'b11111111 : 8'bzzzzzzzz;
+	
+	// NEO-I0 (nCOUNTOUT)
+	// 0000 0000 0000 0000 x11? xxxx
+	// 0000 0000 0000 0000 x11? xxxx
+	
+	assign nCOUNTOUT = ~nBITWD0;	// ?
+	// A7=Counter/lockout data
+	// A1=1/2
+	// A2=Counter/lockout
+	
 	clocks CLK(CLK_24M, nRESETP, CLK_12M, CLK_68KCLK, CLK_68KCLKB, CLK_8M, CLK_6MB, CLK_4M, CLK_1MB);
 
 	mvs_cart CART(PBUS, CA4, S2H1, PCK1B, PCK2B, CR, FIXD_CART, M68K_ADDR[18:0], M68K_DATA, nROMOE,
@@ -53,18 +98,24 @@ module neogeo_mvs(
 
 	neo_zmc2 ZMC2(CLK_12M, EVEN, LOAD, H, CR, GAD, GBD, DOTA, DOTB);
 	
-	neo_c1 C1(M68K_ADDR[20:16], A22Z, A23Z, LDS, UDS, RW, AS, ROMOEL, ROMOEU, PORTOEL, PORTOEU, PORTWEL, PORTWEU,
-				PORTADRS, WRL, WRU, WWL, WWU, SROMOEL, SROMOEU, SRAMOEL, SRAMOEU, SRAMWEL, SRAMWEU, LSPOE, LSPWE,
-				CRDO, CRDW, CRDC, P1_IN, P2_IN);
+	neo_c1 C1(M68K_ADDR[20:16], M68K_DATA[15:8], A22Z, A23Z, LDS, UDS, M68K_RW, AS, nROMOEL, nROMOEU, nPORTOEL, nPORTOEU,
+				nPORTWEL, nPORTWEU, nPORTADRS, nWRL, nWRU, nWWL, nWWU, nSROMOEL, nSROMOEU, nSRAMOEL, nSRAMOEU, nSRAMWEL,
+				nSRAMWEU, nLSPOE, nLSPWE, nCRDO, nCRDW, nCRDC, nSDW, P1_IN, P2_IN, nCD1, nCD2, nWP, ROMWAIT, PWAIT0,
+				PWAIT1, PDTACK, SDD, CLK_68KCLK, nDTACK, nBITW0, nBITW1, nDIPRD0, nDIPRD1);
+				
+	neo_d0 D0(M68K_ADDR[21:0], nBITWD0, M68K_DATA[5:0], CDA, P1_OUT, P2_OUT);
 
 	lspc_a2 LSPC(CLK_24M, nRESET, PBUS, M68K_ADDR[2:0], M68K_DATA, nLSPOE, nLSPWE, DOTA, DOTB, CA4, S2H1,
 				S1H1, LOAD, H, EVEN1, EVEN2, IPL0, IPL1, CHG, LD1, LD1, PCK1, PCK2, WE[3:0], CK[3:0], SS1,
-				SS2, nRESETP, SYNC, CHBL, nBNKB, nVCS, CLK_6M);
+				SS2, nRESETP, VIDEO_SYNC, CHBL, nBNKB, nVCS, CLK_6M);
 	neo_b1 B1(PBUS, FIXD, PCK1, PCK2, GAD, GBD, WE, CK, TMS0, LD1, LD2, SS1, SS2, PA);
+	
+	syslatch SL(M68K_ADDR[3:0], nBITW1, nRESET,
+				SHADOW, nVEC, nCARDWEN, CARDWENB, nREGEN, nSYSTEM, nSRAMLOCK, nPALBANK);
 	
 	rom_l0 L0(PBUS[15:0], PBUS[23:16], nVCS);
 	rom_sps2 SP(M68K_ADDR[15:0], M68K_DATA[15:0], nSROMOE);
-	rom_sfix SFIX({G[15:3], S2H1, G[2:0]}, FIXD, nSYSTEM);
+	rom_sfix SFIX({G[15:3], S2H1, G[2:0]}, FIXD_EMBED, nSYSTEM);
 
 	palram PRAML({PALBNK, PA}, PC[7:0], nPALWE, 1'b0, 1'b0);
 	palram PRAMU({PALBNK, PA}, PC[15:8], nPALWE, 1'b0, 1'b0);
@@ -77,7 +128,7 @@ module neogeo_mvs(
 	assign SYSTEMB = nSYSTEM;	// ?
 	
 	// Good job SNK ! Gates cart FIXD to avoid bus wreck with SFIX
-	assign FIXD = SYSTEM ? FIXD : FIXD_CART;
+	assign FIXD = nSYSTEM ? FIXD_EMBED : FIXD_CART;
 	
 	// This is done by NEO-E0:
 	// A' = 1 if nVEC == 0 and A == 11000000000000000xxxxxxx

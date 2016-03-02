@@ -67,7 +67,7 @@ module lspc_a2(
 	autoanim AA(VBLANK, AASPEED, SPR_TILENB_IN, AA_DISABLE, SPR_TILEATTR[4:3], SPR_TILENB_OUT, AACOUNT);
 	irq IRQ(IRQS, IPL0, IPL1);
 	videosync VS(CLK_6M, VCOUNT, SYNC);
-	videocycle VC(CLK_24M, PCK1, PCK2, LOAD, nVCS);
+	videocycle VC(CLK_24M, PCK1, PCK2, LOAD, nVCS, PBUS);
 	
 	// -------------------------------- Register access --------------------------------
 	
