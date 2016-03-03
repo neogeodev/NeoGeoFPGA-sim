@@ -9,6 +9,7 @@ module clocks(
 	output CLK_8M,
 	output CLK_6MB,
 	output CLK_4M,
+	output CLK_4MB,
 	output CLK_1MB
 );
 
@@ -41,8 +42,9 @@ module clocks(
 	assign CLK_68KCLK = CLKDIV[0];		// ?
 	assign CLK_68KCLKB = ~CLK_68KCLK;
 	assign CLK_8M = CLKDIV2[0];
-	assign CLK_6MB = CLKDIV[1];
+	assign CLK_6MB = ~CLKDIV[1];
 	assign CLK_4M = CLKDIV2[1];
-	assign CLK_1MB = CLKDIV[2];
+	assign CLK_4MB = ~CLKDIV2[1];
+	assign CLK_1MB = ~CLKDIV[2];
 	
 endmodule

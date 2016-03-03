@@ -6,13 +6,16 @@
 
 module neogeo_mvs(
 	input RESET_BTN,
-	//input TEST_BTN,				// Todo
+	input TEST_BTN,				// Todo
 	input [7:0] DIPSW,
 	input [9:0] P1_IN,
 	input [9:0] P2_IN,
 	output [2:0] P1_OUT,
 	output [2:0] P2_OUT,
 	output [23:0] CDA,			// Memcard address
+	output [3:0] EL_OUT,			// Clock, 3x data
+	output [8:0] LED_OUT1,		// Clock, 8x data
+	output [8:0] LED_OUT2,		// Clock, 8x data
 	output reg [6:0] VIDEO_R,
 	output reg [6:0] VIDEO_G,
 	output reg [6:0] VIDEO_B,
@@ -21,6 +24,7 @@ module neogeo_mvs(
 
 	// Todo: Check watchdog timing
 	// Todo: VPA (NEO-C1)
+	// TODO: ERROR ! BITWD0 should ignore M68K_ADDR[5] (see writes to NEO-F0)
 
 	// REG_P1CNT		Read ok, check range
 	//	REG_DIPSW		Read ok, Write ok, check range
@@ -31,16 +35,21 @@ module neogeo_mvs(
 	// REG_STATUS_B	Read ok, check range
 	// REG_POUTPUT		Write ok, check range
 	// REG_CRDBANK		Write ok, check range
-	// REG_SLOT			Write todo, check range
-	// REG_LEDLATCHES	Write todo, check range
-	// REG_LEDDATA		Write todo, check range
-	// REG_RTCCTRL		Write todo, check range
+	// REG_SLOT			Write ok, check range
+	// REG_LEDLATCHES	Write ok, check range
+	// REG_LEDDATA		Write ok, check range
+	// REG_RTCCTRL		Write ok, check range
 	
-	wire [22:0] M68K_ADDR;	// Really A23~A1
+	// Counter/lockout	Ok, check range, neo_i0.v
+	
 	wire A22Z;
 	wire A23Z;
+	wire [22:0] M68K_ADDR;	// Really A23~A1
 	wire [15:0] M68K_DATA;
 	wire M68K_RW;
+	wire nDTACK;
+	
+	wire [7:0] SDD;			// Z80 data bus
 	
 	wire nPAL, nPALWE;
 	wire nSROMOEU, nSROMOEL;
@@ -54,6 +63,8 @@ module neogeo_mvs(
 	wire [23:0] PBUS;
 	wire [31:0] CR;			// Raw sprite data
 	wire [15:0] PC;			// Palette RAM data
+	wire [3:0] WE;				// LSPC/B1
+	wire [3:0] CK;				// LSPC/B1
 	
 	wire S2H1;
 	wire SYSTEMB;
@@ -64,14 +75,7 @@ module neogeo_mvs(
 	wire nVEC, SHADOW;
 	wire nBNKB;
 	
-	wire [3:0] WE;				// LSPC/B1
-	wire [3:0] CK;				// LSPC/B1
 	
-	wire [7:0] SDD;			// Z80 data bus
-	
-	wire nDTACK;
-	
-
 	// NEO-C1:nBITW0(38xxxx-39xxxx) -> NEO-F0:nBITWD0(A7~6=0) -> NEO-D0
 	assign nBITWD0 = nBITW0 & (M68K_ADDR[6] | M68K_ADDR[5]);
 	
@@ -87,31 +91,17 @@ module neogeo_mvs(
 	// 0000 0000 0000 0000 0001 xxxx
 	// 0000 0000 0000 0000 1101 xxxx ?
 	
-	/*
-	A7 low: output dipswitch states DIP00~DIP07 (read $300001)
-	A7 high: output IN01 to D7 (test switch) and TYPE to D6 (read $300081)
-	*/
+	wire [5:0] SLOT;
 	
-	// $300001~?, odd bytes REG_DIPSW
-	// $300081~?, odd bytes TODO
-	assign M68K_DATA = (M68K_RW & nDIPRD0) ? (M68K_ADDR[6]) ? 8'b11111111 :
-															DIPSW : 8'bzzzzzzzz;
-	// REG_STATUS_A (NEO-F0) $320001~?, odd bytes TODO
-	// IN3: Output IN300~IN304 to D0~D4 and CALTP/CALDOUT to D6/D7 (read $320001)
-	assign M68K_DATA = (M68K_RW & nDIPRD1) ? 8'b11111111 : 8'bzzzzzzzz;
-	
-	// NEO-I0 (nCOUNTOUT)
-	// 0000 0000 0000 0000 x11? xxxx
-	// 0000 0000 0000 0000 x11? xxxx
-	
-	assign nCOUNTOUT = ~nBITWD0;	// ?
-	// A7=Counter/lockout data
-	// A1=1/2
-	// A2=Counter/lockout
-	
+	// Implementation specific (unique slot)
 	assign nSLOTCS = SLOT[0];
 	
-	clocks CLK(CLK_24M, nRESETP, CLK_12M, CLK_68KCLK, CLK_68KCLKB, CLK_8M, CLK_6MB, CLK_4M, CLK_1MB);
+	// For NEO-I0:
+	assign nCOUNTOUT = &{nBITW0, ~M68K_ADDR[5], M68K_ADDR[4:3]};	// nBITW0 or nBITWD0 ?
+	// NEO-F0: A6~4 (5~3)
+	// xx10 0xxx
+	
+	clocks CLK(CLK_24M, nRESETP, CLK_12M, CLK_68KCLK, CLK_68KCLKB, CLK_8M, CLK_6MB, CLK_4M, CLK_4MB, CLK_1MB);
 
 	mvs_cart CART(PBUS, CA4, S2H1, PCK1B, PCK2B, CR, FIXD_CART, M68K_ADDR[18:0], M68K_DATA, nROMOE,
 					nPORTOEL, nPORTOEU, nSLOTCS);
@@ -124,6 +114,9 @@ module neogeo_mvs(
 				PWAIT1, PDTACK, SDD, CLK_68KCLK, nDTACK, nBITW0, nBITW1, nDIPRD0, nDIPRD1, nPAL);
 				
 	neo_d0 D0(M68K_ADDR[21:0], nBITWD0, M68K_DATA[5:0], CDA, P1_OUT, P2_OUT);
+	
+	neo_f0 F0(nDIPRD0, nDIPRD1, nBITWD0, DIPSW, M68K_ADDR[6:3], M68K_DATA[7:0], SYSTEMB, SLOT, SLOTA, SLOTB, SLOTC,
+				EL_OUT, LED_OUT1, LED_OUT2);	
 
 	lspc_a2 LSPC(CLK_24M, nRESET, PBUS, M68K_ADDR[2:0], M68K_DATA, nLSPOE, nLSPWE, DOTA, DOTB, CA4, S2H1,
 				S1H1, LOAD, H, EVEN1, EVEN2, IPL0, IPL1, CHG, LD1, LD1, PCK1, PCK2, WE[3:0], CK[3:0], SS1,
@@ -131,6 +124,8 @@ module neogeo_mvs(
 				
 	neo_b1 B1(PBUS, FIXD, PCK1, PCK2, GAD, GBD, WE, CK, TMS0, LD1, LD2, SS1, SS2, A23Z, A22Z, PA, nLDS, M68K_RW,
 				M68K_ADDR[20:16], M68K_ADDR[11:0], nHALT, nRESET, VCCON);
+	
+	neo_i0 I0(nRESET, nCOUNTOUT, M68K_ADDR[2:0], M68K_ADDR[7], COUNTER1, COUNTER2, LOCKOUT1, LOCKOUT2);
 	
 	syslatch SL(M68K_ADDR[3:0], nBITW1, nRESET,
 				SHADOW, nVEC, nCARDWEN, CARDWENB, nREGEN, nSYSTEM, nSRAMLOCK, nPALBANK);
@@ -147,7 +142,7 @@ module neogeo_mvs(
 	assign PCK2B = ~PCK2;
 	assign nSROMOE = nSROMOEU & nSROMOEL;
 	assign nPALWE = M68K_RW & nPAL;
-	assign SYSTEMB = nSYSTEM;	// ?
+	assign SYSTEMB = ~nSYSTEM;	// ?
 	
 	// Good job SNK ! Gates cart FIXD to avoid bus wreck with SFIX
 	assign FIXD = nSYSTEM ? FIXD_EMBED : FIXD_CART;
@@ -159,19 +154,6 @@ module neogeo_mvs(
 	// Palette data bidir buffer from/to 68k
 	assign M68K_DATA = (M68K_RW | ~nPAL) ? PC : 16'bzzzzzzzzzzzzzzzz;
 	assign PC = nPALWE ? M68K_DATA : 16'bzzzzzzzzzzzzzzzz;
-	
-	reg [5:0] SLOT;
-	
-	// In NEO-F0
-	wire [2:0] SLOTS = {SLOTC, SLOTB, SLOTA};
-	
-	assign SLOT = (SLOTS == 3'b000) ? 6'b111110 :
-						(SLOTS == 3'b001) ? 6'b111101 :
-						(SLOTS == 3'b010) ? 6'b111011 :
-						(SLOTS == 3'b011) ? 6'b110111 :
-						(SLOTS == 3'b100) ? 6'b101111 :
-						(SLOTS == 3'b101) ? 6'b011111 :
-						6'b111110;	// ?
 	
 	// Color data latch/blanking
 	always @(posedge CLK_6MB)
