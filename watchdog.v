@@ -12,7 +12,7 @@ module watchdog(
 
 	reg [21:0] WDCNT;		// ?
 	
-	assign nRESET = WDCNT[21];
+	assign nRESET = 1'bz; // Debug WDCNT[21];
 	assign nHALT = WDCNT[21];
 	
 	// 300001 (LDS)

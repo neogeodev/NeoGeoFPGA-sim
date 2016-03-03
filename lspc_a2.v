@@ -65,7 +65,7 @@ module lspc_a2(
 	wire [2:0] AACOUNT;
 	
 	autoanim AA(VBLANK, AASPEED, SPR_TILENB_IN, AA_DISABLE, SPR_TILEATTR[4:3], SPR_TILENB_OUT, AACOUNT);
-	irq IRQ(IRQS, IPL0, IPL1);
+	irq IRQ(IRQS, IPL0, IPL1);	// nRESETP ?
 	videosync VS(CLK_6M, VCOUNT, SYNC);
 	videocycle VC(CLK_24M, PCK1, PCK2, LOAD, nVCS, PBUS);
 	
@@ -83,44 +83,49 @@ module lspc_a2(
 								16'bzzzzzzzzzzzzzzzz;
 	
 	// Write
-	always @(negedge nLSPWE)
+	always @(negedge nLSPWE or negedge nRESET)	// ?
 	begin
-		case (M68K_ADDR[2:0])
-			// 3C0000
-			3'b000 :
-			begin
-				{VRAMADDR_U, VRAMADDR_L} <= M68K_DATA;
-				//VRAM_READ_BUFFER <= VRAMDATA;		// TODO
-			end
-			// 3C0002
-			3'b001 :
-			begin
-				VRAM_WRITE_BUFFER <= M68K_DATA;
-				VRAMADDR_L <= VRAMADDR_L + REG_VRAMMOD;
-			end
-			// 3C0004
-			3'b010 : REG_VRAMMOD <= M68K_DATA;
-			// 3C0006
-			3'b011 :
-			begin
-				AASPEED <= M68K_DATA[15:8];
-				TIMERINT_MODE <= M68K_DATA[7:5];
-				TIMERINT_EN <= M68K_DATA[4];
-				AA_DISABLE <= M68K_DATA[3];
-			end
-			// 3C0008
-			3'b100 : TIMERLOAD[31:16] <= M68K_DATA;
-			// 3C000A
-			3'b101 :
-			begin
-				TIMERLOAD[15:0] <= M68K_DATA;
-				if (TIMERINT_MODE[0]) TIMER <= TIMERLOAD;
-			end
-			// 3C000C
-			3'b110 : IRQS <= IRQS & ~(M68K_DATA[2:0]);
-			// 3C000E
-			3'b111 : TIMERSTOP <= M68K_DATA[0];
-		endcase
+		if (!nRESET)
+			IRQS <= 3'b000;
+		else
+		begin
+			case (M68K_ADDR[2:0])
+				// 3C0000
+				3'b000 :
+				begin
+					{VRAMADDR_U, VRAMADDR_L} <= M68K_DATA;
+					//VRAM_READ_BUFFER <= VRAMDATA;		// TODO
+				end
+				// 3C0002
+				3'b001 :
+				begin
+					VRAM_WRITE_BUFFER <= M68K_DATA;
+					VRAMADDR_L <= VRAMADDR_L + REG_VRAMMOD;
+				end
+				// 3C0004
+				3'b010 : REG_VRAMMOD <= M68K_DATA;
+				// 3C0006
+				3'b011 :
+				begin
+					AASPEED <= M68K_DATA[15:8];
+					TIMERINT_MODE <= M68K_DATA[7:5];
+					TIMERINT_EN <= M68K_DATA[4];
+					AA_DISABLE <= M68K_DATA[3];
+				end
+				// 3C0008
+				3'b100 : TIMERLOAD[31:16] <= M68K_DATA;
+				// 3C000A
+				3'b101 :
+				begin
+					TIMERLOAD[15:0] <= M68K_DATA;
+					if (TIMERINT_MODE[0]) TIMER <= TIMERLOAD;
+				end
+				// 3C000C
+				3'b110 : IRQS <= IRQS & ~(M68K_DATA[2:0]);
+				// 3C000E
+				3'b111 : TIMERSTOP <= M68K_DATA[0];
+			endcase
+		end
 	end
 
 	// -------------------------------- Timer counter --------------------------------
@@ -147,7 +152,7 @@ module lspc_a2(
 				TIMER <= TIMER - 1;
 			else
 			begin
-				if (TIMERINT_EN) IRQS[1] = 1;	// IRQ2 plz
+				if (TIMERINT_EN) IRQS[1] <= 1'b1;	// IRQ2 plz
 				if (TIMERINT_MODE[2]) TIMER <= TIMERLOAD;
 			end
 		end

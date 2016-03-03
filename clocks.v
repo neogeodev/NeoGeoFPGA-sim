@@ -19,7 +19,7 @@ module clocks(
 	
 	always @(posedge CLK_24M or posedge ~nRESETP)
 	begin
-		if (~nRESETP)
+		if (!nRESETP)
 		begin
 			CLKDIV <= 0;
 			CLKDIV_D3 <= 0;
@@ -28,6 +28,7 @@ module clocks(
 		else
 		begin
 			CLKDIV <= CLKDIV + 1;
+			
 			if (CLKDIV_D3 == 3)
 			begin
 				CLKDIV_D3 <= 0;

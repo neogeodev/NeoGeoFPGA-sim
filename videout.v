@@ -5,9 +5,9 @@ module videout(
 	input nBNKB,
 	input SHADOW,
 	input [15:0] PC,
-	output reg VIDEO_R,
-	output reg VIDEO_G,
-	output reg VIDEO_B
+	output reg [6:0] VIDEO_R,
+	output reg [6:0] VIDEO_G,
+	output reg [6:0] VIDEO_B
 );
 
 	// Color data latch/blanking

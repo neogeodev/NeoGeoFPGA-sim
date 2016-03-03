@@ -23,11 +23,11 @@ module neo_f0(
 
 	// $300001~?, odd bytes REG_DIPSW
 	// $300081~?, odd bytes TODO
-	assign M68K_DATA = (nDIPRD0) ? (M68K_ADDR[6]) ? 8'b11111111 :
-															DIPSW : 8'bzzzzzzzz;
+	assign M68K_DATA = (nDIPRD0) ? 8'bzzzzzzzz :
+								(M68K_ADDR[6]) ? 8'b11111111 : DIPSW;
 	// REG_STATUS_A (NEO-F0) $320001~?, odd bytes TODO
 	// IN3: Output IN300~IN304 to D0~D4 and CALTP/CALDOUT to D6/D7 (read $320001)
-	assign M68K_DATA = (nDIPRD1) ? 8'b11111111 : 8'bzzzzzzzz;
+	assign M68K_DATA = (nDIPRD1) ? 8'bzzzzzzzz : 8'b11111111;
 	
 	always @(nBITWD0)
 	begin

@@ -14,10 +14,11 @@ module mvs_cart(
 	input nROMOE,
 	input nPORTOEL,
 	input nPORTOEU,
-	input nSLOTCS
+	input nSLOTCS,
+	output nROMWAIT, nPWAIT0, nPWAIT1, nPDTACK
 );
 
 	cha_board CHA(PBUS, CA4, S2H1, PCK1B, PCK2B, CR, FIXD);
-	prog_board PROG(M68K_ADDR, M68K_DATA, nROMOE, nPORTOEL, nPORTOEU);
+	prog_board PROG(M68K_ADDR, M68K_DATA, nROMOE, nPORTOEL, nPORTOEU, nROMWAIT, nPWAIT0, nPWAIT1, nPDTACK);
 
 endmodule

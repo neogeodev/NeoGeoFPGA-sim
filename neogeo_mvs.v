@@ -5,8 +5,9 @@
 // https://github.com/neogeodev/NeoGeoFPGA-sim
 
 module neogeo_mvs(
-	input RESET_BTN,
+	input nRESET_BTN,
 	input TEST_BTN,				// Todo
+	input CLK_24M,
 	input [7:0] DIPSW,
 	
 	input [9:0] P1_IN,
@@ -15,6 +16,7 @@ module neogeo_mvs(
 	output [2:0] P2_OUT,
 	
 	output [23:0] CDA,			// Memcard address
+	output [15:0] CDD,			// Memcard data
 	
 	output [3:0] EL_OUT,			// Clock, 3x data
 	output [8:0] LED_OUT1,		// Clock, 8x data
@@ -23,12 +25,15 @@ module neogeo_mvs(
 	output [6:0] VIDEO_R,
 	output [6:0] VIDEO_G,
 	output [6:0] VIDEO_B,
-	output VIDEO_SYNC
+	output VIDEO_SYNC,
+	
+	output [22:0] TB_M68K_ADDR
 );
 
-	// Todo: Check watchdog timing
-	// Todo: VPA (NEO-C1)
+	// TODO: Check watchdog timing
+	// TODO: VPA (NEO-C1)
 	// TODO: ERROR ! BITWD0 should ignore M68K_ADDR[5] (see writes to NEO-F0)
+	// TODO: MEMCARD zone has a fixed 2 (6 clks) waitstates (NEO-C1)
 
 	// REG_P1CNT		Read ok, check range
 	//	REG_DIPSW		Read ok, Write ok, check range
@@ -52,11 +57,16 @@ module neogeo_mvs(
 	wire [15:0] M68K_DATA;
 	wire M68K_RW;
 	wire nDTACK;
+	wire nRESET;
+	
+	assign TB_M68K_ADDR = M68K_ADDR;
 	
 	wire [7:0] SDD;			// Z80 data bus
 	
 	wire nPAL, nPALWE;
 	wire nSROMOEU, nSROMOEL;
+	
+	wire nROMOE;
 	
 	wire [15:0] G;				// SFIX address
 	wire [7:0] FIXD;
@@ -74,7 +84,6 @@ module neogeo_mvs(
 	wire SYSTEMB;
 	wire nSYSTEM;
 	
-	wire CLK_24M;
 	wire nRESETP;
 	wire nVEC, SHADOW;
 	wire nBNKB;
@@ -105,14 +114,84 @@ module neogeo_mvs(
 	// NEO-F0: A6~4 (5~3)
 	// xx10 0xxx
 	
+	wire [31:0] AO68KDATA_OUT;
+	wire [31:0] AO68KDATA_IN;
+	
+	wire [31:2] AO68KADDR;
+	
+	assign AO68KDATA_IN = 32'b0; //{16'b0, M68K_RW ? M68K_DATA : 16'bzzzzzzzzzzzzzzzz};
+	assign M68K_DATA = (~M68K_RW) ? AO68KDATA_OUT[15:0] : 16'bzzzzzzzzzzzzzzzz;
+	
+	wire CLK_68KCLK;
+	
+	assign nRESET = nRESET_BTN;
+	assign nRESETP = nRESET;	// DEBUG TODO
+	
+	// 1000: 01 UDS
+	// 0100: 01 LDS
+	// 0010: 00 UDS
+	// 0001: 00 LDS
+	// 1100: 01 UDS+LDS
+	// 0011: 00 UDS+LDS
+	// 1111: 00 ???
+	
+	wire [3:0] AO68KSIZE;
+	
+	assign M68K_ADDR = {AO68KADDR[23:2], ~&{AO68KSIZE[1:0]}};
+	
+	assign nAS = ~AO68KAS;
+	assign M68K_RW = ~AO68KWE;
+	
+	assign nUDS = ~(AO68KSIZE[3] | AO68KSIZE[1]);
+	assign nLDS = ~(AO68KSIZE[2] | AO68KSIZE[0]);
+	
+	ao68000 AO68K(
+		.CLK_I(CLK_68KCLK),
+		.reset_n(nRESET),
+
+		.CYC_O(),						// ?
+		.ADR_O(AO68KADDR),
+		.DAT_O(AO68KDATA_OUT),
+		.DAT_I(AO68KDATA_IN),
+		.SEL_O(AO68KSIZE),			// B1 B2 B3 D4 (0x00000000)
+		.STB_O(AO68KAS),
+		.WE_O(AO68KWE),
+
+		.ACK_I(1'b1),					// DTACK ?
+		.ERR_I(1'b0),					// See a068000 doc
+		.RTY_I(1'b0),
+
+		// TAG_TYPE: TGC_O
+		.SGL_O(),
+		.BLK_O(),
+		.RMW_O(),
+
+		// TAG_TYPE: TGA_O
+		.CTI_O(),
+		.BTE_O(),
+
+		// TAG_TYPE: TGC_O
+		.fc_o(),
+
+		//****************** OTHER
+		/* interrupt acknowlege:
+		* ACK_I: interrupt vector on DAT_I[7:0]
+		* ERR_I: spurious interrupt
+		* RTY_I: autovector
+		*/
+		.ipl_i({1'b0, IPL1, IPL0}),
+		.reset_o(),
+		.blocked_o()
+	);
+	
 	clocks CLK(CLK_24M, nRESETP, CLK_12M, CLK_68KCLK, CLK_68KCLKB, CLK_8M, CLK_6MB, CLK_4M, CLK_4MB, CLK_1MB);
 
 	mvs_cart CART(PBUS, CA4, S2H1, PCK1B, PCK2B, CR, FIXD_CART, M68K_ADDR[18:0], M68K_DATA, nROMOE,
-					nPORTOEL, nPORTOEU, nSLOTCS);
+					nPORTOEL, nPORTOEU, nSLOTCS, nROMWAIT, nPWAIT0, nPWAIT1, nPDTACK);
 
 	neo_zmc2 ZMC2(CLK_12M, EVEN, LOAD, H, CR, GAD, GBD, DOTA, DOTB);
 	
-	neo_c1 C1(M68K_ADDR[20:16], M68K_DATA[15:8], A22Z, A23Z, nLDS, nUDS, M68K_RW, AS, nROMOEL, nROMOEU, nPORTOEL, nPORTOEU,
+	neo_c1 C1(M68K_ADDR[20:16], M68K_DATA[15:8], A22Z, A23Z, nLDS, nUDS, M68K_RW, nAS, nROMOEL, nROMOEU, nPORTOEL, nPORTOEU,
 				nPORTWEL, nPORTWEU, nPORTADRS, nWRL, nWRU, nWWL, nWWU, nSROMOEL, nSROMOEU, nSRAMOEL, nSRAMOEU, nSRAMWEL,
 				nSRAMWEU, nLSPOE, nLSPWE, nCRDO, nCRDW, nCRDC, nSDW, P1_IN, P2_IN, nCD1, nCD2, nWP, ROMWAIT, PWAIT0,
 				PWAIT1, PDTACK, SDD, CLK_68KCLK, nDTACK, nBITW0, nBITW1, nDIPRD0, nDIPRD1, nPAL);
@@ -135,7 +214,7 @@ module neogeo_mvs(
 				SHADOW, nVEC, nCARDWEN, CARDWENB, nREGEN, nSYSTEM, nSRAMLOCK, nPALBANK);
 	
 	rom_l0 L0(PBUS[15:0], PBUS[23:16], nVCS);
-	rom_sps2 SP(M68K_ADDR[15:0], M68K_DATA[15:0], nSROMOE);
+	rom_sps2 SP(M68K_ADDR[15:0], M68K_DATA, nSROMOE);
 	rom_sfix SFIX({G[15:3], S2H1, G[2:0]}, FIXD_EMBED, nSYSTEM);
 	
 	memcard MC(CDA, CDD, nCRDC, nCRDO, CARD_PIN_nWE, CARD_PIN_nREG, nCD1, nCD2, nWP);
@@ -151,6 +230,7 @@ module neogeo_mvs(
 	assign nSROMOE = nSROMOEU & nSROMOEL;
 	assign nPALWE = M68K_RW | nPAL;
 	assign SYSTEMB = ~nSYSTEM;
+	assign nROMOE = nROMOEU & nROMOEL;
 	
 	// Memcard stuff
 	assign CARD_PIN_nWE = |{nCARDWEN, ~CARDWENB, nCRDW};
