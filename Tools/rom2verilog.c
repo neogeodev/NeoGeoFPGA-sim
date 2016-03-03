@@ -21,15 +21,15 @@ int main(int argc, char *argv[]) {
 	sz = ftell(inf);
 	
 	indata = (unsigned char *)malloc(sz);
-	outdata = (unsigned char *)malloc(sz * 5);
-	//outdata = (unsigned char *)malloc(sz * 3);
+	//outdata = (unsigned char *)malloc(sz * 5);
+	outdata = (unsigned char *)malloc(sz * 3);
 
     fseek(inf, 0, SEEK_SET);
     fread(indata, 1, sz, inf);
     fclose(inf);
     
     i = 0;
-    for (c = 0; c < sz; c += 2) {
+    /*for (c = 0; c < sz; c += 2) {
 		ch = indata[c];
 		outdata[i++] = hexi(ch >> 4);
     	outdata[i++] = hexi(ch & 15);
@@ -37,16 +37,16 @@ int main(int argc, char *argv[]) {
 		outdata[i++] = hexi(ch >> 4);
     	outdata[i++] = hexi(ch & 15);
     	outdata[i++] = 0x0A;
-	}
-    /*for (c = 0; c < sz; c++) {
+	}*/
+    for (c = 0; c < sz; c++) {
 		ch = indata[c];
 		outdata[i++] = hexi(ch >> 4);
     	outdata[i++] = hexi(ch & 15);
     	outdata[i++] = 0x0A;
-	}*/
+	}
 	
-	fwrite(outdata, 1, sz * 5, outf);
-	//fwrite(outdata, 1, sz * 3, outf);
+	//fwrite(outdata, 1, sz * 5, outf);
+	fwrite(outdata, 1, sz * 3, outf);
 	
     fclose(outf);
     free(indata);

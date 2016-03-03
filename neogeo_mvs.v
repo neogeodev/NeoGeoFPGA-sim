@@ -119,7 +119,7 @@ module neogeo_mvs(
 	
 	wire [31:2] AO68KADDR;
 	
-	assign AO68KDATA_IN = 32'b0; //{16'b0, M68K_RW ? M68K_DATA : 16'bzzzzzzzzzzzzzzzz};
+	assign AO68KDATA_IN = M68K_RW ? {16'b0, M68K_DATA} : 32'bzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz;
 	assign M68K_DATA = (~M68K_RW) ? AO68KDATA_OUT[15:0] : 16'bzzzzzzzzzzzzzzzz;
 	
 	wire CLK_68KCLK;
