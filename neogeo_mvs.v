@@ -8,17 +8,21 @@ module neogeo_mvs(
 	input RESET_BTN,
 	input TEST_BTN,				// Todo
 	input [7:0] DIPSW,
+	
 	input [9:0] P1_IN,
 	input [9:0] P2_IN,
 	output [2:0] P1_OUT,
 	output [2:0] P2_OUT,
+	
 	output [23:0] CDA,			// Memcard address
+	
 	output [3:0] EL_OUT,			// Clock, 3x data
 	output [8:0] LED_OUT1,		// Clock, 8x data
 	output [8:0] LED_OUT2,		// Clock, 8x data
-	output reg [6:0] VIDEO_R,
-	output reg [6:0] VIDEO_G,
-	output reg [6:0] VIDEO_B,
+	
+	output [6:0] VIDEO_R,
+	output [6:0] VIDEO_G,
+	output [6:0] VIDEO_B,
 	output VIDEO_SYNC
 );
 
@@ -133,34 +137,37 @@ module neogeo_mvs(
 	rom_l0 L0(PBUS[15:0], PBUS[23:16], nVCS);
 	rom_sps2 SP(M68K_ADDR[15:0], M68K_DATA[15:0], nSROMOE);
 	rom_sfix SFIX({G[15:3], S2H1, G[2:0]}, FIXD_EMBED, nSYSTEM);
+	
+	memcard MC(CDA, CDD, nCRDC, nCRDO, CARD_PIN_nWE, CARD_PIN_nREG, nCD1, nCD2, nWP);
 
 	palram PRAML({PALBNK, PA}, PC[7:0], nPALWE, 1'b0, 1'b0);
 	palram PRAMU({PALBNK, PA}, PC[15:8], nPALWE, 1'b0, 1'b0);
+	
+	videout VOUT(CLK_6MB, nBNKB, SHADOW, PC[15:0], VIDEO_R, VIDEO_G, VIDEO_B);
 	
 	// Gates
 	assign PCK1B = ~PCK1;
 	assign PCK2B = ~PCK2;
 	assign nSROMOE = nSROMOEU & nSROMOEL;
-	assign nPALWE = M68K_RW & nPAL;
-	assign SYSTEMB = ~nSYSTEM;	// ?
+	assign nPALWE = M68K_RW | nPAL;
+	assign SYSTEMB = ~nSYSTEM;
+	
+	// Memcard stuff
+	assign CARD_PIN_nWE = |{nCARDWEN, ~CARDWENB, nCRDW};
+	assign CARD_PIN_nREG = nREGEN | nCRDO;
+	// In NEO-G0 (AES only)
+	assign M68K_DATA = (M68K_RW & ~nCRDC) ? CDD : 16'bzzzzzzzzzzzzzzzz;
+	assign CDD = (M68K_RW | nCRDC) ? M68K_DATA : 16'bzzzzzzzzzzzzzzzz;
 	
 	// Good job SNK ! Gates cart FIXD to avoid bus wreck with SFIX
 	assign FIXD = nSYSTEM ? FIXD_EMBED : FIXD_CART;
 	
 	// This is done by NEO-E0:
-	// A' = 1 if nVEC == 0 and A == 11000000000000000xxxxxxx
+	// A = 1 if nVEC == 0 and A == 11000000000000000xxxxxxx
 	assign {A23Z, A22Z} = M68K_ADDR[22:21] ^ {2{~|{M68K_ADDR[20:6], ^M68K_ADDR[22:21], nVEC}}};
 	
 	// Palette data bidir buffer from/to 68k
-	assign M68K_DATA = (M68K_RW | ~nPAL) ? PC : 16'bzzzzzzzzzzzzzzzz;
-	assign PC = nPALWE ? M68K_DATA : 16'bzzzzzzzzzzzzzzzz;
-	
-	// Color data latch/blanking
-	always @(posedge CLK_6MB)
-	begin
-		VIDEO_R <= nBNKB ? {SHADOW, PC[11:8], PC[14], PC[15]} : 7'b0000000;
-		VIDEO_G <= nBNKB ? {SHADOW, PC[7:4], PC[13], PC[15]} : 7'b0000000;
-		VIDEO_B <= nBNKB ? {SHADOW, PC[3:0], PC[12], PC[15]} : 7'b0000000;
-	end
+	assign M68K_DATA = (M68K_RW & ~nPAL) ? PC : 16'bzzzzzzzzzzzzzzzz;
+	assign PC = nPALWE ? 16'bzzzzzzzzzzzzzzzz : M68K_DATA;
 
 endmodule

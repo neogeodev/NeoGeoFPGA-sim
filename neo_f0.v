@@ -9,9 +9,7 @@ module neo_f0(
 	inout [7:0] M68K_DATA,
 	input SYSTEMB,
 	output [5:0] SLOT,
-	output reg SLOTA,
-	output reg SLOTB,
-	output reg SLOTC,
+	output SLOTA, SLOTB, SLOTC,
 	output [3:0] EL_OUT,
 	output [8:0] LED_OUT1,
 	output [8:0] LED_OUT2
@@ -21,7 +19,7 @@ module neo_f0(
 	reg [7:0] LEDDATA;
 	reg [2:0] REG_RTCCTRL;		// Todo
 	
-	wire [2:0] SLOTS;				// Helper
+	reg [2:0] SLOTS;
 
 	// $300001~?, odd bytes REG_DIPSW
 	// $300081~?, odd bytes TODO
@@ -33,17 +31,17 @@ module neo_f0(
 	
 	always @(nBITWD0)
 	begin
-		if (M68K_ADDR[5:3] == 3'b010) {SLOTC, SLOTB, SLOTA} <= M68K_DATA[2:0];	// REG_SLOT
-		if (M68K_ADDR[5:3] == 3'b011) LEDLATCH <= M68K_DATA[5:3];					// REG_LEDLATCHES
-		if (M68K_ADDR[5:3] == 3'b100) LEDDATA <= M68K_DATA[7:0];						// REG_LEDDATA
-		if (M68K_ADDR[5:3] == 3'b101) REG_RTCCTRL <= M68K_DATA[2:0];				// REG_RTCCTRL
+		if (M68K_ADDR[5:3] == 3'b010) SLOTS <= M68K_DATA[2:0];			// REG_SLOT
+		if (M68K_ADDR[5:3] == 3'b011) LEDLATCH <= M68K_DATA[5:3];		// REG_LEDLATCHES
+		if (M68K_ADDR[5:3] == 3'b100) LEDDATA <= M68K_DATA[7:0];			// REG_LEDDATA
+		if (M68K_ADDR[5:3] == 3'b101) REG_RTCCTRL <= M68K_DATA[2:0];	// REG_RTCCTRL
 	end
 	
 	assign EL_OUT = {LEDLATCH[0], LEDDATA[2:0]};
 	assign LED_OUT1 = {LEDLATCH[1], LEDDATA};
 	assign LED_OUT2 = {LEDLATCH[2], LEDDATA};
 	
-	assign SLOTS = {SLOTC, SLOTB, SLOTA};
+	assign {SLOTC, SLOTB, SLOTA} = SYSTEMB ? 3'b000 : SLOTS;	// Not sure ?
 	
 	assign SLOT = SYSTEMB ? 6'b111111 :
 						(SLOTS == 3'b000) ? 6'b111110 :
