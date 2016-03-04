@@ -1,5 +1,6 @@
 # NeoGeoFPGA-sim
 Simulation project for a NeoGeo hardware definition. This does not go in a FPGA yet :)
+This is being made possible by neogeodev contributors cited in neogeo_mvs.v and Patreon donators: Valérianne Lagrange, Mahen, Ange Albertini, Cyrille Jouineau, Artemio Urbina, Charly, Alexis Bezverkhyy.
 
 ![Diagram](ngfpgad1.png)
 
