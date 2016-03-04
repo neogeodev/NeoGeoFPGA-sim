@@ -2,7 +2,6 @@
 
 module testbench_1();
 	 
-	wire [22:0] M68K_ADDR;
 	reg MCLK;
 	reg nRESET_BTN;
 
@@ -27,9 +26,7 @@ module testbench_1();
 		VIDEO_R,
 		VIDEO_G,
 		VIDEO_B,
-		VIDEO_SYNC,
-		
-		M68K_ADDR
+		VIDEO_SYNC
 	);
 	
 	initial

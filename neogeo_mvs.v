@@ -1,7 +1,7 @@
 `timescale 10ns/10ns
 
 // SNK NeoGeo FPGA hardware definitions (for simulation only)
-// furrtek, Charles MacDonald, Kyuusaku and neogeodev contributors ~ 2016
+// furrtek, Charles MacDonald, Kyuusaku, freem and neogeodev contributors ~ 2016
 // https://github.com/neogeodev/NeoGeoFPGA-sim
 
 module neogeo_mvs(
@@ -25,13 +25,11 @@ module neogeo_mvs(
 	output [6:0] VIDEO_R,
 	output [6:0] VIDEO_G,
 	output [6:0] VIDEO_B,
-	output VIDEO_SYNC,
-	
-	output [22:0] TB_M68K_ADDR
+	output VIDEO_SYNC
 );
 
-	// TODO: Check watchdog timing
 	// TODO: VPA (NEO-C1)
+	// TODO: Check watchdog timing
 	// TODO: ERROR ! BITWD0 should ignore M68K_ADDR[5] (see writes to NEO-F0)
 	// TODO: MEMCARD zone has a fixed 2 (6 clks) waitstates (NEO-C1)
 
@@ -58,8 +56,6 @@ module neogeo_mvs(
 	wire M68K_RW;
 	wire nDTACK;
 	wire nRESET;
-	
-	assign TB_M68K_ADDR = M68K_ADDR;
 	
 	wire [7:0] SDD;			// Z80 data bus
 	
