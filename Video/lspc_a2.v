@@ -40,7 +40,7 @@ module lspc_a2(
 	reg [31:0] TIMER;
 	
 	// VBL, HBL, COLDBOOT
-	reg [2:0] IRQS;
+	reg [2:0] nIRQS;
 	
 	// VRAM CPU I/O
 	reg VRAMADDR_U;					// Top bit of VRAM address (low/high indicator)
@@ -65,7 +65,7 @@ module lspc_a2(
 	wire [2:0] AACOUNT;
 	
 	autoanim AA(VBLANK, AASPEED, SPR_TILENB_IN, AA_DISABLE, SPR_TILEATTR[4:3], SPR_TILENB_OUT, AACOUNT);
-	irq IRQ(IRQS, IPL0, IPL1);	// nRESETP ?
+	irq IRQ(nIRQS, IPL0, IPL1);	// nRESETP ?
 	videosync VS(CLK_6M, VCOUNT, SYNC);
 	videocycle VC(CLK_24M, PCK1, PCK2, LOAD, nVCS, PBUS);
 	
@@ -86,7 +86,7 @@ module lspc_a2(
 	always @(negedge nLSPWE or negedge nRESET)	// ?
 	begin
 		if (!nRESET)
-			IRQS <= 3'b000;
+			nIRQS <= 3'b111;
 		else
 		begin
 			case (M68K_ADDR[2:0])
@@ -120,8 +120,8 @@ module lspc_a2(
 					TIMERLOAD[15:0] <= M68K_DATA;
 					if (TIMERINT_MODE[0]) TIMER <= TIMERLOAD;
 				end
-				// 3C000C
-				3'b110 : IRQS <= IRQS & ~(M68K_DATA[2:0]);
+				// 3C000C: Interrupt ack
+				3'b110 : nIRQS <= nIRQS | M68K_DATA[2:0];
 				// 3C000E
 				3'b111 : TIMERSTOP <= M68K_DATA[0];
 			endcase
@@ -152,7 +152,7 @@ module lspc_a2(
 				TIMER <= TIMER - 1;
 			else
 			begin
-				if (TIMERINT_EN) IRQS[1] <= 1'b1;	// IRQ2 plz
+				if (TIMERINT_EN) nIRQS[1] <= 1'b0;	// IRQ2 plz
 				if (TIMERINT_MODE[2]) TIMER <= TIMERLOAD;
 			end
 		end

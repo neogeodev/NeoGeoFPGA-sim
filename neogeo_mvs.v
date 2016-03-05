@@ -28,7 +28,11 @@ module neogeo_mvs(
 	output VIDEO_SYNC
 );
 
-	// TODO: VPA (NEO-C1)
+	// Last notes:
+	// ao68000 loads SSP and PC properly, reads word opcode 4EF9 for JMP at C00402
+	// but reads 2x longword after, decoder_micropc is good for JMP but isn't used...
+
+	// TODO: VPA for interrupt ACK (NEO-C1)
 	// TODO: Check watchdog timing
 	// TODO: ERROR ! BITWD0 should ignore M68K_ADDR[5] (see writes to NEO-F0)
 	// TODO: MEMCARD zone has a fixed 2 (6 clks) waitstates (NEO-C1)
@@ -84,6 +88,8 @@ module neogeo_mvs(
 	wire nVEC, SHADOW;
 	wire nBNKB;
 	
+	wire CLK_68KCLK;
+	
 	
 	// NEO-C1:nBITW0(38xxxx-39xxxx) -> NEO-F0:nBITWD0(A7~6=0) -> NEO-D0
 	assign nBITWD0 = nBITW0 & (M68K_ADDR[6] | M68K_ADDR[5]);
@@ -111,17 +117,49 @@ module neogeo_mvs(
 	// xx10 0xxx
 	
 	wire [31:0] AO68KDATA_OUT;
-	wire [31:0] AO68KDATA_IN;
+	reg [31:0] AO68KDATA_IN;
 	
 	wire [31:2] AO68KADDR;
 	
-	assign AO68KDATA_IN = M68K_RW ? {16'b0, M68K_DATA} : 32'bzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz;
-	assign M68K_DATA = (~M68K_RW) ? AO68KDATA_OUT[15:0] : 16'bzzzzzzzzzzzzzzzz;
+	reg M68K_ACCESS_CNT;
+	reg AO68KDTACK;
 	
-	wire CLK_68KCLK;
+	// Damn Wishbone, longword access adapter...
+	always @(negedge CLK_68KCLK)
+	begin
+		if (nAS)
+			M68K_ACCESS_CNT <= 1'b0;
+		else
+		begin
+			if (&{AO68KSIZE[3:0]})
+			begin
+				if (!M68K_ACCESS_CNT)
+				begin
+					AO68KDTACK <= 1'b0;
+					AO68KDATA_IN[31:16] <= M68K_DATA;
+					M68K_ACCESS_CNT <= 1'b1;
+				end
+				else
+				begin
+					AO68KDTACK <= 1'b1;
+					AO68KDATA_IN[15:0] <= M68K_DATA;
+					M68K_ACCESS_CNT <= 1'b0;
+				end
+			end
+			else
+			begin
+				AO68KDTACK <= 1'b1;
+				AO68KDATA_IN <= {16'b0, M68K_DATA};
+			end
+		end
+	end
+	
+	assign M68K_DATA = (~M68K_RW) ? AO68KDATA_OUT[15:0] : 16'bzzzzzzzzzzzzzzzz;
 	
 	assign nRESET = nRESET_BTN;
 	assign nRESETP = nRESET;	// DEBUG TODO
+	
+	wire [3:0] AO68KSIZE;
 	
 	// 1000: 01 UDS
 	// 0100: 01 LDS
@@ -130,16 +168,17 @@ module neogeo_mvs(
 	// 1100: 01 UDS+LDS
 	// 0011: 00 UDS+LDS
 	// 1111: 00 ???
+	assign nUDS = ~(AO68KSIZE[3] | AO68KSIZE[1]);
+	assign nLDS = ~(AO68KSIZE[2] | AO68KSIZE[0]);
 	
-	wire [3:0] AO68KSIZE;
+	assign M68K_ADDR = (&{AO68KSIZE[3:0]}) ? {AO68KADDR[23:2], M68K_ACCESS_CNT} : {AO68KADDR[23:2], &{AO68KSIZE[1:0]}};
 	
-	assign M68K_ADDR = {AO68KADDR[23:2], ~&{AO68KSIZE[1:0]}};
+	// DEBUG
+	wire [23:0] ADDR_BYTE;
+	assign ADDR_BYTE = {M68K_ADDR, nUDS};
 	
 	assign nAS = ~AO68KAS;
 	assign M68K_RW = ~AO68KWE;
-	
-	assign nUDS = ~(AO68KSIZE[3] | AO68KSIZE[1]);
-	assign nLDS = ~(AO68KSIZE[2] | AO68KSIZE[0]);
 	
 	ao68000 AO68K(
 		.CLK_I(CLK_68KCLK),
@@ -149,11 +188,11 @@ module neogeo_mvs(
 		.ADR_O(AO68KADDR),
 		.DAT_O(AO68KDATA_OUT),
 		.DAT_I(AO68KDATA_IN),
-		.SEL_O(AO68KSIZE),			// B1 B2 B3 D4 (0x00000000)
+		.SEL_O(AO68KSIZE),
 		.STB_O(AO68KAS),
 		.WE_O(AO68KWE),
 
-		.ACK_I(1'b1),					// DTACK ?
+		.ACK_I(AO68KDTACK),			// DTACK ?
 		.ERR_I(1'b0),					// See a068000 doc
 		.RTY_I(1'b0),
 
@@ -175,7 +214,7 @@ module neogeo_mvs(
 		* ERR_I: spurious interrupt
 		* RTY_I: autovector
 		*/
-		.ipl_i({1'b0, IPL1, IPL0}),
+		.ipl_i({1'b1, IPL1, IPL0}),
 		.reset_o(),
 		.blocked_o()
 	);

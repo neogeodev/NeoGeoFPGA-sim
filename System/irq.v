@@ -5,13 +5,15 @@ module irq(
 	output IPL0, IPL1
 );
 
+	// VBL, HBL, COLDBOOT
 	// Interrupt priority encoder
-	// xx1: 11
-	// x10: 10
-	// 100: 01
-	// 000: 00
-	assign IPL0 = (IRQ[2] & ~IRQ[1]) + IRQ[0];
-	assign IPL1 = IRQ[1] + IRQ[0];
+	// IRQ  IPL
+	// xx0:  00
+	// x01:  01
+	// 011:  10
+	// 111:  11
+	assign IPL0 = IRQ[0] & (IRQ[2] | ~IRQ[1]);
+	assign IPL1 = IRQ[0] & IRQ[1];
 
 endmodule
 
