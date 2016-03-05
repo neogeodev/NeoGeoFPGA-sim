@@ -93,6 +93,7 @@ module neogeo_mvs(
 	wire nDTACK;
 	wire nRESET;
 	
+	wire [15:0] SDA;
 	wire [7:0] SDD;			// Z80 data bus
 	
 	wire nPAL, nPALWE;
@@ -263,6 +264,10 @@ module neogeo_mvs(
 	
 	syslatch SL(M68K_ADDR[3:0], nBITW1, nRESET,
 				SHADOW, nVEC, nCARDWEN, CARDWENB, nREGEN, nSYSTEM, nSRAMLOCK, nPALBANK);
+	
+	// Todo: connect to cartridge
+	ym2610 YM(CLK_8M, SDD, SDA[1:0], nIRQ, n2610CS, n2610WR, n2610RD, nZ80INT, RAD, RA_L, RA_U, RMPX, nROE,
+					PAD, PA, PMPX, nPOE, ANA, SH1, SH2, OP0, PHI_M);
 	
 	rom_l0 L0(PBUS[15:0], PBUS[23:16], nVCS);
 	rom_sps2 SP(M68K_ADDR[15:0], M68K_DATA, nSROMOE);
