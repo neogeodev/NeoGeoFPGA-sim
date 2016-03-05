@@ -53,6 +53,38 @@ module neogeo_mvs(
 	
 	// Counter/lockout	Ok, check range, neo_i0.v
 	
+	//Reg/Signal        Address                         Value     Mask
+	//REG_P1CNT(RD) =   0b0011000x xxxxxxxx xxxxxxx0    300000    3E0001
+	//nDIPRD0(RD) =     0b0011000x xxxxxxxx xxxxxxx1    300001    3E0001
+	//  REG_DIPSW(RD)   0b0011000x xxxxxxxx 0xxxxxx1    300001    3E0081
+	//  REG_$300081(RD) 0b0011000x xxxxxxxx 1xxxxxx1    300081    3E0081
+	//REG_SOUND(W/RD) = 0b0011001x xxxxxxxx xxxxxxx0    320000    3E0001
+	//nDIPRD1(RD) =     0b0011001x xxxxxxxx xxxxxxx1    320001    3E0001 \ Unique
+	//  REG_STATUS_A    0b0011001x xxxxxxxx xxxxxxx1    320001    3E0001 /
+	//REG_P2CNT(RD) =   0b001101?x xxxxxxxx xxxxxxx0    340000    3C0001 3E0001 ?
+	//REG_STATUS_B(RD)= 0b0011100x xxxxxxxx xxxxxxx0    380000    3E0001
+	//nBITW0(WR) =      0b0011100x xxxxxxxx xxxxxxx1    380001    3E0001
+	//  nBITWD0(WR) =   0b0011100x xxxxxxxx x00xxxx1    380001    3E0061
+	//      REG_POUTPUT 0b0011100x xxxxxxxx x000xxx1    380001    3E0071
+	//      REG_CRDBANK 0b0011100x xxxxxxxx x001xxx1    380011    3E0071
+	//  REG_SLOT        0b0011100x xxxxxxxx ?010xxx1    380021    3E0071 3E00F1 ?
+	//  REG_LEDLATCHES  0b0011100x xxxxxxxx ?011xxx1    380031    3E0071 3E00F1 ?
+	//  REG_LEDDATA     0b0011100x xxxxxxxx ?100xxx1    380041    3E0071 3E00F1 ?
+	//  REG_RTCCTRL     0b0011100x xxxxxxxx 0101xxx1    380051    3E00F1
+	//  REG_$3800D1     0b0011100x xxxxxxxx 1101xxx1    3800D1    3E00F1
+	//  nCUNTOUT =      0b0011100x xxxxxxxx x11x?xx1    380061    3E0061 3E0069 ?
+	//    REG_RESETCC1  0b0011100x xxxxxxxx x1100001    380051    3E0071
+	//    REG_RESETCC2  0b0011100x xxxxxxxx x1100011    380051    3E0071
+	//    REG_RESETCL1  0b0011100x xxxxxxxx x1100101    380051    3E0071
+	//    REG_RESETCL2  0b0011100x xxxxxxxx x1100111    380051    3E0071
+	//    REG_SETCC1    0b0011100x xxxxxxxx x1110001    380051    3E0071
+	//    REG_SETCC2    0b0011100x xxxxxxxx x1110011    380051    3E0071
+	//    REG_SETCL1    0b0011100x xxxxxxxx x1110101    380051    3E0071
+	//    REG_SETCL2    0b0011100x xxxxxxxx x1110111    380051    3E0071
+	//?                 0b0011101x xxxxxxxx xxxxxxx0    3A0000    3E0001
+	//nBITW1(WR) =      0b0011101x xxxxxxxx xxxxxxx1    3A0001    3E0001 (system latch)
+	//nLSPCZONE(W/RD) = 0b0011110x xxxxxxxx xxxxxxxx    3C0000    3E0000
+	
 	wire A22Z;
 	wire A23Z;
 	wire [22:0] M68K_ADDR;	// Really A23~A1
@@ -89,32 +121,19 @@ module neogeo_mvs(
 	wire nBNKB;
 	
 	wire CLK_68KCLK;
-	
-	
-	// NEO-C1:nBITW0(38xxxx-39xxxx) -> NEO-F0:nBITWD0(A7~6=0) -> NEO-D0
-	assign nBITWD0 = nBITW0 & (M68K_ADDR[6] | M68K_ADDR[5]);
-	
-	//                     7654 3210
-	// NEO-D0 (nBITWD0)
-	// 0000 0000 0000 0000 000x 0000
-	
-	// NEO-F0
-	// 0000 0000 0000 0000 0101 xxxx
-	// 0000 0000 0000 0000 0100 xxxx
-	// 0000 0000 0000 0000 0011 xxxx
-	// 0000 0000 0000 0000 0010 xxxx
-	// 0000 0000 0000 0000 0001 xxxx
-	// 0000 0000 0000 0000 1101 xxxx ?
-	
 	wire [5:0] SLOT;
 	
 	// Implementation specific (unique slot)
 	assign nSLOTCS = SLOT[0];
 	
+	// ?
+	assign nBITWD0 = nBITW0 & (M68K_ADDR[5] | M68K_ADDR[4]);
+	
 	// For NEO-I0:
-	assign nCOUNTOUT = &{nBITW0, ~M68K_ADDR[5], M68K_ADDR[4:3]};	// nBITW0 or nBITWD0 ?
-	// NEO-F0: A6~4 (5~3)
-	// xx10 0xxx
+	assign nCOUNTOUT = |{nBITW0, ~M68K_ADDR[5:4]};
+	
+	assign nRESET = nRESET_BTN;
+	assign nRESETP = nRESET;	// DEBUG TODO
 	
 	wire [31:0] AO68KDATA_OUT;
 	reg [31:0] AO68KDATA_IN;
@@ -155,9 +174,6 @@ module neogeo_mvs(
 	end
 	
 	assign M68K_DATA = (~M68K_RW) ? AO68KDATA_OUT[15:0] : 16'bzzzzzzzzzzzzzzzz;
-	
-	assign nRESET = nRESET_BTN;
-	assign nRESETP = nRESET;	// DEBUG TODO
 	
 	wire [3:0] AO68KSIZE;
 	

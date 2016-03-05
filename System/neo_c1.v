@@ -78,10 +78,10 @@ module neo_c1(
 	assign nCTRL2ZONE = nUDS | ~RW | |{A23Z, A22Z, ~M68K_ADDR[20], ~M68K_ADDR[19], M68K_ADDR[18], ~M68K_ADDR[17]};
 	
 	// 30xxxx 31xxxx ?, odd bytes read
-	assign nDIPRD0 = nLDS | ~RW | |{A23Z, A22Z, ~M68K_ADDR[20], ~M68K_ADDR[19], M68K_ADDR[18], M68K_ADDR[17], M68K_ADDR[17]};
+	assign nDIPRD0 = nLDS | ~RW | |{A23Z, A22Z, ~M68K_ADDR[20], ~M68K_ADDR[19], M68K_ADDR[18], M68K_ADDR[17], M68K_ADDR[16]};
 	
 	// 32xxxx 33xxxx ?, odd bytes read
-	assign nDIPRD1 = nLDS | ~RW | |{A23Z, A22Z, ~M68K_ADDR[20], ~M68K_ADDR[19], M68K_ADDR[18], M68K_ADDR[17], ~M68K_ADDR[17]};
+	assign nDIPRD1 = nLDS | ~RW | |{A23Z, A22Z, ~M68K_ADDR[20], ~M68K_ADDR[19], M68K_ADDR[18], M68K_ADDR[17], ~M68K_ADDR[16]};
 	
 	// 38xxxx 39xxxx odd bytes write ?
 	assign nBITW0 = nLDS | RW | |{A23Z, A22Z, ~M68K_ADDR[20], ~M68K_ADDR[19], ~M68K_ADDR[18], M68K_ADDR[17], M68K_ADDR[16]};
@@ -89,8 +89,8 @@ module neo_c1(
 	// 3Axxxx 3Bxxxx odd bytes write ?
 	assign nBITW1 = nLDS | RW | |{A23Z, A22Z, ~M68K_ADDR[20], ~M68K_ADDR[19], ~M68K_ADDR[18], M68K_ADDR[17], ~M68K_ADDR[16]};
 	
-	// 38xxxx 3Bxxxx even bytes read
-	assign nSTATUSBZONE = nUDS | ~RW | |{A23Z, A22Z, ~M68K_ADDR[20], ~M68K_ADDR[19], ~M68K_ADDR[18], M68K_ADDR[17]};
+	// 38xxxx 39xxxx even bytes read
+	assign nSTATUSBZONE = nUDS | ~RW | |{A23Z, A22Z, ~M68K_ADDR[20], ~M68K_ADDR[19], ~M68K_ADDR[18], M68K_ADDR[17], M68K_ADDR[16]};
 	
 	// 3Cxxxx 3Dxxxx not sure if M68K_ADDR[16] is used (up to 3DFFFF only ?)
 	assign nLSPCZONE = |{A23Z, A22Z, ~M68K_ADDR[20], ~M68K_ADDR[19], ~M68K_ADDR[18], ~M68K_ADDR[17]};
