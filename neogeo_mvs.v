@@ -83,7 +83,7 @@ module neogeo_mvs(
 	//    REG_SETCL2    0b0011100x xxxxxxxx x1110111    380051    3E0071
 	//?                 0b0011101x xxxxxxxx xxxxxxx0    3A0000    3E0001
 	//nBITW1(WR) =      0b0011101x xxxxxxxx xxxxxxx1    3A0001    3E0001 (system latch)
-	//nLSPCZONE(W/RD) = 0b0011110x xxxxxxxx xxxxxxxx    3C0000    3E0000
+	//nLSPCZONE(W/RD) = 0b0011110x xxxxxxxx xxxxxxx0    3C0000    3E0001
 	
 	wire A22Z;
 	wire A23Z;

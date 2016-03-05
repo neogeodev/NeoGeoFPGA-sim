@@ -24,125 +24,115 @@ module neo_c1(
 	input nROMWAIT, nPWAIT0, nPWAIT1, nPDTACK,
 	input [7:0] SDD,
 	input CLK_68KCLK,
-	output reg nDTACK,
+	output nDTACK,
 	output nBITW0, nBITW1, nDIPRD0, nDIPRD1,
 	output nPAL
 );
 
 	parameter CONSOLE_MODE = 1;	// MVS (IN27 of NEO-C1)
 
-	wire nSTATUSB;
+	wire nIO_ZONE;			// Internal
+	wire nC1REGS_ZONE;	// Internal
+	wire nROM_ZONE;		// Internal
+	wire nWRAM_ZONE;		// Internal
+	wire nPORT_ZONE;		// Internal
+	wire nCTRL1_ZONE;		// Internal
+	wire nICOM_ZONE;		// Internal
+	wire nCTRL2_ZONE;		// Internal
+	wire nSTATUSB_ZONE;	// Internal
+	wire nLSPC_ZONE;		// Internal
+	wire nCARD_ZONE;		// Internal
+	wire nSROM_ZONE;		// Internal
+	wire nSRAM_ZONE;		// Internal
+	wire nWORDACCESS;		// Internal
 	
-	reg [7:0] SDD_LATCH;				// Z80 data latch
-
-	// REG_P1CNT
-	assign M68K_DATA = (~nCTRL1ZONE) ? P1_IN[7:0] : 8'bzzzzzzzz;
-	// REG_P2CNT
-	assign M68K_DATA = (~nCTRL2ZONE) ? P2_IN[7:0] : 8'bzzzzzzzz;
+	c1_regs C1REGS(nCTRL1_ZONE, nCTRL2_ZONE, nSTATUSB_ZONE, nICOM_ZONE, CONSOLE_MODE, nWP, nCD2, nCD1,
+					P2_IN, P1_IN, RW, M68K_DATA);
 	
-	// REG_STATUS_B
-	assign M68K_DATA = (~nSTATUSBZONE) ? {CONSOLE_MODE, nWP, nCD2, nCD1, P2_IN[9:8], P1_IN[9:8]} : 8'bzzzzzzzz;
-	
-	// REG_SOUND Is Z80 data latch really 2 different latches ?
-	assign M68K_DATA = (RW & ~nICOMZONE) ? SDD_LATCH : 8'bzzzzzzzz;
-	always @(RW or nICOMZONE)
-	begin
-		if (~RW & ~nICOMZONE) SDD_LATCH <= M68K_DATA;
-	end
-	
-	// Wait cycle gen
-	always @(posedge CLK_68KCLK)
-	begin
-		// nROMWAIT, nPWAIT0, nPWAIT1, nPDTACK, CLK_68KCLK
-		nDTACK <= 0;	// TODO
-	end
+	c1_wait C1WAIT(CLK_68KCLK, nROMWAIT, nPWAIT0, nPWAIT1, nPDTACK, nDTACK);
 	
 	// Address decoding, is everything in sync with nAS ?
 	
 	// 0xxxxx read/write
-	assign nROMZONE = |{A23Z, A22Z, M68K_ADDR[20], M68K_ADDR[19]};
+	assign nROM_ZONE = |{A23Z, A22Z, M68K_ADDR[20], M68K_ADDR[19]};
 	
 	// 1xxxxx read/write
-	assign nWRAMZONE = |{A23Z, A22Z, M68K_ADDR[20], ~M68K_ADDR[19]};
+	assign nWRAM_ZONE = |{A23Z, A22Z, M68K_ADDR[20], ~M68K_ADDR[19]};
 	
 	// 2xxxxx read/write
-	assign nPORTZONE = |{A23Z, A22Z, ~M68K_ADDR[20], M68K_ADDR[19]};
+	assign nPORT_ZONE = |{A23Z, A22Z, ~M68K_ADDR[20], M68K_ADDR[19]};
 	
-	// 30xxxx 31xxxx even bytes read
-	assign nCTRL1ZONE = nUDS | ~RW | |{A23Z, A22Z, ~M68K_ADDR[20], ~M68K_ADDR[19], M68K_ADDR[18], M68K_ADDR[17], M68K_ADDR[16]};
+	// 3xxxxx read/write
+	assign nIO_ZONE = |{A23Z, A22Z, ~M68K_ADDR[20], ~M68K_ADDR[19]};
+	
+	// 30xxxx 37xxxx even bytes read/write
+	assign nC1REGS_ZONE = nUDS | |{nIO_ZONE, M68K_ADDR[18]};
+	
+	// 30xxxx 31xxxx even bytes read only
+	assign nCTRL1_ZONE = nC1REGS_ZONE | ~RW | |{M68K_ADDR[17], M68K_ADDR[16]};
 	
 	// 32xxxx 33xxxx even bytes read/write
-	assign nICOMZONE = nUDS | |{A23Z, A22Z, ~M68K_ADDR[20], ~M68K_ADDR[19], M68K_ADDR[18], M68K_ADDR[17], ~M68K_ADDR[16]};
+	assign nICOM_ZONE = nC1REGS_ZONE | |{M68K_ADDR[17], ~M68K_ADDR[16]};
 	
-	// 34xxxx 37xxxx even bytes not sure if M68K_ADDR[16] is used (up to 35FFFF only ?)
-	assign nCTRL2ZONE = nUDS | ~RW | |{A23Z, A22Z, ~M68K_ADDR[20], ~M68K_ADDR[19], M68K_ADDR[18], ~M68K_ADDR[17]};
+	// 34xxxx 37xxxx even bytes read only - not sure if M68K_ADDR[16] is used (up to 35FFFF only ?)
+	assign nCTRL2_ZONE = nC1REGS_ZONE | ~RW | |{~M68K_ADDR[17]};
+
+	// 30xxxx 31xxxx ?, odd bytes read only
+	assign nDIPRD0 = nLDS | ~RW | |{nIO_ZONE, M68K_ADDR[18], M68K_ADDR[17], M68K_ADDR[16]};
 	
-	// 30xxxx 31xxxx ?, odd bytes read
-	assign nDIPRD0 = nLDS | ~RW | |{A23Z, A22Z, ~M68K_ADDR[20], ~M68K_ADDR[19], M68K_ADDR[18], M68K_ADDR[17], M68K_ADDR[16]};
+	// 32xxxx 33xxxx ?, odd bytes read only
+	assign nDIPRD1 = nLDS | ~RW | |{nIO_ZONE, M68K_ADDR[18], M68K_ADDR[17], ~M68K_ADDR[16]};
 	
-	// 32xxxx 33xxxx ?, odd bytes read
-	assign nDIPRD1 = nLDS | ~RW | |{A23Z, A22Z, ~M68K_ADDR[20], ~M68K_ADDR[19], M68K_ADDR[18], M68K_ADDR[17], ~M68K_ADDR[16]};
+	// 38xxxx 39xxxx odd bytes write only
+	assign nBITW0 = nLDS | RW | |{nIO_ZONE, ~M68K_ADDR[18], M68K_ADDR[17], M68K_ADDR[16]};
 	
-	// 38xxxx 39xxxx odd bytes write ?
-	assign nBITW0 = nLDS | RW | |{A23Z, A22Z, ~M68K_ADDR[20], ~M68K_ADDR[19], ~M68K_ADDR[18], M68K_ADDR[17], M68K_ADDR[16]};
+	// 3Axxxx 3Bxxxx odd bytes write only
+	assign nBITW1 = nLDS | RW | |{nIO_ZONE, ~M68K_ADDR[18], M68K_ADDR[17], ~M68K_ADDR[16]};
 	
-	// 3Axxxx 3Bxxxx odd bytes write ?
-	assign nBITW1 = nLDS | RW | |{A23Z, A22Z, ~M68K_ADDR[20], ~M68K_ADDR[19], ~M68K_ADDR[18], M68K_ADDR[17], ~M68K_ADDR[16]};
+	// 38xxxx 39xxxx even bytes read only
+	assign nSTATUSB_ZONE = nC1REGS_ZONE | ~RW | |{M68K_ADDR[17], M68K_ADDR[16]};
 	
-	// 38xxxx 39xxxx even bytes read
-	assign nSTATUSBZONE = nUDS | ~RW | |{A23Z, A22Z, ~M68K_ADDR[20], ~M68K_ADDR[19], ~M68K_ADDR[18], M68K_ADDR[17], M68K_ADDR[16]};
-	
-	// 3Cxxxx 3Dxxxx not sure if M68K_ADDR[16] is used (up to 3DFFFF only ?)
-	assign nLSPCZONE = |{A23Z, A22Z, ~M68K_ADDR[20], ~M68K_ADDR[19], ~M68K_ADDR[18], ~M68K_ADDR[17]};
+	// 3Cxxxx 3Dxxxx - not sure if M68K_ADDR[16] is used (up to 3DFFFF only ?)
+	assign nLSPC_ZONE = |{nIO_ZONE, ~M68K_ADDR[18], ~M68K_ADDR[17]};
 	
 	// 4xxxxx 7xxxxx
 	assign nPAL = |{A23Z, ~A22Z};
 	
 	// 8xxxxx Bxxxxx
-	assign nCARDZONE = |{~A23Z, A22Z};
+	assign nCARD_ZONE = |{~A23Z, A22Z};
 	
 	// Cxxxxx Cxxxxx
-	assign nSROMZONE = |{~A23Z, ~A22Z, M68K_ADDR[20], M68K_ADDR[19]};
+	assign nSROM_ZONE = |{~A23Z, ~A22Z, M68K_ADDR[20], M68K_ADDR[19]};
 	
 	// Dxxxxx Dxxxxx ?
-	assign nSRAMZONE = |{~A23Z, ~A22Z, M68K_ADDR[20], ~M68K_ADDR[19]};
+	assign nSRAM_ZONE = |{~A23Z, ~A22Z, M68K_ADDR[20], ~M68K_ADDR[19]};
 
 	assign nWORDACCESS = nLDS | nUDS;
 
-	assign nROMOEL = ~RW | nLDS | nROMZONE;
-	assign nROMOEU = ~RW | nUDS | nROMZONE;
-	assign nPORTOEL = ~RW | nLDS | nPORTZONE;
-	assign nPORTOEU = ~RW | nUDS | nPORTZONE;
-	assign nPORTWEL = RW | nLDS | nPORTZONE;
-	assign nPORTWEU = RW | nUDS | nPORTZONE;
-	assign nPADRS = nPORTZONE;
-	assign nWRL = ~RW | nLDS | nWRAMZONE;
-	assign nWRU = ~RW | nUDS | nWRAMZONE;
-	assign nWWL = RW | nLDS | nWRAMZONE;
-	assign nWWU = RW | nUDS | nWRAMZONE;
-	assign nSROMOEL = ~RW | nLDS | nSROMZONE;
-	assign nSROMOEU = ~RW | nUDS | nSROMZONE;
-	assign nSRAMOEL = ~RW | nLDS | nSRAMZONE;
-	assign nSRAMOEU = ~RW | nUDS | nSRAMZONE;
-	assign nSRAMWEL = RW | nLDS | nSRAMZONE;
-	assign nSRAMWEU = RW | nUDS | nSRAMZONE;
-
-	// assign DIPRD0 = ? // Asks NEO-F0 for dipswitches on D0~7 ?
+	// Outputs:
+	assign nROMOEL = ~RW | nLDS | nROM_ZONE;
+	assign nROMOEU = ~RW | nUDS | nROM_ZONE;
+	assign nPORTOEL = ~RW | nLDS | nPORT_ZONE;
+	assign nPORTOEU = ~RW | nUDS | nPORT_ZONE;
+	assign nPORTWEL = RW | nLDS | nPORT_ZONE;
+	assign nPORTWEU = RW | nUDS | nPORT_ZONE;
+	assign nPADRS = nPORT_ZONE;
+	assign nWRL = ~RW | nLDS | nWRAM_ZONE;
+	assign nWRU = ~RW | nUDS | nWRAM_ZONE;
+	assign nWWL = RW | nLDS | nWRAM_ZONE;
+	assign nWWU = RW | nUDS | nWRAM_ZONE;
+	assign nSROMOEL = ~RW | nLDS | nSROM_ZONE;
+	assign nSROMOEU = ~RW | nUDS | nSROM_ZONE;
+	assign nSRAMOEL = ~RW | nLDS | nSRAM_ZONE;
+	assign nSRAMOEU = ~RW | nUDS | nSRAM_ZONE;
+	assign nSRAMWEL = RW | nLDS | nSRAM_ZONE;
+	assign nSRAMWEU = RW | nUDS | nSRAM_ZONE;
 
 	// Not sure about word access ?
-	assign nLSPOE = RW | nWORDACCESS | nLSPCZONE;
-	assign nLSPWE = ~RW | nWORDACCESS | nLSPCZONE;
-	assign nCRDO = RW | nWORDACCESS | nCARDZONE;
-	assign nCRDW = ~RW | nWORDACCESS | nCARDZONE;
+	assign nLSPOE = RW | nWORDACCESS | nLSPC_ZONE;
+	assign nLSPWE = ~RW | nWORDACCESS | nLSPC_ZONE;
+	assign nCRDO = RW | nWORDACCESS | nCARD_ZONE;
+	assign nCRDW = ~RW | nWORDACCESS | nCARD_ZONE;
 	assign nCRDC = nCRDO & nCRDW;
-
-	// Inter-CPU comm.
-	// To do
-
-	// Inputs
-	// To do
-
-	// Wait states
-	// To do
 
 endmodule
