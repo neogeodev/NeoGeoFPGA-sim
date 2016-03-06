@@ -13,7 +13,7 @@ module palram_u(
 	reg [7:0] RAMDATA[0:8191];
 	
 	initial begin
-		$readmemh("raminit_palu.txt", ROMDATA);
+		$readmemh("raminit_palu.txt", RAMDATA);
 	end
 
 	assign #10 DATA = (nCE & nOE & ~nWE) ? 8'bzzzzzzzz : RAMDATA[ADDR];

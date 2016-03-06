@@ -28,7 +28,10 @@ module cha_board(
 	rom_c1 C1(C_ADDR[17:0], C1DATA);
 	rom_c2 C2(C_ADDR[17:0], C2DATA);
 	rom_s1 S1(S_ADDR[16:0], FIXD);
-	rom_m1 M1(SDA, SDD, nSDROM);
+	
+	// Need ZMC here
+	//rom_m1 M1(SDA, SDD, nSDROM);
+	
 	neo_273 N273(PBUS[19:0], PCK1B, PCK2B, C_LATCH, S_LATCH);
 
 endmodule

@@ -13,7 +13,7 @@ module vram_slow_l(
 	reg [7:0] RAMDATA[0:32767];
 	
 	initial begin
-		$readmemh("raminit_vram_slowl.txt", ROMDATA);
+		$readmemh("raminit_vram_slowl.txt", RAMDATA);
 	end
 
 	assign #12 DATA = (nCE & nOE & ~nWE) ? 8'bzzzzzzzz : RAMDATA[ADDR];

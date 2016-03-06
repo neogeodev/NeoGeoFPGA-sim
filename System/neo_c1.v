@@ -29,7 +29,7 @@ module neo_c1(
 	output nPAL
 );
 
-	parameter CONSOLE_MODE = 1;	// MVS (IN27 of NEO-C1)
+	parameter CONSOLE_MODE = 1'b1;	// MVS (IN27 of NEO-C1)
 
 	wire nIO_ZONE;			// Internal
 	wire nC1REGS_ZONE;	// Internal

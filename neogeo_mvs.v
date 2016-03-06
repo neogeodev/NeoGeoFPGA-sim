@@ -1,4 +1,4 @@
-`timescale 10ns/10ns
+`timescale 1ns/1ns
 
 // SNK NeoGeo FPGA hardware definitions (for simulation only)
 // furrtek, Charles MacDonald, Kyuusaku, freem and neogeodev contributors ~ 2016
@@ -32,10 +32,10 @@ module neogeo_mvs(
 	// ao68000 loads SSP and PC properly, reads word opcode 4EF9 for JMP at C00402
 	// but reads 2x longword after, decoder_micropc is good for JMP but isn't used...
 
+	// TODO: Make a wrapper for ao68000
 	// TODO: VPA for interrupt ACK (NEO-C1)
+	// TODO: MEMCARD zone has a fixed 2 (6 clks) waitstate (NEO-C1)
 	// TODO: Check watchdog timing
-	// TODO: ERROR ! BITWD0 should ignore M68K_ADDR[5] (see writes to NEO-F0)
-	// TODO: MEMCARD zone has a fixed 2 (6 clks) waitstates (NEO-C1)
 
 	// REG_P1CNT		Read ok, check range
 	//	REG_DIPSW		Read ok, Write ok, check range
@@ -124,23 +124,26 @@ module neogeo_mvs(
 	wire CLK_68KCLK;
 	wire [5:0] SLOT;
 	
+	wire [7:0] SDRAD;
+	wire [7:0] SDPAD;
+	wire [11:8] SDPA;
+	wire [23:20] SDRA_U;
+	wire [9:8] SDRA_L;
+	
 	// Implementation specific (unique slot)
 	assign nSLOTCS = SLOT[0];
 	
-	// ?
-	assign nBITWD0 = nBITW0 & (M68K_ADDR[5] | M68K_ADDR[4]);
-	
-	// For NEO-I0:
+	// Are these good ?
+	assign nBITWD0 = |{nBITW0, M68K_ADDR[5:4]};
 	assign nCOUNTOUT = |{nBITW0, ~M68K_ADDR[5:4]};
 	
 	assign nRESET = nRESET_BTN;
-	assign nRESETP = nRESET;	// DEBUG TODO
+	assign nRESETP = nRESET;		// DEBUG TODO
 	
-	wire [31:0] AO68KDATA_OUT;
+	// ao68000 specifics
 	reg [31:0] AO68KDATA_IN;
-	
+	wire [31:0] AO68KDATA_OUT;
 	wire [31:2] AO68KADDR;
-	
 	reg M68K_ACCESS_CNT;
 	reg AO68KDTACK;
 	
@@ -190,7 +193,7 @@ module neogeo_mvs(
 	
 	assign M68K_ADDR = (&{AO68KSIZE[3:0]}) ? {AO68KADDR[23:2], M68K_ACCESS_CNT} : {AO68KADDR[23:2], &{AO68KSIZE[1:0]}};
 	
-	// DEBUG
+	// DEBUG, concat for display in ISim only
 	wire [23:0] ADDR_BYTE;
 	assign ADDR_BYTE = {M68K_ADDR, nUDS};
 	
@@ -209,8 +212,8 @@ module neogeo_mvs(
 		.STB_O(AO68KAS),
 		.WE_O(AO68KWE),
 
-		.ACK_I(AO68KDTACK),			// DTACK ?
-		.ERR_I(1'b0),					// See a068000 doc
+		.ACK_I(AO68KDTACK),
+		.ERR_I(1'b0),					// See ao68000 doc
 		.RTY_I(1'b0),
 
 		// TAG_TYPE: TGC_O
@@ -239,9 +242,11 @@ module neogeo_mvs(
 	clocks CLK(CLK_24M, nRESETP, CLK_12M, CLK_68KCLK, CLK_68KCLKB, CLK_8M, CLK_6MB, CLK_4M, CLK_4MB, CLK_1MB);
 
 	mvs_cart CART(PBUS, CA4, S2H1, PCK1B, PCK2B, CR, FIXD_CART, M68K_ADDR[18:0], M68K_DATA, nROMOE,
-					nPORTOEL, nPORTOEU, nSLOTCS, nROMWAIT, nPWAIT0, nPWAIT1, nPDTACK);
+					nPORTOEL, nPORTOEU, nSLOTCS, nROMWAIT, nPWAIT0, nPWAIT1, nPDTACK, SDRAD, SDRA_L, SDRA_U, SDRMPX,
+					nSDROE, SDPAD, SDPA, SDPMPX, nSDPOE, nSDROM, SDA, SDD);
 
-	neo_zmc2 ZMC2(CLK_12M, EVEN, LOAD, H, CR, GAD, GBD, DOTA, DOTB);
+	neo_zmc2 ZMC2(CLK_12M, EVEN, LOAD, H, CR, GAD, GBD, DOTA, DOTB,
+					1'b0, 2'b00, 8'b00000000, MA);
 	
 	neo_c1 C1(M68K_ADDR[20:16], M68K_DATA[15:8], A22Z, A23Z, nLDS, nUDS, M68K_RW, nAS, nROMOEL, nROMOEU, nPORTOEL, nPORTOEU,
 				nPORTWEL, nPORTWEU, nPORTADRS, nWRL, nWRU, nWWL, nWWU, nSROMOEL, nSROMOEU, nSRAMOEL, nSRAMOEU, nSRAMWEL,
@@ -264,10 +269,9 @@ module neogeo_mvs(
 	
 	syslatch SL(M68K_ADDR[3:0], nBITW1, nRESET,
 				SHADOW, nVEC, nCARDWEN, CARDWENB, nREGEN, nSYSTEM, nSRAMLOCK, nPALBANK);
-	
-	// Todo: connect to cartridge
-	ym2610 YM(CLK_8M, SDD, SDA[1:0], nIRQ, n2610CS, n2610WR, n2610RD, nZ80INT, RAD, RA_L, RA_U, RMPX, nROE,
-					PAD, PA, PMPX, nPOE, ANA, SH1, SH2, OP0, PHI_M);
+				
+	ym2610 YM(CLK_8M, SDD, SDA[1:0], nZ80INT, n2610CS, n2610WR, n2610RD, SDRAD, SDRA_L, SDRA_U, SDRMPX, nSDROE,
+					SDPAD, SDPA, SDPMPX, nSDPOE, ANA, SH1, SH2, OP0, PHI_M);
 	
 	rom_l0 L0(PBUS[15:0], PBUS[23:16], nVCS);
 	rom_sps2 SP(M68K_ADDR[15:0], M68K_DATA, nSROMOE);

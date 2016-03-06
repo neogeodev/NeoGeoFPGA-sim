@@ -13,7 +13,7 @@ module vram_fast_l(
 	reg [7:0] RAMDATA[0:2047];
 	
 	initial begin
-		$readmemh("raminit_vram_fastl.txt", ROMDATA);
+		$readmemh("raminit_vram_fastl.txt", RAMDATA);
 	end
 
 	assign #3 DATA = (nCE & nOE & ~nWE) ? 8'bzzzzzzzz : RAMDATA[ADDR];

@@ -4,6 +4,20 @@ module testbench_1();
 	 
 	reg MCLK;
 	reg nRESET_BTN;
+	
+	wire [2:0] P1_OUT;
+	wire [2:0] P2_OUT;
+	
+	wire [23:0] CDA;
+	wire [15:0] CDD;
+
+	wire [3:0] EL_OUT;
+	wire [8:0] LED_OUT1;
+	wire [8:0] LED_OUT2;
+	
+	wire [6:0] VIDEO_R;
+	wire [6:0] VIDEO_G;
+	wire [6:0] VIDEO_B;
 
 	neogeo_mvs NGMVS(
 		nRESET_BTN,

@@ -10,14 +10,14 @@ module ym2610(
 	input nWR,
 	input nRD,
 	
-	inout [7:0] RAD,
-	output [9:8] RA_L,
-	output [23:20] RA_U,
-	output RMPX, nROE,
+	inout [7:0] SDRAD,
+	output [9:8] SDRA_L,
+	output [23:20] SDRA_U,
+	output SDRMPX, nSDROE,
 	
-	inout [7:0] PAD,
-	output [11:8] PA,
-	output PMPX, nPOE,
+	inout [7:0] SDPAD,
+	output [11:8] SDPA,
+	output SDPMPX, nSDPOE,
 	
 	output [3:0] ANA,					// How many levels ?
 	
@@ -79,8 +79,8 @@ module ym2610(
 	
 	ym_timer YMTIMER(PHI_S, YMTIMER_TA_LOAD, YMTIMER_TB_LOAD, YMTIMER_CONFIG, nIRQ);
 	ym_ssg YMSSG(PHI_S, ANA);
-	ym_fm YMFM(PHI_S);
-	ym_pcma YMPCMA(PHI_S, RAD, RA_L, RA_U, RMPX, nROE);
-	ym_pcmb YMPCMB(PHI_S, PAD, PA, PMPX, nPOE);
+	//ym_fm YMFM(PHI_S);
+	ym_pcma YMPCMA(PHI_S, SDRAD, SDRA_L, SDRA_U, SDRMPX, nSDROE);
+	ym_pcmb YMPCMB(PHI_S, SDPAD, SDPA, SDPMPX, nSDPOE);
 
 endmodule
