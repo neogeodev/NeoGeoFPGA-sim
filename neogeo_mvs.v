@@ -275,8 +275,8 @@ module neogeo_mvs(
 	
 	memcard MC(CDA, CDD, nCRDC, nCRDO, CARD_PIN_nWE, CARD_PIN_nREG, nCD1, nCD2, nWP);
 
-	palram PRAML({PALBNK, PA}, PC[7:0], nPALWE, 1'b0, 1'b0);
-	palram PRAMU({PALBNK, PA}, PC[15:8], nPALWE, 1'b0, 1'b0);
+	palram_l PRAML({PALBNK, PA}, PC[7:0], nPALWE, 1'b0, 1'b0);
+	palram_u PRAMU({PALBNK, PA}, PC[15:8], nPALWE, 1'b0, 1'b0);
 	
 	videout VOUT(CLK_6MB, nBNKB, SHADOW, PC[15:0], VIDEO_R, VIDEO_G, VIDEO_B);
 	

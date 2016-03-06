@@ -5,23 +5,23 @@ module testbench_1();
 	reg MCLK;
 	reg nRESET_BTN;
 
-	neogeo_mvs NG(
+	neogeo_mvs NGMVS(
 		nRESET_BTN,
-		1'b1,				// TEST_BTN
+		1'b1,					// TEST_BTN
 		MCLK,
-		8'b11111111,	// DIPSW
+		8'b11111111,		// DIPSW
 		
-		10'b1111111111,
-		10'b1111111111,
+		10'b1111111111,	// P1 in
+		10'b1111111111,	// P2 in
 		P1_OUT,
 		P2_OUT,
 		
-		CDA,			// Memcard address
-		CDD,			// Memcard data
+		CDA,					// Memcard address
+		CDD,					// Memcard data
 		
-		EL_OUT,			// Clock, 3x data
-		LED_OUT1,		// Clock, 8x data
-		LED_OUT2,		// Clock, 8x data
+		EL_OUT,				// Cab stuff
+		LED_OUT1,
+		LED_OUT2,
 		
 		VIDEO_R,
 		VIDEO_G,

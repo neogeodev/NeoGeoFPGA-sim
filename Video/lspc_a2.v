@@ -170,15 +170,16 @@ module lspc_a2(
 		CLKDIV <= CLKDIV + 1;
 	end
 	
-	// VRAM
+	// -------------------------------- VRAM --------------------------------
+	
 	wire [14:0] B;		// Low VRAM address
 	wire [10:0] C;		// High VRAM address
 	wire [15:0] E;		// Low VRAM data
 	wire [15:0] F;		// High VRAM data
 
-	vram_l VRAMLL(B, E[7:0], nBWE, nBOE, 1'b0);
-	vram_l VRAMLU(B, E[15:8], nBWE, nBOE, 1'b0);
-	vram_u VRAMUL(C, F[7:0], nCWE, 1'b0, 1'b0);
-	vram_u VRAMUU(C, F[15:8], nCWE, 1'b0, 1'b0);
+	vram_fast_u VRAMUU(C, F[15:8], nCWE, 1'b0, 1'b0);
+	vram_fast_l VRAMUL(C, F[7:0], nCWE, 1'b0, 1'b0);
+	vram_slow_u VRAMLU(B, E[15:8], nBWE, nBOE, 1'b0);
+	vram_slow_l VRAMLL(B, E[7:0], nBWE, nBOE, 1'b0);
 	
 endmodule

@@ -2,7 +2,7 @@
 
 // 120ns 32768*8bit RAM
 
-module vram_l(
+module vram_slow_l(
 	input [14:0] ADDR,
 	inout [7:0] DATA,
 	input nWE,
@@ -11,11 +11,15 @@ module vram_l(
 );
 
 	reg [7:0] RAMDATA[0:32767];
+	
+	initial begin
+		$readmemh("raminit_vram_slowl.txt", ROMDATA);
+	end
 
 	assign #12 DATA = (nCE & nOE & ~nWE) ? 8'bzzzzzzzz : RAMDATA[ADDR];
 
 	always @(nCE or nWE)
 	  if (!(nCE & nWE))
-		 #5 RAMDATA[ADDR] = DATA;
+		 #5 RAMDATA[ADDR] <= DATA;
 
 endmodule
