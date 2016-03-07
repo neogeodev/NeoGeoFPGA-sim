@@ -21,9 +21,7 @@ module testbench_1();
 
 	neogeo_mvs NGMVS(
 		nRESET_BTN,
-		1'b1,					// TEST_BTN
 		MCLK,
-		8'b11111111,		// DIPSW
 		
 		10'b1111111111,	// P1 in
 		10'b1111111111,	// P2 in
@@ -33,6 +31,8 @@ module testbench_1();
 		CDA,					// Memcard address
 		CDD,					// Memcard data
 		
+		1'b1,					// TEST_BTN
+		8'b11111111,		// DIPSW
 		EL_OUT,				// Cab stuff
 		LED_OUT1,
 		LED_OUT2,

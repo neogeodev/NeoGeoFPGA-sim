@@ -8,7 +8,7 @@ module neo_f0(
 	input [6:3] M68K_ADDR,
 	inout [7:0] M68K_DATA,
 	input SYSTEMB,
-	output [5:0] SLOT,
+	output [5:0] nSLOT,
 	output SLOTA, SLOTB, SLOTC,
 	output [3:0] EL_OUT,
 	output [8:0] LED_OUT1,
@@ -43,7 +43,7 @@ module neo_f0(
 	
 	assign {SLOTC, SLOTB, SLOTA} = SYSTEMB ? 3'b000 : SLOTS;	// Not sure ?
 	
-	assign SLOT = SYSTEMB ? 6'b111111 :
+	assign nSLOT = SYSTEMB ? 6'b111111 :
 						(SLOTS == 3'b000) ? 6'b111110 :
 						(SLOTS == 3'b001) ? 6'b111101 :
 						(SLOTS == 3'b010) ? 6'b111011 :

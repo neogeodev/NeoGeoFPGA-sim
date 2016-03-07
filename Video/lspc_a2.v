@@ -31,10 +31,8 @@ module lspc_a2(
 
 	assign CLK_24MB = ~CLK_24M;
 	
-	wire [15:0] SPR_TILEATTR;
-	assign SPR_TILEATTR = E;
-	
 	wire [8:0] VCOUNT;
+	wire [8:0] HCOUNT;
 	
 	reg [31:0] TIMERLOAD;
 	reg [31:0] TIMER;
@@ -43,14 +41,14 @@ module lspc_a2(
 	reg [2:0] nIRQS;
 	
 	// VRAM CPU I/O
-	reg VRAMADDR_U;					// Top bit of VRAM address (low/high indicator)
-	reg [14:0] VRAMADDR_L;
-	reg [15:0] VRAM_READ_BUFFER;	// Are those two the same ?
-	reg [15:0] VRAM_WRITE_BUFFER;
-	wire [15:0] VRAMADDR;
-	assign VRAMADDR = {VRAMADDR_U, VRAMADDR_L};
+	reg CPU_PENDING;
+	reg CPU_RW;
+	reg CPU_VRAM_ZONE;						// Top bit of VRAM address (low/high indicator)
+	reg [14:0] CPU_VRAM_ADDR;
+	wire [15:0] CPU_VRAM_READ_BUFFER;	// Are those two the same ?
+	reg [15:0] CPU_VRAM_WRITE_BUFFER;
 	
-	// Config, write only
+	// Config, write only. Is this actually 15 bit only ?
 	reg [15:0] REG_VRAMMOD;
 	// REG_LSPCMODE:
 	reg [7:0] AASPEED;
@@ -60,14 +58,60 @@ module lspc_a2(
 	
 	reg TIMERSTOP;
 	
-	wire [19:0] SPR_TILENB_OUT;
-	wire [19:0] SPR_TILENB_IN;
+	wire [19:0] SPR_TILENB_OUT;		// SPR_ATTR_TILENB after AA
 	wire [2:0] AACOUNT;
+	wire VBLANK;
 	
-	autoanim AA(VBLANK, AASPEED, SPR_TILENB_IN, AA_DISABLE, SPR_TILEATTR[4:3], SPR_TILENB_OUT, AACOUNT);
-	irq IRQ(nIRQS, IPL0, IPL1);	// nRESETP ?
-	videosync VS(CLK_6M, VCOUNT, SYNC);
-	videocycle VC(CLK_24M, PCK1, PCK2, LOAD, nVCS, PBUS);
+	// This goes in fast_cycle:
+	reg [11:0] SPR_ATTR_SHRINK;
+	reg [8:0] SPR_ATTR_YPOS;
+	reg SPR_ATTR_STICKY;
+	reg [5:0] SPR_ATTR_SIZE;			// 4 ?
+	reg [8:0] SPR_ATTR_XPOS;
+	
+	wire [1:0] SPR_ATTR_AA;
+	
+	reg [3:0] SPR_PIXELCNT;
+	wire WR_PIXEL;
+	
+	wire [7:0] L0_DATA;
+	
+	irq IRQ(nIRQS, IPL0, IPL1);		// nRESETP ?
+	videosync VS(CLK_6M, VCOUNT, HCOUNT, VBLANK, SYNC);
+	
+	wire [8:0] SPR_NB;
+	wire [4:0] SPR_IDX;
+	wire [7:0] SPR_TILEPAL;
+	wire [1:0] SPR_TILEAA;
+	wire [1:0] SPR_TILEFLIP;
+	wire [19:0] SPR_TILENB;
+	
+	wire [11:0] FIX_TILENB;
+	wire [3:0] FIX_TILEPAL;
+	
+	wire [16:0] FIX_ADDR;
+	wire [24:0] SPR_ADDR;
+	
+	// 6 MHz = 166ns > 120ns
+	slow_cycle SCY(CLK_6M, HCOUNT[8:3], VCOUNT[7:3], SPR_NB, SPR_IDX,	SPR_TILENB, SPR_TILEPAL,
+					SPR_TILEAA, SPR_TILEFLIP, FIX_TILENB, FIX_TILEPAL,
+					CPU_VRAM_ADDR, CPU_VRAM_READ_BUFFER, CPU_VRAM_WRITE_BUFFER, CPU_PENDING, CPU_VRAM_ZONE, CPU_RW);
+	
+	// 24 MHz = 41ns > 35ns
+	// This needs to give SPR_NB, SPR_IDX, SPR_XPOS, L0_ADDR
+	// This needs L0_DATA
+	fast_cycle FCY(CLK_24M,
+					CPU_VRAM_ADDR[10:0], CPU_VRAM_READ_BUFFER, CPU_VRAM_WRITE_BUFFER, CPU_PENDING, CPU_VRAM_ZONE, CPU_RW);
+	
+	assign FIX_ADDR = {FIX_TILENB, 5'b00000};			// Todo {half, S2H1, line} S2H1:1 then 0, half: 0 then 1
+	assign SPR_ADDR = {SPR_TILENB_OUT, 5'b00000};	// Todo {CA4, line} CA4:1 then 0
+	
+	// This needs SPR_XPOS, L0_ADDR
+	p_cycle PCY(CLK_24M, FIX_ADDR, FIX_TILEPAL, SPR_ADDR, SPR_TILEPAL, SPR_XPOS, L0_ADDR,
+					PCK1, PCK2, LOAD, nVCS, L0_DATA, PBUS);
+	
+	autoanim AA(VBLANK, AASPEED, SPR_TILENB, AA_DISABLE, SPR_ATTR_AA, SPR_TILENB_OUT, AACOUNT);
+	hshrink HSHRINK(SPR_ATTR_SHRINK[11:8], SPR_PIXELCNT, WR_PIXEL);
 	
 	// -------------------------------- Register access --------------------------------
 	
@@ -76,10 +120,10 @@ module lspc_a2(
 	
 	// Read
 	assign M68K_DATA = (nLSPOE | ~nLSPWE) ? 16'bzzzzzzzzzzzzzzzz :
-								(M68K_ADDR[2:0] == 3'b000) ? VRAM_READ_BUFFER :	// 3C0000
-								(M68K_ADDR[2:0] == 3'b001) ? VRAM_READ_BUFFER :	// 3C0002
-								(M68K_ADDR[2:0] == 3'b010) ? REG_VRAMMOD :		// 3C0004
-								(M68K_ADDR[2:0] == 3'b011) ? REG_LSPCMODE :		// 3C0006
+								(M68K_ADDR[2:0] == 3'b000) ? CPU_VRAM_READ_BUFFER :	// 3C0000
+								(M68K_ADDR[2:0] == 3'b001) ? CPU_VRAM_READ_BUFFER :	// 3C0002
+								(M68K_ADDR[2:0] == 3'b010) ? REG_VRAMMOD :				// 3C0004
+								(M68K_ADDR[2:0] == 3'b011) ? REG_LSPCMODE :				// 3C0006
 								16'bzzzzzzzzzzzzzzzz;
 	
 	// Write
@@ -93,14 +137,16 @@ module lspc_a2(
 				// 3C0000
 				3'b000 :
 				begin
-					{VRAMADDR_U, VRAMADDR_L} <= M68K_DATA;
-					//VRAM_READ_BUFFER <= VRAMDATA;		// TODO
+					// Read happens as soon as address is set
+					{CPU_VRAM_ZONE, CPU_VRAM_ADDR} <= M68K_DATA;
+					CPU_PENDING <= 1'b1;
+					CPU_RW <= 1'b1;
 				end
 				// 3C0002
 				3'b001 :
 				begin
-					VRAM_WRITE_BUFFER <= M68K_DATA;
-					VRAMADDR_L <= VRAMADDR_L + REG_VRAMMOD;
+					CPU_VRAM_WRITE_BUFFER <= M68K_DATA;
+					CPU_VRAM_ADDR <= CPU_VRAM_ADDR + REG_VRAMMOD[14:0];	// ?
 				end
 				// 3C0004
 				3'b010 : REG_VRAMMOD <= M68K_DATA;
@@ -169,17 +215,5 @@ module lspc_a2(
 	begin
 		CLKDIV <= CLKDIV + 1;
 	end
-	
-	// -------------------------------- VRAM --------------------------------
-	
-	wire [14:0] B;		// Low VRAM address
-	wire [10:0] C;		// High VRAM address
-	wire [15:0] E;		// Low VRAM data
-	wire [15:0] F;		// High VRAM data
-
-	vram_fast_u VRAMUU(C, F[15:8], nCWE, 1'b0, 1'b0);
-	vram_fast_l VRAMUL(C, F[7:0], nCWE, 1'b0, 1'b0);
-	vram_slow_u VRAMLU(B, E[15:8], nBWE, nBOE, 1'b0);
-	vram_slow_l VRAMLL(B, E[7:0], nBWE, nBOE, 1'b0);
 	
 endmodule

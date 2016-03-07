@@ -8,15 +8,16 @@ module neo_zmc2(
 	input H,
 	input [31:0] CR,
 	output [3:0] GAD, GBD,
-	output DOTA, DOTB,
+	output DOTA, DOTB
 	
-	input SDRD0,
+	/*input SDRD0,
 	input [1:0] SDA_L,
 	input [15:8] SDA_U,
-	output [21:11] MA
+	output [21:11] MA*/
 );
 
-	zmc2_zmc ZMC2ZMC(SDRD0, SDA_L, SDA_U, MA);
+	// Not used here
+	//zmc2_zmc ZMC2ZMC(SDRD0, SDA_L, SDA_U, MA);
 	zmc2_dot ZMC2DOT(CLK_12M, EVEN, LOAD, H, CR, GAD, GBD, DOTA, DOTB);
 
 endmodule

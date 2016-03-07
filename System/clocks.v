@@ -17,7 +17,9 @@ module clocks(
 	reg [1:0] CLKDIV_D3;
 	reg [1:0] CLKDIV2;
 	
-	always @(posedge CLK_24M or posedge ~nRESETP)
+	assign RESETP = ~nRESETP;
+	
+	always @(posedge CLK_24M or posedge RESETP)
 	begin
 		if (!nRESETP)
 		begin

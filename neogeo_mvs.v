@@ -5,12 +5,11 @@
 // https://github.com/neogeodev/NeoGeoFPGA-sim
 
 module neogeo_mvs(
-	input nRESET_BTN,
-	input TEST_BTN,				// Todo
 	input CLK_24M,
-	input [7:0] DIPSW,
 	
-	input [9:0] P1_IN,
+	input nRESET_BTN,				// AES
+	
+	input [9:0] P1_IN,			// Joypads
 	input [9:0] P2_IN,
 	output [2:0] P1_OUT,
 	output [2:0] P2_OUT,
@@ -18,6 +17,8 @@ module neogeo_mvs(
 	output [23:0] CDA,			// Memcard address
 	output [15:0] CDD,			// Memcard data
 	
+	input TEST_BTN,				// MVS
+	input [7:0] DIPSW,
 	output [3:0] EL_OUT,			// Clock, 3x data
 	output [8:0] LED_OUT1,		// Clock, 8x data
 	output [8:0] LED_OUT2,		// Clock, 8x data
@@ -32,7 +33,9 @@ module neogeo_mvs(
 	// ao68000 loads SSP and PC properly, reads word opcode 4EF9 for JMP at C00402
 	// but reads 2x longword after, decoder_micropc is good for JMP but isn't used...
 
-	// TODO: Make a wrapper for ao68000
+	// TODO: Z80 controller (NEO-D0)
+	// TODO: Z80 RAM
+	//
 	// TODO: VPA for interrupt ACK (NEO-C1)
 	// TODO: MEMCARD zone has a fixed 2 (6 clks) waitstate (NEO-C1)
 	// TODO: Check watchdog timing
@@ -92,6 +95,7 @@ module neogeo_mvs(
 	wire M68K_RW;
 	wire nDTACK;
 	wire nRESET;
+	wire CLK_68KCLK;
 	
 	wire [15:0] SDA;
 	wire [7:0] SDD;			// Z80 data bus
@@ -104,7 +108,7 @@ module neogeo_mvs(
 	wire [15:0] G;				// SFIX address
 	wire [7:0] FIXD;
 	wire [7:0] FIXD_CART;
-	wire [7:0] FIXD_EMBED;
+	wire [7:0] FIXD_SFIX;
 	wire [11:0] PA;			// Palette RAM address
 	wire [3:0] GAD, GBD;		// Pixel pair
 	wire [23:0] PBUS;
@@ -121,23 +125,22 @@ module neogeo_mvs(
 	wire nVEC, SHADOW;
 	wire nBNKB;
 	
-	wire CLK_68KCLK;
-	wire [5:0] SLOT;
+	wire [5:0] nSLOT;
 	
 	wire [7:0] SDRAD;
-	wire [7:0] SDPAD;
-	wire [11:8] SDPA;
 	wire [23:20] SDRA_U;
 	wire [9:8] SDRA_L;
+	wire [7:0] SDPAD;
+	wire [11:8] SDPA;
 	
 	// Implementation specific (unique slot)
-	assign nSLOTCS = SLOT[0];
+	assign nSLOTCS = nSLOT[0];
 	
 	// Are these good ?
 	assign nBITWD0 = |{nBITW0, M68K_ADDR[5:4]};
 	assign nCOUNTOUT = |{nBITW0, ~M68K_ADDR[5:4]};
 	
-	assign nRESET = nRESET_BTN;
+	assign nRESET = nRESET_BTN;	// DEBUG TODO
 	assign nRESETP = nRESET;		// DEBUG TODO
 	
 	cpu_68k CPU68K(CLK_68KCLK, nRESET, IPL1, IPL0, M68K_ADDR, M68K_DATA, nLDS, nUDS, nAS, M68K_RW);
@@ -148,8 +151,7 @@ module neogeo_mvs(
 					nPORTOEL, nPORTOEU, nSLOTCS, nROMWAIT, nPWAIT0, nPWAIT1, nPDTACK, SDRAD, SDRA_L, SDRA_U, SDRMPX,
 					nSDROE, SDPAD, SDPA, SDPMPX, nSDPOE, nSDROM, SDA, SDD);
 
-	neo_zmc2 ZMC2(CLK_12M, EVEN, LOAD, H, CR, GAD, GBD, DOTA, DOTB,
-					1'b0, 2'b00, 8'b00000000, MA);
+	neo_zmc2 ZMC2(CLK_12M, EVEN, LOAD, H, CR, GAD, GBD, DOTA, DOTB);
 	
 	neo_c1 C1(M68K_ADDR[20:16], M68K_DATA[15:8], A22Z, A23Z, nLDS, nUDS, M68K_RW, nAS, nROMOEL, nROMOEU, nPORTOEL, nPORTOEU,
 				nPORTWEL, nPORTWEU, nPORTADRS, nWRL, nWRU, nWWL, nWWU, nSROMOEL, nSROMOEU, nSRAMOEL, nSRAMOEU, nSRAMWEL,
@@ -158,7 +160,7 @@ module neogeo_mvs(
 				
 	neo_d0 D0(M68K_ADDR[21:0], nBITWD0, M68K_DATA[5:0], CDA, P1_OUT, P2_OUT);
 	
-	neo_f0 F0(nDIPRD0, nDIPRD1, nBITWD0, DIPSW, M68K_ADDR[6:3], M68K_DATA[7:0], SYSTEMB, SLOT, SLOTA, SLOTB, SLOTC,
+	neo_f0 F0(nDIPRD0, nDIPRD1, nBITWD0, DIPSW, M68K_ADDR[6:3], M68K_DATA[7:0], SYSTEMB, nSLOT, SLOTA, SLOTB, SLOTC,
 				EL_OUT, LED_OUT1, LED_OUT2);	
 
 	lspc_a2 LSPC(CLK_24M, nRESET, PBUS, M68K_ADDR[2:0], M68K_DATA, nLSPOE, nLSPWE, DOTA, DOTB, CA4, S2H1,
@@ -178,7 +180,7 @@ module neogeo_mvs(
 	
 	rom_l0 L0(PBUS[15:0], PBUS[23:16], nVCS);
 	rom_sps2 SP(M68K_ADDR[15:0], M68K_DATA, nSROMOE);
-	rom_sfix SFIX({G[15:3], S2H1, G[2:0]}, FIXD_EMBED, nSYSTEM);
+	rom_sfix SFIX({G[15:3], S2H1, G[2:0]}, FIXD_SFIX, nSYSTEM);
 	
 	memcard MC(CDA, CDD, nCRDC, nCRDO, CARD_PIN_nWE, CARD_PIN_nREG, nCD1, nCD2, nWP);
 
@@ -202,8 +204,8 @@ module neogeo_mvs(
 	assign M68K_DATA = (M68K_RW & ~nCRDC) ? CDD : 16'bzzzzzzzzzzzzzzzz;
 	assign CDD = (M68K_RW | nCRDC) ? M68K_DATA : 16'bzzzzzzzzzzzzzzzz;
 	
-	// Good job SNK ! Gates cart FIXD to avoid bus wreck with SFIX
-	assign FIXD = nSYSTEM ? FIXD_EMBED : FIXD_CART;
+	// SFIX / Cart FIX switch
+	assign FIXD = nSYSTEM ? FIXD_SFIX : FIXD_CART;
 	
 	// This is done by NEO-E0:
 	// A = 1 if nVEC == 0 and A == 11000000000000000xxxxxxx

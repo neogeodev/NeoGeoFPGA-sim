@@ -3,12 +3,11 @@
 module videosync(
 	input CLK_6M,
 	output reg [8:0] VCOUNT,	// F8 ~ 1FF
+	output reg [8:0] HCOUNT,	// 0 ~ 17F
+	output reg VBLANK,
 	output SYNC
 );
 
-	reg [8:0] HCOUNT;				// 0 ~ 17F (is this clocked by 24M ?)
-	
-	reg VBLANK;
 	reg VSYNC;
 
 	always @(posedge CLK_6M)
