@@ -19,6 +19,8 @@ Top file is neogeo_mvs.v, currently used testbench is testbench_1.v .
  * neo_273.v : SNK latch chip
 * prog_board.v : MVS cartridge model PROG board (V ROMs, P ROM)
  * rom_p1.v : 68k program ROM
+ * rom_v1.v : Sound ROM
+ * rom_v2.v : Sound ROM
 * mvs_cart.v : Just wires both CHA and PROG boards into a cartridge model
 
 # Memory card model
@@ -27,24 +29,35 @@ Top file is neogeo_mvs.v, currently used testbench is testbench_1.v .
 
 # NeoGeo model
 
-* ao68000.v : AO68000 Motorola 68000 CPU core (https://github.com/alfikpl/ao68000)
+* cpu_68k.v : Wrapper for ao68000, exposing real 68k connections
+ * ao68000.v : ao68000 Motorola 68000 CPU core (https://github.com/alfikpl/ao68000)
 * clocks.v : Clock divider (parts of NEO-D0 and LSPC merged together)
 * neo_zmc2.v : SNK graphics chip (most of it done by Kyuusaku)
+ * zmc2_dot.v : Graphics serializer part
+ * zmc2_zmc.v : Z80 Memory Controller part (will be used in cart)
 * neo_c1.v : SNK address decoding, joypad inputs, system maestro chip
 * neo_d0.v : SNK memory card and joypad outputs chip
 * neo_f0.v : SNK MVS cab I/O chip
 * lspc_a2.v : Where the magic lives
- * videosync.v : Video sync and "ticks" generation
- * videocycle.v : Rendering cycle sequencer
  * irq.v : 68000 IRQ gen/ack
+ * videosync.v : Video sync and "ticks" generator
+ * slow_cycle.v : Slow VRAM access sequencer
+  * vram_slow_l.v : Slow VRAM chip LSBs
+  * vram_slow_u.v : Slow VRAM chip MSBs
+ * fast_cycle.v : Fast VRAM access sequencer
+ *  vram_fast_l.v : Fast VRAM chip LSBs
+ *  vram_fast_u.v : Fast VRAM chip MSBs
+ * p_cycle.v : P bus sequencer
  * autoanim.v : Auto-animation specifics
- * vram_l.v : Slow VRAM chip (2x)
- * vram_u.v : Fast VRAM chip (2x)
+ * hshrink.v : Sprite horizontal shrink logic
 * neo_b1.v : SNK graphics buffer chip
+ * watchdog.v : Watchdog timer part
+ * linebuffer.v : Pixel line buffers (x4)
 * neo_i0.v : SNK MVS cab I/O chip
 * syslatch.v : System latch/register
 * rom_l0.v : Shrink lookup table (L0) ROM
 * rom_sp.v : System program (SP-S2 BIOS) ROM
 * rom_sfix.v : Embeded fix graphics (SFIX) ROM
-* palram.v : Palette RAM chip (2x)
+* palram_l.v : Palette RAM LSB
+* palram_u.v : Palette RAM MSB
 * videout.v : Video output latch
