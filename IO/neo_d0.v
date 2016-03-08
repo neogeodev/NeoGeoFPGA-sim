@@ -1,4 +1,4 @@
-`timescale 10ns/10ns
+`timescale 1ns/1ns
 
 module neo_d0(
 	input [21:0] M68K_ADDR,

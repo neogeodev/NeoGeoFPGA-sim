@@ -1,4 +1,4 @@
-`timescale 10ns/10ns
+`timescale 1ns/1ns
 
 // 30ns (should be 35) 2048*8bit RAM
 

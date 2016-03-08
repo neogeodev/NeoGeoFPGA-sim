@@ -1,4 +1,4 @@
-`timescale 10ns/10ns
+`timescale 1ns/1ns
 
 // 2K memory card (100ns 2048*8bit RAM)
 

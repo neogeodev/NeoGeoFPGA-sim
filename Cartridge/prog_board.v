@@ -1,4 +1,4 @@
-`timescale 10ns/10ns
+`timescale 1ns/1ns
 
 module prog_board(
 	input [18:0] M68K_ADDR,

@@ -1,4 +1,4 @@
-`timescale 10ns/10ns
+`timescale 1ns/1ns
 
 module slow_cycle(
 	input CLK_6M,
@@ -66,11 +66,23 @@ module slow_cycle(
 	// SPR_NB    /xxxxxxx xx-----! [8:0]
 	assign SPRVRAM_ADDR = {SPR_NB, SPR_IDX};
 	
+	// SIMULATION STUFF
+	integer f;
+	
+	initial
+	begin
+		f = $fopen("video_output.txt", "w");
+		#18000000
+		$fclose(f);
+		$stop;
+	end
+	
 	always @(posedge CLK_6M)		// negedge ?
 	begin
 		if (HSYNC)
 		begin
 			CYCLE <= 0;
+			$fwrite(f, "\n");
 		end
 		else
 		begin
@@ -80,6 +92,7 @@ module slow_cycle(
 				begin
 					FIX_ATTR_PAL <= E[15:12];
 					FIX_ATTR_TILENB <= E[11:0];
+					$fwrite(f, "%04X ", FIX_ATTR_TILENB);
 				end
 				0 :
 				begin

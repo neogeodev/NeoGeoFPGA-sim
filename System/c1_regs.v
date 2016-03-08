@@ -1,4 +1,4 @@
-`timescale 10ns/10ns
+`timescale 1ns/1ns
 
 module c1_regs(
 	input nCTRL1ZONE,

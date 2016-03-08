@@ -1,5 +1,5 @@
 // Graphics mux part (CT0) was written by Kyuusaku
-`timescale 10ns/10ns
+`timescale 1ns/1ns
 
 module neo_zmc2(
 	input CLK_12M,
