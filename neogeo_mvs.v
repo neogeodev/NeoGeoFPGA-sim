@@ -133,6 +133,8 @@ module neogeo_mvs(
 	wire [7:0] SDPAD;
 	wire [11:8] SDPA;
 	
+	wire [3:0] ANA;
+	
 	// Implementation specific (unique slot)
 	assign nSLOTCS = nSLOT[0];
 	

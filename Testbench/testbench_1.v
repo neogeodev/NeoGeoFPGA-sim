@@ -1,7 +1,6 @@
 `timescale 1ns / 1ns
 
 module testbench_1();
-	 
 	reg MCLK;
 	reg nRESET_BTN;
 	
@@ -20,8 +19,8 @@ module testbench_1();
 	wire [6:0] VIDEO_B;
 
 	neogeo_mvs NGMVS(
-		nRESET_BTN,
 		MCLK,
+		nRESET_BTN,
 		
 		10'b1111111111,	// P1 in
 		10'b1111111111,	// P2 in
@@ -50,7 +49,7 @@ module testbench_1();
 	end
 	
 	always
-		#42 MCLK = !MCLK;
+		#21 MCLK = !MCLK;
 		
 	initial
 	begin

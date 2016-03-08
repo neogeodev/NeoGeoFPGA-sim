@@ -3,6 +3,7 @@
 module slow_cycle(
 	input CLK_6M,
 	
+	input HSYNC,
 	input [8:3] HCOUNT,
 	input [7:3] VCOUNT,
 	input [8:0] SPR_NB,
@@ -30,8 +31,8 @@ module slow_cycle(
 	wire [14:0] B;		// Low VRAM address
 	wire [15:0] E;		// Low VRAM data
 	
-	wire [13:0] FIXVRAM_ADDR;
-	wire [14:0] SPRVRAM_ADDR;
+	wire [14:0] FIXVRAM_ADDR;
+	wire [13:0] SPRVRAM_ADDR;
 	
 	reg [3:0] SPR_TILENB_U;
 	reg [15:0] SPR_TILENB_L;
@@ -58,6 +59,7 @@ module slow_cycle(
 	// 47,31 = 75FF (NEO-CMC exploits this !)
 	
 	// ((HCOUNT / 8) << 5) | ((VCOUNT & 255) / 8)
+	// 1110HHHHHHVVVVV
 	assign FIXVRAM_ADDR = {4'b1110, HCOUNT[8:3], VCOUNT[7:3]};
 	
 	// SPR_IDX   /------- --xxxxx! [4:0]
@@ -66,30 +68,39 @@ module slow_cycle(
 	
 	always @(posedge CLK_6M)		// negedge ?
 	begin
-		CYCLE <= CYCLE + 1;
-		case (CYCLE)
-			0 :
-			begin
-				FIX_ATTR_PAL <= E[15:12];
-				FIX_ATTR_TILENB <= E[11:0];
-			end
-			1 :
-			begin
-				// CPU access R/W ?
-			end
-			2 :
-			begin
-				SPR_TILENB_L <= E;
-			end
-			3 :
-			begin
-				SPR_ATTR_PAL <= E[15:8];
-				SPR_TILENB_U <= E[7:4];
-				SPR_ATTR_AA <= E[3:2];
-				SPR_ATTR_FLIP <= E[1:0];
-			end
-		endcase
+		if (HSYNC)
+		begin
+			CYCLE <= 0;
+		end
+		else
+		begin
+			CYCLE <= CYCLE + 1;
+			case (CYCLE)
+				3 :
+				begin
+					FIX_ATTR_PAL <= E[15:12];
+					FIX_ATTR_TILENB <= E[11:0];
+				end
+				0 :
+				begin
+					// CPU access R/W ?
+				end
+				1 :
+				begin
+					SPR_TILENB_L <= E;
+				end
+				2 :
+				begin
+					SPR_ATTR_PAL <= E[15:8];
+					SPR_TILENB_U <= E[7:4];
+					SPR_ATTR_AA <= E[3:2];
+					SPR_ATTR_FLIP <= E[1:0];
+				end
+			endcase
+		end
 	end
+	
+	assign nBOE = 1'b0;
 
 	vram_slow_u VRAMLU(B, E[15:8], nBWE, nBOE, 1'b0);
 	vram_slow_l VRAMLL(B, E[7:0], nBWE, nBOE, 1'b0);

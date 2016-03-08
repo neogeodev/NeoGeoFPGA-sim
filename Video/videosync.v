@@ -2,33 +2,44 @@
 
 module videosync(
 	input CLK_6M,
+	input nRESET,
 	output reg [8:0] VCOUNT,	// F8 ~ 1FF
 	output reg [8:0] HCOUNT,	// 0 ~ 17F
 	output reg VBLANK,
-	output SYNC
+	output nVSYNC,
+	output HSYNC
 );
 
-	reg VSYNC;
+	wire RESET;
 
-	always @(posedge CLK_6M)
+	assign RESET = ~nRESET;
+
+	always @(posedge CLK_6M or posedge RESET)
 	begin
-		if (HCOUNT == 9'h17F)
+		if (!nRESET)
 		begin
-			if (VCOUNT == 9'h1FF)
-			begin
-				VCOUNT <= 9'hF8;				// VSSTART	F8:VSync start
-				VSYNC <= 1;
-			end
-			else
-				VCOUNT <= VCOUNT + 1;
-			
-			if (VCOUNT == 9'h100)			// VBEND		100:VBlank end
-				VBLANK <= 0;
-			if (VCOUNT == 9'h1F0)			// VBSTART	1F0:VBlank start
-				VBLANK <= 1;
+			HCOUNT <= 0;
+			VCOUNT <= 0;
 		end
 		else
-			HCOUNT <= HCOUNT + 1;
+		begin
+			if (HCOUNT == 9'h17F)
+			begin
+				if (VCOUNT == 9'h1FF)
+				begin
+					VCOUNT <= 9'hF8;				// VSSTART	F8:VSync start
+				end
+				else
+					VCOUNT <= VCOUNT + 1;
+				
+				if (VCOUNT == 9'h100)			// VBEND		100:VBlank end
+					VBLANK <= 0;
+				if (VCOUNT == 9'h1F0)			// VBSTART	1F0:VBlank start
+					VBLANK <= 1;
+			end
+			else
+				HCOUNT <= HCOUNT + 1;
+		end
 	end
 	
 	// -------------------------------- Unreadable notes follow --------------------------------
@@ -51,8 +62,7 @@ module videosync(
 	assign nVSYNC = ~VCOUNT[8];
 	
 	// Probably wrong:
-	assign HSYNC = &{HCOUNT[4:2]} | |{HCOUNT[8:5]};
-	assign SYNC = nVSYNC ^ HSYNC;
+	assign HSYNC = ~|{HCOUNT[8:5]} & |{~HCOUNT[4:2]};
 	// Stuff happens 14px after HSYNC rises: VSYNC and nBNKB
 	// Not sure about this at all...
 	assign HTRIG = (HSYNC == 42) ? 1 : 0;
@@ -61,5 +71,3 @@ module videosync(
 	end*/
 
 endmodule
-
-

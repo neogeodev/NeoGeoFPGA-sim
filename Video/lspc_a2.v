@@ -77,7 +77,7 @@ module lspc_a2(
 	wire [7:0] L0_DATA;
 	
 	irq IRQ(nIRQS, IPL0, IPL1);		// nRESETP ?
-	videosync VS(CLK_6M, VCOUNT, HCOUNT, VBLANK, SYNC);
+	videosync VS(CLK_6M, nRESET, VCOUNT, HCOUNT, VBLANK, nVSYNC, HSYNC);
 	
 	wire [8:0] SPR_NB;
 	wire [4:0] SPR_IDX;
@@ -92,8 +92,14 @@ module lspc_a2(
 	wire [16:0] FIX_ADDR;
 	wire [24:0] SPR_ADDR;
 	
+	wire [7:0] SPR_XPOS;
+	wire [15:0] L0_ADDR;
+	
+	wire nVSYNC;
+	wire HSYNC;
+	
 	// 6 MHz = 166ns > 120ns
-	slow_cycle SCY(CLK_6M, HCOUNT[8:3], VCOUNT[7:3], SPR_NB, SPR_IDX,	SPR_TILENB, SPR_TILEPAL,
+	slow_cycle SCY(CLK_6M, HSYNC, HCOUNT[8:3], VCOUNT[7:3], SPR_NB, SPR_IDX,	SPR_TILENB, SPR_TILEPAL,
 					SPR_TILEAA, SPR_TILEFLIP, FIX_TILENB, FIX_TILEPAL,
 					CPU_VRAM_ADDR, CPU_VRAM_READ_BUFFER, CPU_VRAM_WRITE_BUFFER, CPU_PENDING, CPU_VRAM_ZONE, CPU_RW);
 	
@@ -107,11 +113,13 @@ module lspc_a2(
 	assign SPR_ADDR = {SPR_TILENB_OUT, 5'b00000};	// Todo {CA4, line} CA4:1 then 0
 	
 	// This needs SPR_XPOS, L0_ADDR
-	p_cycle PCY(CLK_24M, FIX_ADDR, FIX_TILEPAL, SPR_ADDR, SPR_TILEPAL, SPR_XPOS, L0_ADDR,
+	p_cycle PCY(CLK_24M, HSYNC, FIX_ADDR, FIX_TILEPAL, SPR_ADDR, SPR_TILEPAL, SPR_XPOS, L0_ADDR,
 					PCK1, PCK2, LOAD, nVCS, L0_DATA, PBUS);
 	
 	autoanim AA(VBLANK, AASPEED, SPR_TILENB, AA_DISABLE, SPR_ATTR_AA, SPR_TILENB_OUT, AACOUNT);
 	hshrink HSHRINK(SPR_ATTR_SHRINK[11:8], SPR_PIXELCNT, WR_PIXEL);
+	
+	assign SYNC = nVSYNC ^ HSYNC;
 	
 	// -------------------------------- Register access --------------------------------
 	
@@ -213,7 +221,10 @@ module lspc_a2(
 	
 	always @(posedge CLK_24M)
 	begin
-		CLKDIV <= CLKDIV + 1;
+		if (!nRESET)
+			CLKDIV <= 0;
+		else
+			CLKDIV <= CLKDIV + 1;
 	end
 	
 endmodule
