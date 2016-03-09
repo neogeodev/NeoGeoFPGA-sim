@@ -9,7 +9,7 @@ module lspc_a2(
 	input nLSPOE, nLSPWE,
 	input DOTA, DOTB,
 	output CA4, S2H1,
-	output S1H1,
+	output S1H1,						// 3MHz latch signal for FIXD 2 pixels in B1 ?
 	output LOAD, H, EVEN1, EVEN2,
 	output IPL0, IPL1,
 	output CHG,
@@ -24,7 +24,8 @@ module lspc_a2(
 	output CHBL,
 	output nBNKB,
 	output nVCS,
-	output CLK_6M
+	output CLK_8M,
+	output CLK_4M
 );
 
 	parameter VIDEO_MODE = 1;	// PAL
@@ -108,9 +109,18 @@ module lspc_a2(
 	// This needs L0_DATA
 	fast_cycle FCY(CLK_24M,
 					CPU_VRAM_ADDR[10:0], CPU_VRAM_READ_BUFFER, CPU_VRAM_WRITE_BUFFER, CPU_PENDING, CPU_VRAM_ZONE, CPU_RW);
-	
-	assign FIX_ADDR = {FIX_TILENB, 5'b00000};			// Todo {half, S2H1, line} S2H1:1 then 0, half: 0 then 1
+
+	// - -------- ---10000 HCOUNT for first fix address latch would be 4 ?
+	// n nnnnnnnn nnnHHvvv
+	// 6M: PCK2 = 4 pixels
+	// 4: Latch from P, has 2 pixels
+	// 5: Nothing
+	// 6: S2H1 changes, has 2 pixels
+	// 7: Nothing
+	assign FIX_ADDR = {FIX_TILENB, HCOUNT[2:1], VCOUNT[2:0]};
+	assign S2H1 = FIX_ADDR[3];
 	assign SPR_ADDR = {SPR_TILENB_OUT, 5'b00000};	// Todo {CA4, line} CA4:1 then 0
+	assign CA4 = SPR_ADDR[4];
 	
 	// This needs SPR_XPOS, L0_ADDR
 	p_cycle PCY(CLK_24M, HSYNC, FIX_ADDR, FIX_TILEPAL, SPR_ADDR, SPR_TILEPAL, SPR_XPOS, L0_ADDR,
@@ -197,18 +207,32 @@ module lspc_a2(
 	
 	// TIMERINT_MODE[1] is used in vblank !
 	
+	reg [1:0] S1H1_DIV;
+	
+	assign S1H1 = S1H1_DIV[1];
+	
 	// Pixel timer
-	always @(posedge CLK_6M)
+	always @(negedge CLK_6M)	// posedge ? negedge needed for video stuff !
 	begin
-		if (!nTIMERRUN)
+		if (!nRESET)
 		begin
-			if (TIMER)
-				TIMER <= TIMER - 1;
-			else
+			TIMER <= 0;
+			S1H1_DIV <= 0;
+		end
+		else
+		begin
+			if (!nTIMERRUN)
 			begin
-				if (TIMERINT_EN) nIRQS[1] <= 1'b0;	// IRQ2 plz
-				if (TIMERINT_MODE[2]) TIMER <= TIMERLOAD;
+				if (TIMER)
+					TIMER <= TIMER - 1;
+				else
+				begin
+					if (TIMERINT_EN) nIRQS[1] <= 1'b0;	// IRQ2 plz
+					if (TIMERINT_MODE[2]) TIMER <= TIMERLOAD;
+				end
 			end
+			
+			S1H1_DIV <= S1H1_DIV + 1;
 		end
 	end
 	
@@ -216,15 +240,32 @@ module lspc_a2(
 	// -------------------------------- Pixel clock --------------------------------
 	
 	reg [1:0] CLKDIV;
+	reg [1:0] CLKDIV_D3;
+	reg [1:0] CLKDIV2;
 	
-	assign CLK_6M = CLKDIV[1];
+	assign CLK_6M = CLKDIV[1];		// Internal, only 6MB which comes from D0 is used for color latches
+	assign CLK_8M = CLKDIV2[0];
+	assign CLK_4M = CLKDIV2[1];
 	
 	always @(posedge CLK_24M)
 	begin
 		if (!nRESET)
+		begin
 			CLKDIV <= 0;
+			CLKDIV_D3 <= 0;
+			CLKDIV2 <= 0;
+		end
 		else
+		begin
 			CLKDIV <= CLKDIV + 1;
+			if (CLKDIV_D3 == 3)
+			begin
+				CLKDIV_D3 <= 0;
+				CLKDIV2 <= CLKDIV2 + 1;
+			end
+			else
+				CLKDIV_D3 <= CLKDIV_D3 + 1;
+		end
 	end
 	
 endmodule

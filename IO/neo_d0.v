@@ -1,6 +1,13 @@
 `timescale 1ns/1ns
 
 module neo_d0(
+	input CLK_24M,
+	input nRESETP,
+	output CLK_12M,
+	output CLK_68KCLK,
+	output CLK_68KCLKB,
+	output CLK_6MB,
+	output CLK_1MB,
 	input [21:0] M68K_ADDR,
 	input nBITWD0,
 	input [5:0] M68K_DATA,
@@ -8,6 +15,9 @@ module neo_d0(
 	output reg [2:0] P1_OUT,
 	output reg [2:0] P2_OUT
 );
+
+	// Clock divider part
+	clocks CLK(CLK_24M, nRESETP, CLK_12M, CLK_68KCLK, CLK_68KCLKB, CLK_6MB, CLK_1MB);
 
 	// nCARDZONE: 8xxxxx Bxxxxx (3FFFFF) 22 bits
 	// CDA: 24 bits

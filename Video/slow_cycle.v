@@ -92,7 +92,7 @@ module slow_cycle(
 				begin
 					FIX_ATTR_PAL <= E[15:12];
 					FIX_ATTR_TILENB <= E[11:0];
-					$fwrite(f, "%04X ", FIX_ATTR_TILENB);
+					$fwrite(f, "%04X ", E);
 				end
 				0 :
 				begin

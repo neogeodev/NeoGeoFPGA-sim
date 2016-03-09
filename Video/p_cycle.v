@@ -24,7 +24,7 @@ module p_cycle(
 	// 1048576 tiles
 
 	reg [4:0] CYCLE_P;		// Both
-	reg [3:0] CYCLE_PCK;		// Neg
+	wire [3:0] CYCLE_PCK;	// Neg
 	reg [3:0] CYCLE_LOAD;	// Pos
 	
 	reg [23:16] PBUS_U;		// inout
@@ -40,65 +40,122 @@ module p_cycle(
 	
 	// 28px backporch
 	
+	/*
+	Guess work:
+	Logical order of things to render 8 fix pixels:
+	
+	Set low VRAM address in fix map
+		(min 3mclk)
+		Read low VRAM data to get tile #							Get fix palette #
+		Make fix ROM address from fix tile #
+			(delay ?)
+			Put fix ROM address on P bus							!
+				(delay 1mclk)											( 7mclk ) -> fix pal in B1
+				Latch address in 273 with PCK2 (negedge)
+					(min 5mclk, probably 6)
+					Read fix ROM data to get 2 pixels
+					Latch data in B1 with S1H1
+				Switch pixel pair with S2H1
+					(min 5mclk, probably 6)
+					Read fix ROM data to get 2 pixels
+					Latch data in B1 (tile # and palette) with S1H1
+	
+	3+1+6+6 = 16 / 16 :)
+	P bus fix tile to B1 =	min. 6, probably 7
+	P bus fix pal to B1 =	7
+	
+	S ROM read: 3MHz (333.3ns), since 2 pixels per byte
+	Bootleg ROM is 200ns, so at least 5 mclk between address set and read. Is it 6 ?
+	
+                    Prefetch...     Active display...
+					                     v
+	24M          6 7 8 9 A B C D E F 0 1 2 3 4 5 6 7 8 9 A B C D E F 0 1 2 3 4 5 6 7 8 9 A B C D E F
+	
+	On screen:
+	Tile idx                      ...|                               0                               |
+	FixRom addr                   ...|       16      |       24      |       0       |       8       |
+	
+	Realtime:
+	Tile idx         |                               0                               |               1
+	Half             |               0               |
+	FixRom addr      |       16      |       24      |       0       |       8       ...
+	
+	HCOUNT ?         |   0   |   1   |   2   |   3   |   4   |   5   |   6   |   7   |   8   |   9   |
+	Pixel#           |  -2   |  -1   |   0   |   1   |   2   |   3   |   4   |   5   |   6   |   7   |
+	6MB              |___|'''|___|'''|___|'''|___|'''|___|'''|___|'''|___|'''|___|'''|___|'''|___|'''| (posedge)
+	6M               |'''|___|'''|___|'''|___|'''|___|'''|___|'''|___|'''|___|'''|___|'''|___|'''|___|
+	S1H1(B1LATCH)    ____________|'''''''''''''''|_______________|'''''''''''''''|___________________| (posedge)
+	FIXD             ////////////    ////////////    ////////////    ////////////    ////////////
+	S2H1(ADDR)       |       0       |       1       |       0       |       1       |       0       |
+	PCK2             |_____________|'|_____________________________|'|_____________________________|'| (negedge)
+	FIXADDR                      |||||||                         |||||||
+                    ?               ?               ?               ?               ?               ?
+	
+	If HCOUNT=0 on active display start:
+		S2H1 = HCOUNT[1]; (ok)
+		S1H1 = div2 from negedge of 6M ?
+	*/
+	
+	assign CYCLE_PCK = CYCLE_P[4:1];
+	
 	always @(posedge CLK_24M or posedge nCLK_24M)
 	begin
 		if (HSYNC)
 		begin
 			CYCLE_P <= 0;
 			CYCLE_LOAD <= 0;
-			CYCLE_PCK <= 0;
 		end
 		else
 		begin
 			CYCLE_P <= CYCLE_P + 1;
 			if (CLK_24M)
 				CYCLE_LOAD <= CYCLE_LOAD + 1;		// Pos
-			else
-				CYCLE_PCK <= CYCLE_PCK + 1;		// Neg
+			//else
+			//	CYCLE_PCK <= CYCLE_PCK + 1;		// Neg
 			
 			// Can nVCS be assigned from CYCLE_L instead ?
 			if (CYCLE_LOAD == 9) nVCS <= 1'b0;
 			if (CYCLE_LOAD == 14) nVCS <= 1'b1;
 			
 			case (CYCLE_P)
-				0, 1, 2 :
+				31, 0, 1 :
 				begin
 					// FIXT
 					PBUS_L <= {FIX_ADDR[4], FIX_ADDR[2:0], FIX_ADDR[16:5]};
 					PBUS_U <= 8'b00000000;			// z?
 					//S2H1 <= FIX_ADDR[3];
 				end
-				3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13:
+				2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12:
 				begin
 					// FF0000
 					PBUS_L <= 16'b0000000000000000;
 					PBUS_U <= 8'b11111111;			// Probably z
 				end
-				14, 15:
+				13, 14:
 				begin
 					// FP
 					PBUS_L <= 16'b0000000000000000;
 					PBUS_U <= {4'b0000, FIX_PAL};
 				end
-				16, 17, 18:
+				15, 16, 17:
 				begin
 					// SPRT
 					PBUS_L <= SPR_ADDR[20:5];
 					PBUS_U <= {SPR_ADDR[24:21], SPR_ADDR[3:0]};
 					//CA4 <= SPR_ADDR[4];
 				end
-				19, 20, 21, 22, 23, 24, 25, 26, 27, 28:
+				18, 19, 20, 21, 22, 23, 24, 25, 26, 27:
 				begin
 					// L0
 					PBUS_L <= L0_ADDR;
 					PBUS_U <= 8'bzzzzzzzz;
 				end
-				29:
+				28:
 				begin
 					// Special case, so probably wrong. Read from L0
 					L0_DATA <= PBUS_U;
 				end
-				30, 31:
+				39, 30:
 				begin
 					// SP
 					PBUS_L <= {SPR_XPOS, 8'b00000000};
