@@ -44,21 +44,32 @@ module p_cycle(
 	Guess work:
 	Logical order of things to render 8 fix pixels:
 	
+	             v                               v                               v
+	             00112233445566778899AABBCCDDEEFF00112233445566778899AABBCCDDEEFF00112233445566778899AABBCCDDEEFF
+	MCLK:        .'.'.'.'.'.'.'.'.'.'.'.'.'.'.'.'.'.'.'.'.'.'.'.'.'.'.'.'.'.'.'.'.'.'.'.'.'.'.'.'.'.'.'.'.'.'.'.'
+	Slow VRAM:   |FIXMAP |...    |...    |...    |FIXMAP |...    |...    |...    |FIXMAP |...    |...    |...
+	Read VRAM:   ______||______??______??______??______||______??______??______??______||______??______??______??
+	P bus:             ###-----------FP                ###-----------FP                ###-----------FP
+	Latch:       ________|_______________________________|_______________________________|_______________________
+	S2H1 change: ________|_______________|_______________|_______________|_______________|_______________|_______
+	                     '-----------,                   '-----------,                   '-----------,
+	B1 latch:    ____|_______________|_______________|_______________|_______________|_______________|___________
+	(B1 latch is >> by mclk/2 ?)
+	
 	Set low VRAM address in fix map
 		(min 3mclk)
 		Read low VRAM data to get tile #							Get fix palette #
 		Make fix ROM address from fix tile #
-			(delay ?)
 			Put fix ROM address on P bus							!
 				(delay 1mclk)											( 7mclk ) -> fix pal in B1
 				Latch address in 273 with PCK2 (negedge)
 					(min 5mclk, probably 6)
 					Read fix ROM data to get 2 pixels
-					Latch data in B1 with S1H1
-				Switch pixel pair with S2H1
+					Latch data in B1 (tile # and palette) with S1H1
+		ASYNC:(Switch pixel pair with S2H1
 					(min 5mclk, probably 6)
 					Read fix ROM data to get 2 pixels
-					Latch data in B1 (tile # and palette) with S1H1
+					Latch data in B1 (tile # and palette) with S1H1)
 	
 	3+1+6+6 = 16 / 16 :)
 	P bus fix tile to B1 =	min. 6, probably 7
