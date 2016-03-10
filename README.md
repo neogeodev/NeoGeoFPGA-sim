@@ -45,8 +45,8 @@ Top file is neogeo_mvs.v, currently used testbench is testbench_1.v .
   * vram_slow_l.v : Slow VRAM chip LSBs
   * vram_slow_u.v : Slow VRAM chip MSBs
  * fast_cycle.v : Fast VRAM access sequencer
- *  vram_fast_l.v : Fast VRAM chip LSBs
- *  vram_fast_u.v : Fast VRAM chip MSBs
+  * vram_fast_l.v : Fast VRAM chip LSBs
+  * vram_fast_u.v : Fast VRAM chip MSBs
  * p_cycle.v : P bus sequencer
  * autoanim.v : Auto-animation specifics
  * hshrink.v : Sprite horizontal shrink logic
