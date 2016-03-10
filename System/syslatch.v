@@ -4,10 +4,13 @@ module syslatch(
 	input [3:0] M68K_ADDR,
 	input nBITW1,
 	input nRESET,
-	output SHADOW, nVEC, nCARDWEN, CARDWENB, nREGEN, nSYSTEM, nSRAMLOCK, nPALBANK
+	output SHADOW, nVEC, nCARDWEN, CARDWENB, nREGEN, nSYSTEM, nSRAMLOCK, PALBNK
 );
 
 	reg [7:0] SLATCH;
+	
+	// Todo: debug
+	assign PALBNK = 1'b0;
 	
 	assign SHADOW = SLATCH[7];
 	assign nVEC = SLATCH[6];
@@ -16,7 +19,7 @@ module syslatch(
 	assign nREGEN = SLATCH[3];
 	assign nSYSTEM = SLATCH[2];
 	assign nSRAMLOCK = SLATCH[1];
-	assign nPALBANK = SLATCH[0];
+	//assign PALBNK = SLATCH[0];
 	
 	// System latch
 	always @(M68K_ADDR[3:0] or nBITW1 or nRESET)

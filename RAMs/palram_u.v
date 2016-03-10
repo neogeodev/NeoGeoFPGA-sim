@@ -16,10 +16,10 @@ module palram_u(
 		$readmemh("raminit_palu.txt", RAMDATA);
 	end
 
-	assign #10 DATA = (nCE & nOE & ~nWE) ? 8'bzzzzzzzz : RAMDATA[ADDR];
+	assign #100 DATA = (|{nCE, nOE, ~nWE}) ? 8'bzzzzzzzz : RAMDATA[ADDR];
 
 	always @(nCE or nWE)
-	  if (!(nCE & nWE))
-		 #5 RAMDATA[ADDR] = DATA;
+	  if (!(nCE | nWE))
+		 #10 RAMDATA[ADDR] = DATA;
 
 endmodule

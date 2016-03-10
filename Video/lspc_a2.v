@@ -25,7 +25,8 @@ module lspc_a2(
 	output nBNKB,
 	output nVCS,
 	output CLK_8M,
-	output CLK_4M
+	output CLK_4M,
+	output [8:0] HCOUNT
 );
 
 	parameter VIDEO_MODE = 1;	// PAL
@@ -33,7 +34,7 @@ module lspc_a2(
 	assign CLK_24MB = ~CLK_24M;
 	
 	wire [8:0] VCOUNT;
-	wire [8:0] HCOUNT;
+	//wire [8:0] HCOUNT;
 	
 	reg [31:0] TIMERLOAD;
 	reg [31:0] TIMER;
@@ -77,6 +78,9 @@ module lspc_a2(
 	
 	wire [7:0] L0_DATA;
 	
+	wire nVSYNC;
+	wire HSYNC;
+	
 	irq IRQ(nIRQS, IPL0, IPL1);		// nRESETP ?
 	videosync VS(CLK_6M, nRESET, VCOUNT, HCOUNT, VBLANK, nVSYNC, HSYNC);
 	
@@ -96,11 +100,8 @@ module lspc_a2(
 	wire [7:0] SPR_XPOS;
 	wire [15:0] L0_ADDR;
 	
-	wire nVSYNC;
-	wire HSYNC;
-	
 	// 6 MHz = 166ns > 120ns
-	slow_cycle SCY(CLK_6M, HSYNC, HCOUNT[8:3], VCOUNT[7:3], SPR_NB, SPR_IDX,	SPR_TILENB, SPR_TILEPAL,
+	slow_cycle SCY(CLK_24M, HSYNC, HCOUNT[8:0], VCOUNT[7:3], SPR_NB, SPR_IDX,	SPR_TILENB, SPR_TILEPAL,
 					SPR_TILEAA, SPR_TILEFLIP, FIX_TILENB, FIX_TILEPAL,
 					CPU_VRAM_ADDR, CPU_VRAM_READ_BUFFER, CPU_VRAM_WRITE_BUFFER, CPU_PENDING, CPU_VRAM_ZONE, CPU_RW);
 	
@@ -117,14 +118,16 @@ module lspc_a2(
 	// 5: Nothing
 	// 6: S2H1 changes, has 2 pixels
 	// 7: Nothing
-	assign FIX_ADDR = {FIX_TILENB, HCOUNT[2:1], VCOUNT[2:0]};
-	assign S2H1 = FIX_ADDR[3];
+	
+	// Todo: Should just be HCOUNT[2:1]
+	assign FIX_ADDR = {FIX_TILENB, (HCOUNT[2:1] - 1'b1), VCOUNT[2:0]};
+		
 	assign SPR_ADDR = {SPR_TILENB_OUT, 5'b00000};	// Todo {CA4, line} CA4:1 then 0
-	assign CA4 = SPR_ADDR[4];
+	//assign CA4 = SPR_ADDR[4];
 	
 	// This needs SPR_XPOS, L0_ADDR
 	p_cycle PCY(CLK_24M, HSYNC, FIX_ADDR, FIX_TILEPAL, SPR_ADDR, SPR_TILEPAL, SPR_XPOS, L0_ADDR,
-					PCK1, PCK2, LOAD, nVCS, L0_DATA, PBUS);
+					PCK1, PCK2, LOAD, nVCS, L0_DATA, PBUS, S1H1);
 	
 	autoanim AA(VBLANK, AASPEED, SPR_TILENB, AA_DISABLE, SPR_ATTR_AA, SPR_TILENB_OUT, AACOUNT);
 	hshrink HSHRINK(SPR_ATTR_SHRINK[11:8], SPR_PIXELCNT, WR_PIXEL);
@@ -207,9 +210,9 @@ module lspc_a2(
 	
 	// TIMERINT_MODE[1] is used in vblank !
 	
-	reg [1:0] S1H1_DIV;
+	reg [1:0] S2H1_DIV;
 	
-	assign S1H1 = S1H1_DIV[1];
+	assign S2H1 = S2H1_DIV[1];
 	
 	// Pixel timer
 	always @(negedge CLK_6M)	// posedge ? negedge needed for video stuff !
@@ -217,7 +220,7 @@ module lspc_a2(
 		if (!nRESET)
 		begin
 			TIMER <= 0;
-			S1H1_DIV <= 0;
+			S2H1_DIV <= 0;
 		end
 		else
 		begin
@@ -232,7 +235,7 @@ module lspc_a2(
 				end
 			end
 			
-			S1H1_DIV <= S1H1_DIV + 1;
+			S2H1_DIV <= S2H1_DIV + 1;
 		end
 	end
 	

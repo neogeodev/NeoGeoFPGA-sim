@@ -1,6 +1,6 @@
 `timescale 1ns/1ns
 
-// 30ns (should be 35) 2048*8bit RAM
+// 35ns 2048*8bit RAM
 
 module vram_fast_l(
 	input [10:0] ADDR,
@@ -16,10 +16,10 @@ module vram_fast_l(
 		$readmemh("raminit_vram_fastl.txt", RAMDATA);
 	end
 
-	assign #3 DATA = (nCE & nOE & ~nWE) ? 8'bzzzzzzzz : RAMDATA[ADDR];
+	assign #35 DATA = (nCE & nOE & ~nWE) ? 8'bzzzzzzzz : RAMDATA[ADDR];
 
 	always @(nCE or nWE)
 	  if (!(nCE & nWE))
-		 #2 RAMDATA[ADDR] <= DATA;
+		 #20 RAMDATA[ADDR] <= DATA;
 
 endmodule

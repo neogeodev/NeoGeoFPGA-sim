@@ -97,6 +97,9 @@ module neogeo_mvs(
 	wire nRESET;
 	wire CLK_68KCLK;
 	
+	wire CLK_1MB;
+	wire CLK_6MB;
+	
 	wire [15:0] SDA;
 	wire [7:0] SDD;			// Z80 data bus
 	
@@ -164,17 +167,20 @@ module neogeo_mvs(
 	neo_f0 F0(nDIPRD0, nDIPRD1, nBITWD0, DIPSW, M68K_ADDR[6:3], M68K_DATA[7:0], SYSTEMB, nSLOT, SLOTA, SLOTB, SLOTC,
 				EL_OUT, LED_OUT1, LED_OUT2);	
 
+	wire [8:0] HCOUNT;
+
+	// Todo: REMOVE HCOUNT, it's only used for debug here:
 	lspc_a2 LSPC(CLK_24M, nRESET, PBUS, M68K_ADDR[2:0], M68K_DATA, nLSPOE, nLSPWE, DOTA, DOTB, CA4, S2H1,
 				S1H1, LOAD, H, EVEN1, EVEN2, IPL0, IPL1, CHG, LD1, LD1, PCK1, PCK2, WE[3:0], CK[3:0], SS1,
-				SS2, nRESETP, VIDEO_SYNC, CHBL, nBNKB, nVCS, CLK_8M, CLK_4M);
-				
-	neo_b1 B1(PBUS, FIXD, PCK1, PCK2, GAD, GBD, WE, CK, TMS0, LD1, LD2, SS1, SS2, A23Z, A22Z, PA, nLDS, M68K_RW,
-				M68K_ADDR[20:16], M68K_ADDR[11:0], nHALT, nRESET, VCCON);
+				SS2, nRESETP, VIDEO_SYNC, CHBL, nBNKB, nVCS, CLK_8M, CLK_4M, HCOUNT);
+	
+	neo_b1 B1(CLK_6MB, CLK_1MB, PBUS, FIXD, PCK1, PCK2, GAD, GBD, WE, CK, TMS0, LD1, LD2, SS1, SS2, S1H1,
+				A23Z, A22Z, PA, nLDS, M68K_RW, M68K_ADDR[20:16], M68K_ADDR[11:0], nHALT, nRESET, VCCON);
 	
 	neo_i0 I0(nRESET, nCOUNTOUT, M68K_ADDR[2:0], M68K_ADDR[7], COUNTER1, COUNTER2, LOCKOUT1, LOCKOUT2);
 	
 	syslatch SL(M68K_ADDR[3:0], nBITW1, nRESET,
-				SHADOW, nVEC, nCARDWEN, CARDWENB, nREGEN, nSYSTEM, nSRAMLOCK, nPALBANK);
+				SHADOW, nVEC, nCARDWEN, CARDWENB, nREGEN, nSYSTEM, nSRAMLOCK, PALBNK);
 				
 	ym2610 YM(CLK_8M, SDD, SDA[1:0], nZ80INT, n2610CS, n2610WR, n2610RD, SDRAD, SDRA_L, SDRA_U, SDRMPX, nSDROE,
 					SDPAD, SDPA, SDPMPX, nSDPOE, ANA, SH1, SH2, OP0, PHI_M);
@@ -188,7 +194,8 @@ module neogeo_mvs(
 	palram_l PRAML({PALBNK, PA}, PC[7:0], nPALWE, 1'b0, 1'b0);
 	palram_u PRAMU({PALBNK, PA}, PC[15:8], nPALWE, 1'b0, 1'b0);
 	
-	videout VOUT(CLK_6MB, nBNKB, SHADOW, PC[15:0], VIDEO_R, VIDEO_G, VIDEO_B);
+	// Todo: REMOVE HCOUNT, it's only used for debug here:
+	videout VOUT(CLK_6MB, nBNKB, SHADOW, PC[15:0], VIDEO_R, VIDEO_G, VIDEO_B, HCOUNT);
 	
 	// Gates
 	assign PCK1B = ~PCK1;
@@ -212,8 +219,9 @@ module neogeo_mvs(
 	// A = 1 if nVEC == 0 and A == 11000000000000000xxxxxxx
 	assign {A23Z, A22Z} = M68K_ADDR[22:21] ^ {2{~|{M68K_ADDR[20:6], ^M68K_ADDR[22:21], nVEC}}};
 	
+	// Todo:
 	// Palette data bidir buffer from/to 68k
-	assign M68K_DATA = (M68K_RW & ~nPAL) ? PC : 16'bzzzzzzzzzzzzzzzz;
-	assign PC = nPALWE ? 16'bzzzzzzzzzzzzzzzz : M68K_DATA;
+	//assign M68K_DATA = (M68K_RW & ~nPAL) ? PC : 16'bzzzzzzzzzzzzzzzz;
+	//assign PC = nPALWE ? 16'bzzzzzzzzzzzzzzzz : M68K_DATA;
 
 endmodule

@@ -1,6 +1,6 @@
 `timescale 1ns/1ns
 
-// 250ns 128k*8bit ROM (should be ~200ns at worst)
+// 200ns 128k*8bit ROM (should be 250ns at extreme worst)
 
 module rom_s1(
 	input [16:0] ADDR,
@@ -13,6 +13,6 @@ module rom_s1(
 		$readmemh("rom_s1.txt", ROMDATA);
 	end
 
-	assign #25 OUT = ROMDATA[ADDR];
+	assign #200 OUT = ROMDATA[ADDR];
 
 endmodule

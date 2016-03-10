@@ -14,7 +14,8 @@ module p_cycle(
 	output LOAD,
 	output reg nVCS,
 	output reg [7:0] L0_DATA,
-	inout [23:0] PBUS
+	inout [23:0] PBUS,
+	output S1H1		// Probably wrong
 );
 
 	// 25 bits = 33554431
@@ -34,8 +35,8 @@ module p_cycle(
 	
 	assign PBUS = {PBUS_U, PBUS_L};
 	
-	assign PCK2 = ~|{CYCLE_PCK[3:0]};							// 0
-	assign PCK1 = (CYCLE_PCK[3:0] == 4'b1000) ? 1 : 0;		// 8
+	assign PCK2 = (CYCLE_PCK == 4'd1) ? 1'b1 : 1'b0;		// Todo: adjust
+	assign PCK1 = (CYCLE_PCK[3:0] == 4'd9) ? 1 : 0;			// Todo: adjust
 	assign LOAD = CYCLE_LOAD[2] & CYCLE_LOAD[1];				// 6-7 14-15
 	
 	// 28px backporch
@@ -44,6 +45,10 @@ module p_cycle(
 	Guess work:
 	Logical order of things to render 8 fix pixels:
 	
+	Todo: 24mclk-P cycle should be inverted !
+	
+	Todo: Palette RAM is 100ns, which means at least 3mclk between B1 output and 6MB rising edge !
+	
 	             v                               v                               v
 	             00112233445566778899AABBCCDDEEFF00112233445566778899AABBCCDDEEFF00112233445566778899AABBCCDDEEFF
 	MCLK:        .'.'.'.'.'.'.'.'.'.'.'.'.'.'.'.'.'.'.'.'.'.'.'.'.'.'.'.'.'.'.'.'.'.'.'.'.'.'.'.'.'.'.'.'.'.'.'.'
@@ -51,9 +56,14 @@ module p_cycle(
 	Read VRAM:   ______||______??______??______??______||______??______??______??______||______??______??______??
 	P bus:             ###-----------FP                ###-----------FP                ###-----------FP
 	Latch:       ________|_______________________________|_______________________________|_______________________
-	S2H1 change: ________|_______________|_______________|_______________|_______________|_______________|_______
+	Fix addr:            ?               ?               ?               ?               ?               ?
+	S2H1 change: ________|_______0_______|_______1_______|_______0_______|_______1_______|_______0_______|_______
 	                     '-----------,                   '-----------,                   '-----------,
 	B1 latch:    ____|_______________|_______________|_______________|_______________|_______________|___________
+	
+	6MB          |'''|___|'''|___|'''|___|'''|___|'''|___|'''|___|'''|___|'''|___|'''|___|'''|___|'''|___|'''|___
+	Pixel out:   |       |       |       |   0   |   1   |   2   |   3   |   4   |   5   |   6   |   7   |       
+	
 	(B1 latch is >> by mclk/2 ?)
 	
 	Set low VRAM address in fix map
@@ -109,6 +119,11 @@ module p_cycle(
 	
 	assign CYCLE_PCK = CYCLE_P[4:1];
 	
+	// Todo: Probably wrong, needs shift
+	// 10000 = 0 (00000 too)
+	// 10001 = 1
+	assign S1H1 = CYCLE_P[4] & |{CYCLE_P[3:0]} | ~|{CYCLE_P[4:0]};
+	
 	always @(posedge CLK_24M or posedge nCLK_24M)
 	begin
 		if (HSYNC)
@@ -129,44 +144,44 @@ module p_cycle(
 			if (CYCLE_LOAD == 14) nVCS <= 1'b1;
 			
 			case (CYCLE_P)
-				31, 0, 1 :
+				1, 2, 3 :
 				begin
 					// FIXT
 					PBUS_L <= {FIX_ADDR[4], FIX_ADDR[2:0], FIX_ADDR[16:5]};
 					PBUS_U <= 8'b00000000;			// z?
 					//S2H1 <= FIX_ADDR[3];
 				end
-				2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12:
+				4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14:
 				begin
 					// FF0000
 					PBUS_L <= 16'b0000000000000000;
 					PBUS_U <= 8'b11111111;			// Probably z
 				end
-				13, 14:
+				15, 16:
 				begin
 					// FP
 					PBUS_L <= 16'b0000000000000000;
 					PBUS_U <= {4'b0000, FIX_PAL};
 				end
-				15, 16, 17:
+				17, 18, 19:
 				begin
 					// SPRT
 					PBUS_L <= SPR_ADDR[20:5];
 					PBUS_U <= {SPR_ADDR[24:21], SPR_ADDR[3:0]};
 					//CA4 <= SPR_ADDR[4];
 				end
-				18, 19, 20, 21, 22, 23, 24, 25, 26, 27:
+				20, 21, 22, 23, 24, 25, 26, 27, 28, 29:
 				begin
 					// L0
 					PBUS_L <= L0_ADDR;
 					PBUS_U <= 8'bzzzzzzzz;
 				end
-				28:
+				30:
 				begin
 					// Special case, so probably wrong. Read from L0
 					L0_DATA <= PBUS_U;
 				end
-				39, 30:
+				31, 0:
 				begin
 					// SP
 					PBUS_L <= {SPR_XPOS, 8'b00000000};
