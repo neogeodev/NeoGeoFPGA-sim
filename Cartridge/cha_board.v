@@ -32,7 +32,7 @@ module cha_board(
 	rom_s1 S1(S_ADDR[16:0], FIXD);
 	
 	// Todo: Plug in M ROM
-	//rom_m1 M1({MA[21:11], SDA[10:0]}, SDD, nSDROM);
+	rom_m1 M1({MA[16:11], SDA[10:0]}, SDD, nSDROM);
 
 	zmc2_zmc ZMC2ZMC(SDRD0, SDA[1:0], SDA[15:8], MA);
 	neo_273 N273(PBUS[19:0], PCK1B, PCK2B, C_LATCH, S_LATCH);
