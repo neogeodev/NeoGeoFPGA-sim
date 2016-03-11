@@ -16,7 +16,9 @@ Top file is neogeo_mvs.v, currently used testbench is testbench_1.v .
  * rom_c1.v : Sprite graphics ROM
  * rom_c2.v : Sprite graphics ROM
  * rom_s1.v : Fix graphics ROM
+ * rom_m1.v : Z80 program ROM
  * neo_273.v : SNK latch chip
+ * zmc2_zmc.v : Z80 Memory Controller part (can be part of ZMC2)
 * prog_board.v : MVS cartridge model PROG board (V ROMs, P ROM)
  * rom_p1.v : 68k program ROM
  * rom_v1.v : Sound ROM
@@ -34,7 +36,6 @@ Top file is neogeo_mvs.v, currently used testbench is testbench_1.v .
 * clocks.v : Clock divider (parts of NEO-D0 and LSPC merged together)
 * neo_zmc2.v : SNK graphics chip (most of it done by Kyuusaku)
  * zmc2_dot.v : Graphics serializer part
- * zmc2_zmc.v : Z80 Memory Controller part (will be used in cart)
 * neo_c1.v : SNK address decoding, joypad inputs, system maestro chip
 * neo_d0.v : SNK memory card and joypad outputs chip
 * neo_f0.v : SNK MVS cab I/O chip
@@ -58,6 +59,9 @@ Top file is neogeo_mvs.v, currently used testbench is testbench_1.v .
 * rom_l0.v : Shrink lookup table (L0) ROM
 * rom_sp.v : System program (SP-S2 BIOS) ROM
 * rom_sfix.v : Embeded fix graphics (SFIX) ROM
+* bram.v : Backup RAM
+ * bram_l.v : Backup RAM low
+ * bram_u.v : Backup RAM high
 * palram_l.v : Palette RAM LSB
 * palram_u.v : Palette RAM MSB
 * videout.v : Video output latch
