@@ -168,6 +168,11 @@ module neogeo_mvs(
 				EL_OUT, LED_OUT1, LED_OUT2);	
 
 	wire [8:0] HCOUNT;
+	
+	// Renaming :)
+	wire CHG;
+	wire TMS0;
+	assign TMS0 = CHG;
 
 	// Todo: REMOVE HCOUNT, it's only used for debug here:
 	lspc_a2 LSPC(CLK_24M, nRESET, PBUS, M68K_ADDR[2:0], M68K_DATA, nLSPOE, nLSPWE, DOTA, DOTB, CA4, S2H1,
@@ -186,7 +191,7 @@ module neogeo_mvs(
 					SDPAD, SDPA, SDPMPX, nSDPOE, ANA, SH1, SH2, OP0, PHI_M);
 	
 	rom_l0 L0(PBUS[15:0], PBUS[23:16], nVCS);
-	rom_sps2 SP(M68K_ADDR[15:0], M68K_DATA, nSROMOE);
+	rom_sps2 SP(M68K_ADDR[15:0], {M68K_DATA[7:0], M68K_DATA[15:8]}, nSROMOE);
 	rom_sfix SFIX({G[15:3], S2H1, G[2:0]}, FIXD_SFIX, nSYSTEM);
 	
 	memcard MC(CDA, CDD, nCRDC, nCRDO, CARD_PIN_nWE, CARD_PIN_nREG, nCD1, nCD2, nWP);

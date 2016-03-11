@@ -1,6 +1,7 @@
 `timescale 1ns/1ns
 
 module lspc_a2(
+	// All pins listed ok, DIVI and DIVO only used as /2 on AES ?
 	input CLK_24M,
 	input nRESET,
 	inout [23:0] PBUS,
@@ -9,25 +10,26 @@ module lspc_a2(
 	input nLSPOE, nLSPWE,
 	input DOTA, DOTB,
 	output CA4, S2H1,
-	output S1H1,						// 3MHz latch signal for FIXD 2 pixels in B1 ?
-	output LOAD, H, EVEN1, EVEN2,
+	output S1H1,						// ?
+	output LOAD, H, EVEN1, EVEN2,	// For ZMC2
 	output IPL0, IPL1,
-	output CHG,
+	output CHG,							// Also called SCH, TMS0 in B1
 	output LD1, LD2,
 	output PCK1, PCK2,
 	output [3:0] WE,
 	output [3:0] CK,
-	input SS1,
-	input SS2,
-	output nRESETP,
+	input SS1, SS2,
+	output nRESETP,					// Output ?
 	output SYNC,
 	output CHBL,
 	output nBNKB,
 	output nVCS,
 	output CLK_8M,
 	output CLK_4M,
-	output [8:0] HCOUNT	// Todo: REMOVE HCOUNT, it's only used for debug in videout
+	output [8:0] HCOUNT	// Todo: REMOVE HCOUNT, it's only used for debug in videout and as a hack in B1
 );
+
+	// Todo: Merge VRAM cycle counters together if possible ? Even with P bus ?
 
 	parameter VIDEO_MODE = 1;	// PAL
 
@@ -47,7 +49,7 @@ module lspc_a2(
 	reg CPU_RW;
 	reg CPU_VRAM_ZONE;						// Top bit of VRAM address (low/high indicator)
 	reg [14:0] CPU_VRAM_ADDR;
-	wire [15:0] CPU_VRAM_READ_BUFFER;	// Are those two the same ?
+	wire [15:0] CPU_VRAM_READ_BUFFER;	// Are these two the same ?
 	reg [15:0] CPU_VRAM_WRITE_BUFFER;
 	
 	// Config, write only. Is this actually 15 bit only ?
@@ -64,16 +66,9 @@ module lspc_a2(
 	wire [2:0] AACOUNT;
 	wire VBLANK;
 	
-	// This goes in fast_cycle:
-	reg [11:0] SPR_ATTR_SHRINK;
-	reg [8:0] SPR_ATTR_YPOS;
-	reg SPR_ATTR_STICKY;
-	reg [5:0] SPR_ATTR_SIZE;			// 4 ?
-	reg [8:0] SPR_ATTR_XPOS;
-	
 	wire [1:0] SPR_ATTR_AA;
 	
-	reg [3:0] SPR_PIXELCNT;
+	reg [3:0] SPR_PIXELCNT;				// Sprite render pixel counter for H-shrink
 	wire WR_PIXEL;
 	
 	wire [7:0] L0_DATA;
@@ -84,8 +79,10 @@ module lspc_a2(
 	irq IRQ(nIRQS, IPL0, IPL1);		// nRESETP ?
 	videosync VS(CLK_6M, nRESET, VCOUNT, HCOUNT, VBLANK, nVSYNC, HSYNC);
 	
+	wire [11:0] SPR_ATTR_SHRINK;
+	
 	wire [8:0] SPR_NB;
-	wire [4:0] SPR_IDX;
+	wire [4:0] SPR_TILEIDX;
 	wire [7:0] SPR_TILEPAL;
 	wire [1:0] SPR_TILEAA;
 	wire [1:0] SPR_TILEFLIP;
@@ -100,14 +97,12 @@ module lspc_a2(
 	wire [7:0] SPR_XPOS;
 	wire [15:0] L0_ADDR;
 	
-	// 6 MHz = 166ns > 120ns
-	slow_cycle SCY(CLK_24M, HSYNC, HCOUNT[8:0], VCOUNT[7:3], SPR_NB, SPR_IDX,	SPR_TILENB, SPR_TILEPAL,
+	slow_cycle SCY(CLK_24M, HSYNC, HCOUNT[8:0], VCOUNT[7:3], SPR_NB, SPR_TILEIDX,	SPR_TILENB, SPR_TILEPAL,
 					SPR_TILEAA, SPR_TILEFLIP, FIX_TILENB, FIX_TILEPAL,
 					CPU_VRAM_ADDR, CPU_VRAM_READ_BUFFER, CPU_VRAM_WRITE_BUFFER, CPU_PENDING, CPU_VRAM_ZONE, CPU_RW);
 	
-	// 24 MHz = 41ns > 35ns
-	// This needs to give SPR_NB, SPR_IDX, SPR_XPOS, L0_ADDR
-	// This needs L0_DATA
+	// Todo: this needs to give SPR_NB, SPR_TILEIDX, SPR_XPOS, L0_ADDR, SPR_ATTR_SHRINK
+	// Todo: this needs L0_DATA (from P bus)
 	fast_cycle FCY(CLK_24M,
 					CPU_VRAM_ADDR[10:0], CPU_VRAM_READ_BUFFER, CPU_VRAM_WRITE_BUFFER, CPU_PENDING, CPU_VRAM_ZONE, CPU_RW);
 
@@ -119,11 +114,11 @@ module lspc_a2(
 	// 6: S2H1 changes, has 2 pixels
 	// 7: Nothing
 	
-	// Todo: Should just be HCOUNT[2:1]
+	// Todo: Hack. Should just be HCOUNT[2:1]
 	assign FIX_ADDR = {FIX_TILENB, (HCOUNT[2:1] - 1'b1), VCOUNT[2:0]};
 		
-	assign SPR_ADDR = {SPR_TILENB_OUT, 5'b00000};	// Todo {CA4, line} CA4:1 then 0
-	//assign CA4 = SPR_ADDR[4];
+	assign SPR_ADDR = {SPR_TILENB_OUT, 5'b00000};
+	// Todo: assign CA4 = SPR_ADDR[4]; ?
 	
 	// This needs SPR_XPOS, L0_ADDR
 	p_cycle PCY(CLK_24M, HSYNC, FIX_ADDR, FIX_TILEPAL, SPR_ADDR, SPR_TILEPAL, SPR_XPOS, L0_ADDR,
@@ -210,8 +205,8 @@ module lspc_a2(
 	
 	// TIMERINT_MODE[1] is used in vblank !
 	
+	// Todo: S2H1 is probably simpler
 	reg [1:0] S2H1_DIV;
-	
 	assign S2H1 = S2H1_DIV[1];
 	
 	// Pixel timer
@@ -246,8 +241,9 @@ module lspc_a2(
 	reg [1:0] CLKDIV_D3;
 	reg [1:0] CLKDIV2;
 	
-	assign CLK_6M = CLKDIV[1];		// Internal, only 6MB which comes from D0 is used for color latches
-	assign CLK_8M = CLKDIV2[0];
+	assign CLK_6M = CLKDIV[1];		// Internal ?, only 6MB which comes from D0 is used for color latches
+	
+	assign CLK_8M = CLKDIV2[0];	// Used internally or just outputs ?
 	assign CLK_4M = CLKDIV2[1];
 	
 	always @(posedge CLK_24M)

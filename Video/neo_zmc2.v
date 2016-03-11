@@ -10,6 +10,7 @@ module neo_zmc2(
 	output [3:0] GAD, GBD,
 	output DOTA, DOTB
 	
+	// Not used here
 	/*input SDRD0,
 	input [1:0] SDA_L,
 	input [15:8] SDA_U,

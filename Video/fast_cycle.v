@@ -11,9 +11,16 @@ module fast_cycle(
 	input CPU_RW
 );
 
+	// Fast VRAM is 35ns, so at least 1mclk needed between address set and data valid
 	// Todo: CPU access if pending=1, zone=1
+	
+	reg [11:0] SPR_ATTR_SHRINK;
+	reg [8:0] SPR_ATTR_YPOS;
+	reg SPR_ATTR_STICKY;
+	reg [5:0] SPR_ATTR_SIZE;	// 4 ?
+	reg [8:0] SPR_ATTR_XPOS;
 
-	reg [4:0] CYCLE;	// 32 cycles of CLK_624M, 10 states
+	reg [4:0] CYCLE;				// 32 cycles of CLK_24M, 10 states
 	
 	reg [8:0] SPR_PARSEIDX;
 	reg [8:0] SPR_RENDERIDX;
@@ -38,20 +45,13 @@ module fast_cycle(
 	wire [15:0] F;		// High VRAM data
 	
 	// Warning: Update this according to cycle order if changed !
-	
 	// 29, 30, 31 reserved for CPU access
 	assign C = (!CYCLE[4]) ? YMATCH_ADDR : (&{CYCLE[4:3]} & |{CYCLE[2:1]}) ? CPU_ADDR : RENDER_ADDR;
 	
-	// ((HCOUNT / 8) << 5) | ((VCOUNT & 255) / 8)
-	//assign FIXVRAM_ADDR = {4'b1110, HCOUNT[8:3], VCOUNT[7:3]};
-	
-	// SPR_IDX   /------- --xxxxx! [4:0]
-	// SPR_NB    /xxxxxxx xx-----! [8:0]
-	//assign SPRVRAM_ADDR = {SPR_NB, SPR_IDX};
-	
 	assign nCLK_24M = ~CLK_24M;
 	
-	always @(posedge CLK_24M or posedge nCLK_24M)		// negedge ?
+	// Todo: Wrong cycles, sync hack again.
+	always @(posedge CLK_24M or posedge nCLK_24M)		// Use P bus cycle counter ?
 	begin
 		CYCLE <= CYCLE + 1;
 		case (CYCLE)

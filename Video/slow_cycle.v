@@ -4,14 +4,14 @@ module slow_cycle(
 	input CLK_24M,
 	
 	input HSYNC,
-	input [8:0] HCOUNT,	// Todo: Should be [8:3] only
+	input [8:0] HCOUNT,					// Todo: Should be [8:3] only, [2:0] for dirty sync hack
 	input [7:3] VCOUNT,
-	input [8:0] SPR_NB,
-	input [4:0] SPR_IDX,
+	input [8:0] SPR_NB,					// Sprite number being rendered
+	input [4:0] SPR_TILEIDX,			// Sprite tile index
 	output [19:0] SPR_ATTR_TILENB,
-	output reg [7:0] SPR_ATTR_PAL,
+	output reg [7:0] SPR_ATTR_PAL,	// Todo: Probaby just wires
 	output reg [1:0] SPR_ATTR_AA,
-	output reg [1:0] SPR_ATTR_FLIP,
+	output reg [1:0] SPR_ATTR_FLIP,	// Todo: H flip goes to ZMC2
 	output [11:0] FIX_ATTR_TILENB,
 	output reg [3:0] FIX_ATTR_PAL,
 	
@@ -23,21 +23,35 @@ module slow_cycle(
 	input CPU_RW
 );
 
-	// Todo: CPU access if pending=1, zone=0
-	// Are reads done when changing address ? Maybe this is clocked by 12M or 24M
+	// Guesswork:
+	// Slow VRAM is 120ns, so at least 3mclk needed between address set and data valid
+	// Certainly 4x 4mclk slots: Fix, Sprite even, Sprite odd, CPU (in whatever order)
 
-	reg [3:0] CYCLE_SLOW;	// 4 cycles of CLK_6M corresponds to 16 cycles of CLK_24M
+	// Todo: CPU access if pending=1, zone=0
+	// Are reads done just when changing address ?
+
+	// 4 cycles of CLK_6M corresponds to 16 cycles of CLK_24M, so...
+	reg [3:0] CYCLE_SLOW;
+	
+	reg [3:0] SPR_TILENB_U;
+	reg [15:0] SPR_TILENB_L;
 
 	wire [14:0] B;		// Low VRAM address
 	wire [15:0] E;		// Low VRAM data
 	
 	wire [14:0] FIXVRAM_ADDR;
-	wire [13:0] SPRVRAM_ADDR;
+	wire [13:0] SPRVRAM_ADDR;	// LSB added later for even/odd word selection
 	
-	reg [3:0] SPR_TILENB_U;
-	reg [15:0] SPR_TILENB_L;
+	wire nBOE;
+	
+	// Todo: An OE signal is used for slow VRAM, but not for fast VRAM. What's up with that ? Shared E bus ?
 
-	// This is all wrong ! (shifting needed)
+	assign nBOE = 1'b0;
+
+	vram_slow_u VRAMLU(B, E[15:8], nBWE, nBOE, 1'b0);
+	vram_slow_l VRAMLL(B, E[7:0], nBWE, nBOE, 1'b0);
+
+	// Todo: This is all wrong ! (shifting needed, should be way simpler)
 	// Warning: Update this according to cycle order if changed !			
 	assign B = (CYCLE_SLOW == 14) ? FIXVRAM_ADDR :
 					(CYCLE_SLOW == 15) ? FIXVRAM_ADDR :
@@ -55,36 +69,31 @@ module slow_cycle(
 	
 	assign SPR_ATTR_TILENB = {SPR_TILENB_U, SPR_TILENB_L};
 
-	// FIX tile
-	//		FIX pal (already have it)
-	// SPR tile
-	// SPR pal
+	// Todo: Check cycles order, 3 reads needed, 1 access slot for CPU ?
 	
-	// TODO: Check cycles order, 3 reads needed, 1 access slot for CPU ?
-	
+	// Fix map x,y = VRAM address:
 	// 0,0 = 7000
-	// 0,1 = 7001
-	// 1,0 = 7020
-	// 39,31 = 74FF (Normally)
-	// 47,31 = 75FF (NEO-CMC exploits this !)
+	// 39,31 = 74FF
+	// 47,31 = 75FF (Rendering actually never stops: 48*8 = 384 ! NEO-CMC chip exploits this)
 	
-	// ((HCOUNT / 8) << 5) | ((VCOUNT & 255) / 8)
-	// 1110HHHHHHVVVVV
+	// Fix map address:
+	// ((HCOUNT / 8) << 5) | ((VCOUNT & 255) / 8) | $7000
+	// 01110HHHHHHVVVVV
 	
-	//     !
-	// xxxx0111 xxxx0110
-	// xxxx1000 xxxx0111
+	// Wrong, same sync hack
+	// Todo: should just be HCOUNT[8:3], VCOUNT[7:3]
 	wire [8:0] DEBUG_HCOUNT;
 	assign DEBUG_HCOUNT = (HCOUNT == 9'd383) ? 9'd0 : HCOUNT + 9'd1;
-	assign FIXVRAM_ADDR = {4'b1110, DEBUG_HCOUNT[8:3], VCOUNT[7:3]};	// Todo: should just be HCOUNT[8:3],VCOUNT[7:3]
+	assign FIXVRAM_ADDR = {4'b1110, DEBUG_HCOUNT[8:3], VCOUNT[7:3]};
 	
-	// SPR_IDX   /------- --xxxxx! [4:0]
-	// SPR_NB    /xxxxxxx xx-----! [8:0]
-	assign SPRVRAM_ADDR = {SPR_NB, SPR_IDX};
+	// SPR_TILEIDX   /------- --xxxxx! [4:0]
+	// SPR_NB        /xxxxxxx xx-----! [8:0]
+	assign SPRVRAM_ADDR = {SPR_NB, SPR_TILEIDX};
 
-	assign FIX_ATTR_TILENB = E[11:0];	// This doesn't seem/need to be registered, gated in p_cycle.v
+	// This doesn't seem/need to be registered, gated in p_cycle.v
+	assign FIX_ATTR_TILENB = E[11:0];
 	
-	always @(posedge CLK_24M)		// negedge CLK_6M
+	always @(posedge CLK_24M)
 	begin
 		if (HSYNC)
 		begin
@@ -92,24 +101,27 @@ module slow_cycle(
 		end
 		else
 		begin
-			// Todo, check bits1:0 == 1 and switch with bits3:2
+			// Todo: Wrong.
+			// Should switch case always when bits1:0 == 3 (3rd mclk, lets VRAM reply in time after address set)
 			CYCLE_SLOW <= CYCLE_SLOW + 1;
 			case (CYCLE_SLOW)
 				4'd0 :
 				begin
-					// Should match PCK2
+					// Should match PCK2 ?
 					FIX_ATTR_PAL <= E[15:12];
 				end
 				4'd4 :
 				begin
-					// CPU access R/W ?
+					// CPU access here ?
 				end
 				4'd8 :
 				begin
+					// Todo
 					SPR_TILENB_L <= E;
 				end
 				4'd12 :
 				begin
+					// Todo
 					SPR_ATTR_PAL <= E[15:8];
 					SPR_TILENB_U <= E[7:4];
 					SPR_ATTR_AA <= E[3:2];
@@ -118,10 +130,5 @@ module slow_cycle(
 			endcase
 		end
 	end
-	
-	assign nBOE = 1'b0;
-
-	vram_slow_u VRAMLU(B, E[15:8], nBWE, nBOE, 1'b0);
-	vram_slow_l VRAMLL(B, E[7:0], nBWE, nBOE, 1'b0);
 
 endmodule
