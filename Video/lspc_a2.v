@@ -26,7 +26,7 @@ module lspc_a2(
 	output nVCS,
 	output CLK_8M,
 	output CLK_4M,
-	output [8:0] HCOUNT
+	output [8:0] HCOUNT	// Todo: REMOVE HCOUNT, it's only used for debug in videout
 );
 
 	parameter VIDEO_MODE = 1;	// PAL

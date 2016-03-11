@@ -8,7 +8,7 @@ module videout(
 	output reg [6:0] VIDEO_R,
 	output reg [6:0] VIDEO_G,
 	output reg [6:0] VIDEO_B,
-	input [8:0] HCOUNT
+	input [8:0] HCOUNT	// Todo: REMOVE HCOUNT, it's only used for debug in videout
 );
 
 	// SIMULATION STUFF

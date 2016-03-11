@@ -75,7 +75,7 @@ module slow_cycle(
 	// xxxx0111 xxxx0110
 	// xxxx1000 xxxx0111
 	wire [8:0] DEBUG_HCOUNT;
-	assign DEBUG_HCOUNT = HCOUNT + 9'd1;
+	assign DEBUG_HCOUNT = (HCOUNT == 9'd383) ? 9'd0 : HCOUNT + 9'd1;
 	assign FIXVRAM_ADDR = {4'b1110, DEBUG_HCOUNT[8:3], VCOUNT[7:3]};	// Todo: should just be HCOUNT[8:3],VCOUNT[7:3]
 	
 	// SPR_IDX   /------- --xxxxx! [4:0]

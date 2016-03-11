@@ -24,7 +24,8 @@ module neo_b1(
 	input [11:0] M68K_ADDR_PAL,
 	output nHALT,
 	output nRESET,
-	input VCCON
+	input VCCON,
+	input [8:0] HCOUNT	// Todo: REMOVE HCOUNT, it's only used for debug in videout
 );
 
 	// TODO: Output M68K_ADDR_BOT to PA if palette i/o
@@ -60,19 +61,19 @@ module neo_b1(
 	
 	wire [3:0] FIXD_HALF;
 
-	assign HALF = CLK_1MB; // ?
+	assign HALF = HCOUNT[0]; //CLK_1MB; // ?
 	assign FIXD_HALF = HALF ? FIX_DATA[7:4] : FIX_DATA[3:0];
-	assign PA = nPAL_ACCESS ? (|{FIXD_HALF}) ? DEBUG_FIX_PIXEL : LBDATA1 : M68K_ADDR_PAL;
+	assign PA = nPAL_ACCESS ? (|{FIXD_HALF}) ? {FIX_PAL, FIXD_HALF} : LBDATA1 : M68K_ADDR_PAL;	// DEBUG_FIX_PIXEL
 	
 	// Line buffer clear value, for now
 	assign LBDATA1 = 12'hFFF;
 	//assign LBDATA1 = TMS0 ? {GAD, SPR_PAL} : 12'bzzzzzzzzzzzz;	// TODO
 	
 	// posedge 6MB: set PA
-	always @(posedge CLK_6MB)
+	/*always @(posedge CLK_6MB)
 	begin
 		DEBUG_FIX_PIXEL <= {FIX_PAL, FIXD_HALF};
-	end
+	end*/
 	
 	// Probably wrong, needs real hw observations
 	wire nS1H1;
