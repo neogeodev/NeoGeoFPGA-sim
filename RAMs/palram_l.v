@@ -18,8 +18,8 @@ module palram_l(
 
 	assign #100 DATA = (|{nCE, nOE, ~nWE}) ? 8'bzzzzzzzz : RAMDATA[ADDR];
 
-	/*always @(nCE or nWE)
+	always @(nCE or nWE)
 	  if (!(nCE | nWE))
-		 #10 RAMDATA[ADDR] = DATA;*/
+		 #10 RAMDATA[ADDR] = DATA;
 
 endmodule
