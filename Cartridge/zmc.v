@@ -1,6 +1,6 @@
 `timescale 1ns/1ns
 
-module zmc2_zmc(
+module zmc(
 	input SDRD0,
 	input [1:0] SDA_L,
 	input [15:8] SDA_U,

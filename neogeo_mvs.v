@@ -29,17 +29,16 @@ module neogeo_mvs(
 	output VIDEO_SYNC
 );
 
-	// Last notes:
+	// Dev notes:
 	// ao68000 loads SSP and PC properly, reads word opcode 4EF9 for JMP at C00402
 	// but reads 2x longword after, decoder_micropc is good for JMP but isn't used...
 
-	// TODO: Z80 controller (NEO-D0)
-	// TODO: Z80 RAM
-	//
-	// TODO: VPA for interrupt ACK (NEO-C1)
-	// TODO: MEMCARD zone has a fixed 2 (6 clks) waitstate (NEO-C1)
-	// TODO: Check watchdog timing
+	// Todo: Z80 controller (NEO-D0)
+	// Todo: VPA for interrupt ACK (NEO-C1)
+	// Todo: MEMCARD zone has a fixed 2 (6 clks) waitstate (NEO-C1)
+	// Todo: Check watchdog timing
 
+	// Register implementation:
 	// REG_P1CNT		Read ok, check range
 	//	REG_DIPSW		Read ok, Write ok, check range
 	// REG_TYPE			Read mapped, check range
@@ -145,10 +144,13 @@ module neogeo_mvs(
 	assign nBITWD0 = |{nBITW0, M68K_ADDR[5:4]};
 	assign nCOUNTOUT = |{nBITW0, ~M68K_ADDR[5:4]};
 	
+	// Todo: VCCON ?
 	assign nRESET = nRESET_BTN;	// DEBUG TODO
 	assign nRESETP = nRESET;		// DEBUG TODO
 	
-	cpu_68k CPU68K(CLK_68KCLK, nRESET, IPL1, IPL0, M68K_ADDR, M68K_DATA, nLDS, nUDS, nAS, M68K_RW);
+	cpu_68k M68KCPU(CLK_68KCLK, nRESET, IPL1, IPL0, M68K_ADDR, M68K_DATA, nLDS, nUDS, nAS, M68K_RW);
+	
+	ram_68k M68KRAM(M68K_DATA, M68K_ADDR[14:0], nWWL, nWWU, nWRL, nWRU, 1'b0);
 
 	mvs_cart CART(PBUS, CA4, S2H1, PCK1B, PCK2B, CR, FIXD_CART, M68K_ADDR[18:0], M68K_DATA, nROMOE,
 					nPORTOEL, nPORTOEU, nSLOTCS, nROMWAIT, nPWAIT0, nPWAIT1, nPDTACK, SDRAD, SDRA_L, SDRA_U, SDRMPX,
@@ -160,15 +162,23 @@ module neogeo_mvs(
 				nPORTWEL, nPORTWEU, nPORTADRS, nWRL, nWRU, nWWL, nWWU, nSROMOEL, nSROMOEU, nSRAMOEL, nSRAMOEU, nSRAMWEL,
 				nSRAMWEU, nLSPOE, nLSPWE, nCRDO, nCRDW, nCRDC, nSDW, P1_IN, P2_IN, nCD1, nCD2, nWP, ROMWAIT, PWAIT0,
 				PWAIT1, PDTACK, SDD, CLK_68KCLK, nDTACK, nBITW0, nBITW1, nDIPRD0, nDIPRD1, nPAL);
-				
-	neo_d0 D0(CLK_24M, nRESETP, CLK_12M, CLK_68KCLK, CLK_68KCLKB, CLK_6MB, CLK_1MB,
-				M68K_ADDR[21:0], nBITWD0, M68K_DATA[5:0], CDA, P1_OUT, P2_OUT);
+	
+	// nSRAMCS comes from inverter transistor in analog circuit (MVS schematics page 1)
+	assign nSRAMCS = 0;	// Todo: For debug only
+	assign nSRAMWE = nSRAMWEN | nSRAMCS;
+	assign nBWU = nSRAMWEU | nSRAMWE;
+	assign nBWL = nSRAMWEL | nSRAMWE;
+	
+	// Todo: nSDZ80R, nSDZ80W, nSDZ80CLR comes from C1
+	neo_d0 D0(CLK_24M, nRESET, nRESETP, CLK_12M, CLK_68KCLK, CLK_68KCLKB, CLK_6MB, CLK_1MB,
+				M68K_ADDR[21:0], nBITWD0, M68K_DATA[5:0], CDA, P1_OUT, P2_OUT,
+				SDA, nSDRD, nSDWR, nMREQ, nIORQ, nZ80NMI, nSDZ80R, nSDZ80W, nSDZ80CLR,
+				nSDROM, nSDMRD, nSDMWR, SDRD0, SDRD1, n2610CS, n2610RD, n2610WR, nZRAMCS);
 	
 	neo_f0 F0(nDIPRD0, nDIPRD1, nBITWD0, DIPSW, M68K_ADDR[6:3], M68K_DATA[7:0], SYSTEMB, nSLOT, SLOTA, SLOTB, SLOTC,
 				EL_OUT, LED_OUT1, LED_OUT2);
 	
-	// Todo: nSRAMCE comes from where ?
-	bram BRAM(M68K_ADDR[14:0], M68K_DATA, nSRAMWEL, nSRAMWEU, nSRAMOEL, nSRAMOEU, nSRAMCE);
+	bram BRAM(M68K_ADDR[14:0], M68K_DATA, nBWL, nBWU, nSRAMOEL, nSRAMOEU, nSRAMCS);
 
 	wire [8:0] HCOUNT;
 	
@@ -188,8 +198,11 @@ module neogeo_mvs(
 	neo_i0 I0(nRESET, nCOUNTOUT, M68K_ADDR[2:0], M68K_ADDR[7], COUNTER1, COUNTER2, LOCKOUT1, LOCKOUT2);
 	
 	syslatch SL(M68K_ADDR[3:0], nBITW1, nRESET,
-				SHADOW, nVEC, nCARDWEN, CARDWENB, nREGEN, nSYSTEM, nSRAMLOCK, PALBNK);
-				
+				SHADOW, nVEC, nCARDWEN, CARDWENB, nREGEN, nSYSTEM, nSRAMWEN, PALBNK);
+	
+	// Todo: Z80 core
+	z80ram ZRAM(SDA[10:0], SDD, nZRAMCS, nSDMRD, nSDMWR);
+	
 	ym2610 YM(CLK_8M, SDD, SDA[1:0], nZ80INT, n2610CS, n2610WR, n2610RD, SDRAD, SDRA_L, SDRA_U, SDRMPX, nSDROE,
 					SDPAD, SDPA, SDPMPX, nSDPOE, ANA, SH1, SH2, OP0, PHI_M);
 	
@@ -202,8 +215,8 @@ module neogeo_mvs(
 	palram_l PRAML({PALBNK, PA}, PC[7:0], nPALWE, 1'b0, 1'b0);
 	palram_u PRAMU({PALBNK, PA}, PC[15:8], nPALWE, 1'b0, 1'b0);
 	
-	// Todo: REMOVE HCOUNT, it's only used for debug here:
-	videout VOUT(CLK_6MB, nBNKB, SHADOW, PC[15:0], VIDEO_R, VIDEO_G, VIDEO_B, HCOUNT);
+	// Todo: REMOVE HCOUNT, it's only used for simulation file output here:
+	videout VOUT(CLK_6MB, nBNKB, SHADOW, PC, VIDEO_R, VIDEO_G, VIDEO_B, HCOUNT);
 	
 	// Gates
 	assign PCK1B = ~PCK1;
