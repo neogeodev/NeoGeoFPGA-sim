@@ -2,7 +2,7 @@
 
 // 64K backup RAM (2x 120ns 32768*8bit RAM)
 
-module bram(
+module sram(
 	inout [15:0] M68K_DATA,
 	input [14:0] M68K_ADDR,
 	input nWEL,
@@ -12,7 +12,7 @@ module bram(
 	input nCE
 );
 
-	bram_l (M68K_ADDR, M68K_DATA[7:0], nWEL, nOEL, nCE);
-	bram_u (M68K_ADDR, M68K_DATA[15:8], nWEU, nOEU, nCE);
+	sram_l (M68K_ADDR, M68K_DATA[7:0], nWEL, nOEL, nCE);
+	sram_u (M68K_ADDR, M68K_DATA[15:8], nWEU, nOEU, nCE);
 
 endmodule

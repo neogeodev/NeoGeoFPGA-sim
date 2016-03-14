@@ -32,6 +32,8 @@ module lspc_a2(
 	// Todo: Merge VRAM cycle counters together if possible ? Even with P bus ?
 
 	parameter VIDEO_MODE = 1;	// PAL
+	
+	wire [15:0] REG_LSPCMODE;
 
 	assign CLK_24MB = ~CLK_24M;
 	
@@ -52,7 +54,7 @@ module lspc_a2(
 	wire [15:0] CPU_VRAM_READ_BUFFER;	// Are these two the same ?
 	reg [15:0] CPU_VRAM_WRITE_BUFFER;
 	
-	// Config, write only. Is this actually 15 bit only ?
+	// Config, write only. This is 16bit but only 15 are used
 	reg [15:0] REG_VRAMMOD;
 	// REG_LSPCMODE:
 	reg [7:0] AASPEED;
@@ -136,10 +138,10 @@ module lspc_a2(
 	
 	// Read
 	assign M68K_DATA = (nLSPOE | ~nLSPWE) ? 16'bzzzzzzzzzzzzzzzz :
-								(M68K_ADDR[2:0] == 3'b000) ? CPU_VRAM_READ_BUFFER :	// 3C0000
-								(M68K_ADDR[2:0] == 3'b001) ? CPU_VRAM_READ_BUFFER :	// 3C0002
-								(M68K_ADDR[2:0] == 3'b010) ? REG_VRAMMOD :				// 3C0004
-								(M68K_ADDR[2:0] == 3'b011) ? REG_LSPCMODE :				// 3C0006
+								(M68K_ADDR[1:0] == 2'b00) ? CPU_VRAM_READ_BUFFER :	// 3C0000
+								(M68K_ADDR[1:0] == 2'b01) ? CPU_VRAM_READ_BUFFER :	// 3C0002
+								(M68K_ADDR[1:0] == 2'b10) ? REG_VRAMMOD :				// 3C0004
+								(M68K_ADDR[1:0] == 2'b11) ? REG_LSPCMODE :			// 3C0006
 								16'bzzzzzzzzzzzzzzzz;
 	
 	// Write
@@ -162,7 +164,7 @@ module lspc_a2(
 				3'b001 :
 				begin
 					CPU_VRAM_WRITE_BUFFER <= M68K_DATA;
-					CPU_VRAM_ADDR <= CPU_VRAM_ADDR + REG_VRAMMOD[14:0];	// ?
+					CPU_VRAM_ADDR <= CPU_VRAM_ADDR + REG_VRAMMOD[14:0];
 				end
 				// 3C0004
 				3'b010 : REG_VRAMMOD <= M68K_DATA;

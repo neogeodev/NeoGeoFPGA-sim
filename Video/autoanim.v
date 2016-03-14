@@ -19,7 +19,6 @@ module autoanim(
 								AA_ATTR[0] ? {TILENB_IN[19:2], AACOUNT[1:0]} :
 								TILENB_IN;
 	
-	// Is the AA counter always enabled ?
 	always @(posedge VBLANK)
 	begin
 		if (AATIMER)

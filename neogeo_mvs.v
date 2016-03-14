@@ -33,7 +33,6 @@ module neogeo_mvs(
 	// ao68000 loads SSP and PC properly, reads word opcode 4EF9 for JMP at C00402
 	// but reads 2x longword after, decoder_micropc is good for JMP but isn't used...
 
-	// Todo: Rename BRAM to SRAM
 	// Todo: Z80 controller (NEO-D0)
 	// Todo: VPA for interrupt ACK (NEO-C1)
 	// Todo: MEMCARD zone has a fixed 2 (6 clks) waitstate (NEO-C1)
@@ -88,13 +87,12 @@ module neogeo_mvs(
 	//nBITW1(WR) =      0b0011101x xxxxxxxx xxxxxxx1    3A0001    3E0001 (system latch)
 	//nLSPCZONE(W/RD) = 0b0011110x xxxxxxxx xxxxxxx0    3C0000    3E0001
 	
-	wire A22Z;
-	wire A23Z;
+	wire A22Z, A23Z;
 	wire [22:0] M68K_ADDR;	// Really A23~A1
 	wire [15:0] M68K_DATA;
 	wire M68K_RW;
 	wire nDTACK;
-	wire nRESET;
+	wire nRESET, nRESETP;
 	wire CLK_68KCLK;
 	
 	wire CLK_1MB;
@@ -121,10 +119,8 @@ module neogeo_mvs(
 	wire [3:0] CK;				// LSPC/B1
 	
 	wire S2H1;
-	wire SYSTEMB;
-	wire nSYSTEM;
+	wire nSYSTEM, SYSTEMB;
 	
-	wire nRESETP;
 	wire nVEC, SHADOW;
 	wire nBNKB;
 	
@@ -175,7 +171,7 @@ module neogeo_mvs(
 	neo_i0 I0(nRESET, nCOUNTOUT, M68K_ADDR[2:0], M68K_ADDR[7], COUNTER1, COUNTER2, LOCKOUT1, LOCKOUT2);
 	
 	syslatch SL(M68K_ADDR[3:0], nBITW1, nRESET,
-				SHADOW, nVEC, nCARDWEN, CARDWENB, nREGEN, nSYSTEM, nSRAMWEN, PALBNK);
+				SHADOW, nVEC, nCARDWEN, CARDWENB, nREGEN, nSYSTEM, SRAMWEN, PALBNK);
 	
 	// Video
 	neo_zmc2 ZMC2(CLK_12M, EVEN, LOAD, H, CR, GAD, GBD, DOTA, DOTB);
@@ -190,7 +186,7 @@ module neogeo_mvs(
 	// Todo: Z80 core
 	z80ram ZRAM(SDA[10:0], SDD, nZRAMCS, nSDMRD, nSDMWR);
 	palram({PALBNK, PA}, PC, nPALWE);
-	bram BRAM(M68K_ADDR[14:0], M68K_DATA, nBWL, nBWU, nSRAMOEL, nSRAMOEU, nSRAMCS);
+	sram SRAM(M68K_ADDR[14:0], M68K_DATA, nBWL, nBWU, nSRAMOEL, nSRAMOEU, nSRAMCS);
 	ram_68k M68KRAM(M68K_DATA, M68K_ADDR[14:0], nWWL, nWWU, nWRL, nWRU, 1'b0);
 	
 	ym2610 YM(CLK_8M, SDD, SDA[1:0], nZ80INT, n2610CS, n2610WR, n2610RD, SDRAD, SDRA_L, SDRA_U, SDRMPX, nSDROE,
@@ -222,7 +218,7 @@ module neogeo_mvs(
 	
 	// nSRAMCS comes from inverter transistor in analog circuit (MVS schematics page 1)
 	assign nSRAMCS = 0;	// Todo: For debug only
-	assign nSRAMWE = nSRAMWEN | nSRAMCS;
+	assign nSRAMWE = SRAMWEN | nSRAMCS;
 	assign nBWU = nSRAMWEU | nSRAMWE;
 	assign nBWL = nSRAMWEL | nSRAMWE;
 	

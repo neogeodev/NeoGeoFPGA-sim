@@ -2,7 +2,7 @@
 
 // 120ns 32768*8bit RAM
 
-module bram_l(
+module sram_l(
 	input [14:0] ADDR,
 	inout [7:0] DATA,
 	input nWE,
@@ -13,7 +13,7 @@ module bram_l(
 	reg [7:0] RAMDATA[0:32767];
 	
 	initial begin
-		//$readmemh("raminit_bram_l.txt", RAMDATA);
+		//$readmemh("raminit_sram_l.txt", RAMDATA);
 	end
 
 	assign #120 DATA = (nCE & nOE & ~nWE) ? 8'bzzzzzzzz : RAMDATA[ADDR];
