@@ -11,6 +11,10 @@ Converted ROM files for the cartridge model initialization aren't provided for o
 
 Top file is neogeo_mvs.v, currently used testbench is testbench_1.v .
 
+![Diagram](ngfpgad2.png)
+
+Yellow are RAMs, orange are possibly copyrighted ROMs, blue will be interfaces to external chips, purple are cores I didn't write, white are disabled modules in MVS mode.
+
 # Cartridge model (MVS for now)
 
 * cha_board.v : MVS cartridge model CHA board (C ROMs, S ROM, M ROM)
