@@ -1,0 +1,22 @@
+`timescale 1ns/1ns
+
+module cpu_z80(
+	input CLK_4M,
+	input nRESET,
+	inout [7:0] SDD,
+	output [15:0] SDA,
+	output nIORQ, nMREQ,
+	output nRD, nWR,
+	output nINT, nNMI
+);
+
+	assign nWR = ~WR;
+	
+	assign SDD = nWR ? 8'bzzzzzzzz : SDD_OUT;
+	assign SDD_IN = nRD ? 8'bzzzzzzzz : SDD;
+
+	tv80_core TVZ80( , nIORQ, nRD, WR, , , , SDA, SDD_OUT, , // nMREQ ?
+							, , , ,
+							nRESET, CLK_4M, 1'b1, 1'b1, nINT, nNMI, 1'b1, SDD_IN, );
+	
+endmodule
