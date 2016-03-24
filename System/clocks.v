@@ -1,5 +1,15 @@
 `timescale 1ns/1ns
 
+/*
+From LA:
+
+24M  __|''|__|''|__|''|__|''|__|''|__|''|__|''|__|''|
+12M  '''''|_____|'''''|_____|'''''|_____|'''''|_____|
+6MB  '''''|___________|'''''''''''|__________|'''''''
+1MB  _______________________|'''''''''''''''''''''''|
+68K  _____|'''''|_____|'''''|_____|'''''|_____|'''''|
+*/
+
 module clocks(
 	input CLK_24M,
 	input nRESETP,
@@ -10,22 +20,29 @@ module clocks(
 	output CLK_1MB
 );
 
-	reg [2:0] CLKDIV;
+	reg [1:0] CLKDIV_A;
+	reg [1:0] CLKDIV_B;
 	
-	assign RESETP = ~nRESETP;
+	assign CLK_12M = CLKDIV_A[0];
+	assign CLK_6MB = CLKDIV_A[1];
+	assign CLK_68KCLK = ~CLK_12M;
+	assign CLK_68KCLKB = ~CLK_68KCLK;	// ?
+	assign CLK_1MB = CLKDIV_B[1];
 	
-	always @(posedge CLK_24M or posedge RESETP)
+	always @(negedge CLK_24M or negedge nRESETP)
 	begin
 		if (!nRESETP)
-			CLKDIV <= 0;
+			CLKDIV_A <= 0;
 		else
-			CLKDIV <= CLKDIV + 1;
+			CLKDIV_A <= CLKDIV_A + 1;
 	end
 	
-	assign CLK_12M = CLKDIV[0];			// ?
-	assign CLK_68KCLK = CLKDIV[0];		// ?
-	assign CLK_68KCLKB = ~CLK_68KCLK;
-	assign CLK_6MB = ~CLKDIV[1];
-	assign CLK_1MB = ~CLKDIV[2];
+	always @(negedge CLK_68KCLK or negedge nRESETP)
+	begin
+		if (!nRESETP)
+			CLKDIV_B <= 0;
+		else
+			CLKDIV_B <= CLKDIV_B + 1;
+	end
 	
 endmodule
