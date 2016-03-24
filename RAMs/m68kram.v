@@ -12,7 +12,7 @@ module ram_68k(
 	input nCE
 );
 
-	ram68k_l (M68K_ADDR, M68K_DATA[7:0], nWEL, nOEL, nCE);
-	ram68k_u (M68K_ADDR, M68K_DATA[15:8], nWEU, nOEU, nCE);
+	ram68k_l RAM68KL(M68K_ADDR, M68K_DATA[7:0], nWEL, nOEL, nCE);
+	ram68k_u RAM68KU(M68K_ADDR, M68K_DATA[15:8], nWEU, nOEU, nCE);
 
 endmodule

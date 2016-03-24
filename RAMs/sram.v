@@ -12,7 +12,7 @@ module sram(
 	input nCE
 );
 
-	sram_l (M68K_ADDR, M68K_DATA[7:0], nWEL, nOEL, nCE);
-	sram_u (M68K_ADDR, M68K_DATA[15:8], nWEU, nOEU, nCE);
+	sram_l SRAML(M68K_ADDR, M68K_DATA[7:0], nWEL, nOEL, nCE);
+	sram_u SRAMU(M68K_ADDR, M68K_DATA[15:8], nWEU, nOEU, nCE);
 
 endmodule

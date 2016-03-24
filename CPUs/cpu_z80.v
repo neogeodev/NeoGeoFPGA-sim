@@ -10,6 +10,9 @@ module cpu_z80(
 	output nINT, nNMI
 );
 
+	wire [7:0] SDD_IN;
+	wire [7:0] SDD_OUT;
+
 	assign nWR = ~WR;
 	
 	assign SDD = nWR ? 8'bzzzzzzzz : SDD_OUT;
