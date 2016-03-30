@@ -25,17 +25,17 @@
   { "name": "SADDR", 	"wave": "2.........2...............2...............2...............2...............", phase: 0.2, data: ["ADDR A","ADDR A","ADDR B","ADDR B","ADDR C"] },	// To check ! -1mclk ?
   { "name": "SDATA", 	"wave": "2.xxxxxx2.xxxxxx2.xxxxxx2.xxxxxx2.xxxxxx2.xxxxxx2.xxxxxx2.xxxxxx2.xxxxxx2.", phase: 0.2, data: ["COL 3","COL 4","COL 1","COL 2","COL 3","COL 4","COL 1","COL 2","COL 3","COL 4"] },
   {},
-  { "name": "SPRPXL", 	"wave": "zzzzzzzzzzzzzzzzzzzzzzzzzzzzx3.3.5.4.4.4.5.4.4.4.5.4.4.4.5.4.4.4.5.4.4.4.", phase: 0.2, data: ["?","?","0/1","2/3","4/5","6/7","0/1","2/3","4/5","6/7","0/1","2/3","4/5","6/7","0/1","2/3","4/5","6/7","0/1","2/3","4/5","6/7"] },
+  { "name": "SPRPXL", 	"wave": "zzzzzzzzzzzzzzzzzzzzzzzzzzzx.3.3.5.4.4.4.5.4.4.4.5.4.4.4.5.4.4.4.5.4.4.4.5", phase: 0.2, data: ["?","?","0/1","2/3","4/5","6/7","0/1","2/3","4/5","6/7","0/1","2/3","4/5","6/7","0/1","2/3","4/5","6/7","0/1","2/3","4/5","6/7"] },
   { "name": "CA4", 		"wave": "hl.......h.......l.......h.......l.......h.......l.......h.......l.......h" },		// Varies with X shrink ?
-  { "name": "PCK2B", 	"wave": "h........lH..............lH..............lH..............lH.............." },
+  { "name": "PCK2B", 	"wave": "h........lH..............lH..............lH..............lH..............l" },
   { "name": "CADDR", 	"wave": "zzzzzzzzzzzzzzzzzzzzzzzzzzzzxxxxxx2...............2...............2.......", phase: 0.2, data: ["ADDR A","ADDR B","ADDR C"] },
   { "name": "ZMCBUF", 	"wave": "zzzzzzzzzzzzzzzzzzzzzzzzzzzz3....2.......2.......2.......2.......2.......2", phase: 0.2, node: ".........................................d.......f" },
   { "name": "CDATA", 	"wave": "zzzzzzzzzzzzzzzzzzzzzzzzzzzz3....xxxxxxx2.xxxxxx2.xxxxxx2.xxxxxx2.xxxxxx2.", phase: 0.2, data: ["?","D A0","D A1","D B0","D B1","D C0","D C1"] },
   {},
-  { "name": "EVEN1", 	"wave": "zzzzzzzzzzzzzzzzzzzzzzzzzzzzl.....nh....pl........nh....pl........nh....pl" },
-  { "name": "LOAD", 	"wave": "zzzzzzzzzzzzzzzzzzzzzzzzzzzzl..nhpl....nhpl....nhpl....nhpl....nhpl....nhp" },
-  { "name": "PCK1", 	"wave": "zzzzzzzzzzzzzzzzzzzzzzzzzzzzl....Hl..............Hl..............Hl......." },	// Latch SDATA ?
-  { "name": "PCK2", 	"wave": "zzzzzzzzzzzzzzzzzzzzzzzzzzzzl............Hl..............Hl..............H" },	// Latch SDATA also ?
+  { "name": "EVEN1", 	"wave": "zzzzzzzzzzzzzzzzzzzzzzzzzzzzl.....nh....pl........nh....pl........nh....pl" },	// Varies a lot when sprites on line!
+  { "name": "LOAD", 	"wave": "hpl....nhpl....nhpl....nhpl....nhpl....nhpl....nhpl....nhpl....nhpl....nhp" },
+  { "name": "PCK1", 	"wave": "lHl..............Hl..............Hl..............Hl..............Hl......." },	// Latch SDATA ?
+  { "name": "PCK2", 	"wave": "l........Hl..............Hl..............Hl..............Hl..............H" },	// Latch SDATA also ?
   { "name": "OE-L0", 	"wave": "zzzzzzzzzzzzzzzzzzzzzzzzzzzzh.....pl...nh.........pl...nh.........pl...nh.", node: ".................................b" },
   { "name": "1HB", 		"wave": "zzzzzzzzzzzzzzzzzzzzzzzzzzzzl...h...l...h...l...h...l...h...l...h...l...h." },	// What is this ?
   { "name": "1H1", 		"wave": "zzzzzzzzzzzzzzzzzzzzzzzzzzzzlh...l...h...l...h...l...h...l...h...l...h...l" },	// Switch fix pixel ? 0/1
