@@ -1,5 +1,7 @@
 `timescale 1ns/1ns
 
+// This is by Kyuusaku
+
 module zmc2_dot(
 	input CLK_12M,
 	input EVEN,

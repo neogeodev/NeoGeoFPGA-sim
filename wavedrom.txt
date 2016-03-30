@@ -1,0 +1,52 @@
+{ "signal" : [
+  { "name": "APIXEL", 	"wave": "z..................................=...=...=...=...=...=...=...=...=...=..", phase: 0.1, data: ["0","1","2","3","4","5","6","7","8","9"] },
+  ['Clocks',
+   { "name": "24M", 	"wave": "n........................................................................." },
+   { "name": "12M", 	"wave": "hlhlhlhlhlhlhlhlhlhlhlhlhlhlhlhlhlhlhlhlhlhlhlhlhlhlhlhlhlhlhlhlhlhlhlhlhl", node: ".........................................c.......e" },
+   { "name": "6MB", 	"wave": "hl.H.l.H.l.H.l.H.l.H.l.H.l.H.l.H.l.H.l.H.l.H.l.H.l.H.l.H.l.H.l.H.l.H.l.H.l" },		// Check phase with CHBL drop
+   { "name": "1MB", 	"wave": "l...h...l...h...l...h...l...h...l...h...l...h...l...h...l...h...l...h...l." },		// Phase ?
+   { "name": "68K", 	"wave": "lhlhlhlhlhlhlhlhlhlhlhlhlhlhlhlhlhlhlhlhlhlhlhlhlhlhlhlhlhlhlhlhlhlhlhlhlh" },		// Phase ? Probably ok
+  ],
+  { "name": "MODE", 	"wave": "zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz5.......4.....3.5.......4.....3.5.......4", phase: 0.1, data: ["FETCH","CPU","PARSE","FETCH","CPU","PARSE","FETCH","CPU","PARSE"] },
+  { "name": "TMS0", 	"wave": "l................................h........................................", node: ".................................a" },
+  { "name": "CHBL", 	"wave": "h................................l........................................" },
+  {},
+  // SVADR to SVDAT is really 2.5mclk (100ns), not 2.
+  { "name": "SVADR", 	"wave": "xx5.......4...4...5.......4...4...5.......4...4...5.......4...4...5.......", phase: 0.7, data: ["SPR?","CPU?","FIXM COL 0","SPR?","CPU?","FIXM COL 0","SPR?","CPU?","FIXM COL 1","SPR?","CPU?","FIXM COL 1","SPR?"] },
+  { "name": "SVDAT", 	"wave": "x.x.=.....x.=.x.=.x.=.....x.=.x.=.x.=.....x.=.x.=.x.=.....x.=.x.=.x.=.....", phase: 0.7, data: ["SPR?","CPU?","DC 0","SPR?","CPU?","DC 0","SPR?","CPU?","DC 1","SPR?","CPU?","DC 1","SPR?"] },
+  {},
+  { "name": "PBUST", 	"wave": "hlnh...plhpl...nhlnh...plhpl...nhlnh...plhpl...nhlnh...plhpl...nhlnh...plh" },		// Real PBUS zones
+  { "name": "PBUS", 	"wave": "454.....444.....454.....444.....454.....444.....454.....444.....454.....44", phase: 0.2, data: ["FP","ST","L0","SP","FT","x","FP","ST","L0","SP","FT","x","FP","ST","L0","SP","FT","x","FP","ST","L0","SP","FT","x","FP","ST","L0","SP","FT"] },
+  {},
+  { "name": "FIXTILE", 	"wave": "x=...............................=...............................=........", phase: 0.2, data: ["0","1","2"] },
+  { "name": "FIXPXL", 	"wave": "x=.......=.......=.......=.......5.......5.......5.......5.......5........", phase: 0.2, data: ["0/1","2/3","4/5","6/7","0/1","2/3","4/5","6/7","0/1","2/3","4/5","6/7","0/1","2/3","4/5","6/7"] },
+  { "name": "2H1", 		"wave": "lh.......l.......h.......l.......h.......l.......h.......l.......h.......l" },
+  { "name": "PCK1B", 	"wave": "hlH..............lH..............lH..............lH..............lH......." },
+  { "name": "SADDR", 	"wave": "2.........2...............2...............2...............2...............", phase: 0.2, data: ["ADDR A","ADDR A","ADDR B","ADDR B","ADDR C"] },	// To check ! -1mclk ?
+  { "name": "SDATA", 	"wave": "2.xxxxxx2.xxxxxx2.xxxxxx2.xxxxxx2.xxxxxx2.xxxxxx2.xxxxxx2.xxxxxx2.xxxxxx2.", phase: 0.2, data: ["COL 3","COL 4","COL 1","COL 2","COL 3","COL 4","COL 1","COL 2","COL 3","COL 4"] },
+  {},
+  { "name": "SPRPXL", 	"wave": "zzzzzzzzzzzzzzzzzzzzzzzzzzzzx3.3.5.4.4.4.5.4.4.4.5.4.4.4.5.4.4.4.5.4.4.4.", phase: 0.2, data: ["?","?","0/1","2/3","4/5","6/7","0/1","2/3","4/5","6/7","0/1","2/3","4/5","6/7","0/1","2/3","4/5","6/7","0/1","2/3","4/5","6/7"] },
+  { "name": "CA4", 		"wave": "hl.......h.......l.......h.......l.......h.......l.......h.......l.......h" },		// Varies with X shrink ?
+  { "name": "PCK2B", 	"wave": "h........lH..............lH..............lH..............lH.............." },
+  { "name": "CADDR", 	"wave": "zzzzzzzzzzzzzzzzzzzzzzzzzzzzxxxxxx2...............2...............2.......", phase: 0.2, data: ["ADDR A","ADDR B","ADDR C"] },
+  { "name": "ZMCBUF", 	"wave": "zzzzzzzzzzzzzzzzzzzzzzzzzzzz3....2.......2.......2.......2.......2.......2", phase: 0.2, node: ".........................................d.......f" },
+  { "name": "CDATA", 	"wave": "zzzzzzzzzzzzzzzzzzzzzzzzzzzz3....xxxxxxx2.xxxxxx2.xxxxxx2.xxxxxx2.xxxxxx2.", phase: 0.2, data: ["?","D A0","D A1","D B0","D B1","D C0","D C1"] },
+  {},
+  { "name": "EVEN1", 	"wave": "zzzzzzzzzzzzzzzzzzzzzzzzzzzzl.....nh....pl........nh....pl........nh....pl" },
+  { "name": "LOAD", 	"wave": "zzzzzzzzzzzzzzzzzzzzzzzzzzzzl..nhpl....nhpl....nhpl....nhpl....nhpl....nhp" },
+  { "name": "PCK1", 	"wave": "zzzzzzzzzzzzzzzzzzzzzzzzzzzzl....Hl..............Hl..............Hl......." },	// Latch SDATA ?
+  { "name": "PCK2", 	"wave": "zzzzzzzzzzzzzzzzzzzzzzzzzzzzl............Hl..............Hl..............H" },	// Latch SDATA also ?
+  { "name": "OE-L0", 	"wave": "zzzzzzzzzzzzzzzzzzzzzzzzzzzzh.....pl...nh.........pl...nh.........pl...nh.", node: ".................................b" },
+  { "name": "1HB", 		"wave": "zzzzzzzzzzzzzzzzzzzzzzzzzzzzl...h...l...h...l...h...l...h...l...h...l...h." },	// What is this ?
+  { "name": "1H1", 		"wave": "zzzzzzzzzzzzzzzzzzzzzzzzzzzzlh...l...h...l...h...l...h...l...h...l...h...l" },	// Switch fix pixel ? 0/1
+  {},
+  { "name": "BG1", 		"wave": "zzzzzzzzzzzzzzzzzzzzzzzzzzzzl.............................." },
+  { "name": "BG2", 		"wave": "zzzzzzzzzzzzzzzzzzzzzzzzzzzzl........h....................." },
+  { "name": "WSE1", 	"wave": "zzzzzzzzzzzzzzzzzzzzzzzzzzzzh.............................." },
+  { "name": "WSE2", 	"wave": "zzzzzzzzzzzzzzzzzzzzzzzzzzzzh.............................." },
+  { "name": "CK1", 		"wave": "zzzzzzzzzzzzzzzzzzzzzzzzzzzzxxxxxhLh....Lh.........Lh...Lh." },	// Not sure about sync of 2nd pulse
+  { "name": "CK2", 		"wave": "zzzzzzzzzzzzzzzzzzzzzzzzzzzzxxxxxh......Lh..............Lh." },	// Not sure about sync of 2nd pulse
+  { "name": "LD1", 		"wave": "zzzzzzzzzzzzzzzzzzzzzzzzzzzzh...........l.h.............l.h", phase: 0.5 },	// Not sure, maybe PBUS latch sprite X pos in (SP) slot for B1 when CK low ?
+  ],
+   edge: ["a->b active", "c->d CDATA", "e->f CDATA"]
+  }
