@@ -1,7 +1,7 @@
 # NeoGeoFPGA-sim
-Simulation project for a NeoGeo hardware definition. This does not go in a FPGA yet :)
+Simulation project for a SNK NeoGeo hardware definition. This does not go in a FPGA yet :)
 
-This is being made possible by neogeodev contributors cited in neogeo_mvs.v and Patreon donators: **Marshall H. (Retroactive), Valérianne Lagrange, Mahen, Ange Albertini, Cyrille Jouineau, Artemio Urbina, Charly, Alexis Bezverkhyy**.
+This is being made possible by neogeodev contributors cited in neogeo_mvs.v and Patreon donators: **Alexis Bezverkhyy, Alexis Huet, Ange Albertini, Artemio Urbina, Arthur Lemoine, Blastar, Charly, Cyrille Jouineau, Jonathan Bayle, Laurent Lieben, Lewis Waddington, Mahen, Marshall H. (Retroactive), Maxime Mouflard, Valérianne Lagrange**.
 
 ![Diagram](ngfpgad1.png)
 
@@ -38,6 +38,8 @@ Yellow are RAMs, orange are possibly copyrighted ROMs, blue will be interfaces t
 
 * cpu_68k.v : Wrapper for ao68000, exposing real 68k connections
  * ao68000.v : ao68000 Motorola 68000 CPU core (https://github.com/alfikpl/ao68000)
+* cpu_z80.v : Wrapper for TVZ80
+ * tv80_core.v : TV80 Z80 CPU core
 * m68kram.v : 68k work RAM helper
  * ram68k_l.v : 68k work RAM LSBs
  * ram68k_u.v : 68k work RAM MSBs
