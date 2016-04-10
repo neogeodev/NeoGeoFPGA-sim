@@ -18,7 +18,7 @@ module cpu_z80(
 	assign SDD = nWR ? 8'bzzzzzzzz : SDD_OUT;
 	assign SDD_IN = nRD ? 8'bzzzzzzzz : SDD;
 
-	tv80_core TVZ80( , nIORQ, nRD, WR, , , , SDA, SDD_OUT, , // nMREQ ?
+	tv80_core TV80( , nIORQ, nRD, WR, , , , SDA, SDD_OUT, , // nMREQ ?
 							, , , ,
 							nRESET, CLK_4M, 1'b1, 1'b1, nINT, nNMI, 1'b1, SDD_IN, );
 	

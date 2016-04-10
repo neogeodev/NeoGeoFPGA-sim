@@ -15,7 +15,7 @@ module mvs_cart(
 	input nPORTOEL,
 	input nPORTOEU,
 	input nSLOTCS,
-	output nROMWAIT, nPWAIT0, nPWAIT1, nPDTACK,
+	output nROMWAIT, nPWAIT0, nPWAIT1, PDTACK,
 	
 	inout [7:0] SDRAD,
 	input [9:8] SDRA_L,
@@ -32,7 +32,7 @@ module mvs_cart(
 );
 	
 	cha_board CHA(PBUS, CA4, S2H1, PCK1B, PCK2B, SDA, nSDROM, SDD, CR, FIXD, SDRD0);
-	prog_board PROG(M68K_ADDR, M68K_DATA, nROMOE, nPORTOEL, nPORTOEU, nROMWAIT, nPWAIT0, nPWAIT1, nPDTACK,
+	prog_board PROG(M68K_ADDR, M68K_DATA, nROMOE, nPORTOEL, nPORTOEU, nROMWAIT, nPWAIT0, nPWAIT1, PDTACK,
 						SDRAD, SDRA_L, SDRA_U, SDRMPX, nSDROE, SDPAD, SDPA, SDPMPX, nSDPOE);
 
 endmodule

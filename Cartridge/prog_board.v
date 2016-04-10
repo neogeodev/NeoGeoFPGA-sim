@@ -6,7 +6,7 @@ module prog_board(
 	input nROMOE,
 	input nPORTOEL,
 	input nPORTOEU,
-	output nROMWAIT, nPWAIT0, nPWAIT1, nPDTACK,
+	output nROMWAIT, nPWAIT0, nPWAIT1, PDTACK,
 
 	inout [7:0] RAD,
 	input [9:8] RA_L,
@@ -27,7 +27,7 @@ module prog_board(
 	assign nROMWAIT = 1'b1;
 	assign nPWAIT0 = 1'b1;
 	assign nPWAIT1 = 1'b1;
-	assign nPDTACK = 1'b0;
+	assign PDTACK = 1'b1;	// ?
 	
 	// Joy Joy Kid doesn't use PCM
 	//pcm PCM(RAD, RA_L, RA_U, RMPX, PAD, PA, PMPX, V1_ADDR, V2_ADDR);

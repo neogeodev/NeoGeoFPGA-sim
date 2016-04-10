@@ -18,7 +18,7 @@ module sram_u(
 
 	assign #120 DATA = (nCE & nOE & ~nWE) ? 8'bzzzzzzzz : RAMDATA[ADDR];
 
-	always @(nCE or nWE)
+	always @(nCE or nWE or DATA)
 	  if (!(nCE & nWE))
 		 #30 RAMDATA[ADDR] <= DATA;
 
