@@ -12,10 +12,10 @@ module p_cycle(
 	
 	output PCK1, PCK2,
 	output LOAD,
+	output S1H1,
 	output reg nVCS,
 	output reg [7:0] L0_DATA,
-	inout [23:0] PBUS,
-	output S1H1		// Probably wrong
+	inout [23:0] PBUS
 );
 
 	// 25 bits = 33554431
@@ -25,8 +25,8 @@ module p_cycle(
 	// 1048576 tiles
 
 	reg [4:0] CYCLE_P;		// Both
-	wire [3:0] CYCLE_PCK;	// Neg
-	reg [3:0] CYCLE_LOAD;	// Pos
+	//wire [3:0] CYCLE_PCK;	// Neg
+	//reg [3:0] CYCLE_LOAD;	// Pos
 	
 	reg [23:16] PBUS_U;		// inout
 	reg [15:0] PBUS_L;		// out
@@ -34,11 +34,25 @@ module p_cycle(
 	assign nCLK_24M = ~CLK_24M;
 	
 	assign PBUS = {PBUS_U, PBUS_L};
+
+	// UPDATED !
+	assign PCK1 = (CYCLE_P[4:1] == 4'b0000) ? 0 : 1;		// CYCLE_P = 0,1
+	assign PCK2 = (CYCLE_P[4:1] == 4'b1000) ? 0 : 1;		// CYCLE_P = 16,17
 	
-	assign PCK2 = (CYCLE_PCK == 4'd1) ? 1'b1 : 1'b0;		// Todo: adjust
-	assign PCK1 = (CYCLE_PCK[3:0] == 4'd9) ? 1 : 0;			// Todo: adjust
-	assign LOAD = CYCLE_LOAD[2] & CYCLE_LOAD[1];				// 6-7 14-15
+	// UPDATED !
+	// 13,14,15,16  29,30,31,0
+	assign LOAD = (CYCLE_P[4:0] == 5'b01101) ? 1 :
+						(CYCLE_P[4:0] == 5'b01110) ? 1 :
+						(CYCLE_P[4:0] == 5'b01111) ? 1 :
+						(CYCLE_P[4:0] == 5'b10000) ? 1 :
+						(CYCLE_P[4:0] == 5'b11101) ? 1 :
+						(CYCLE_P[4:0] == 5'b11110) ? 1 :
+						(CYCLE_P[4:0] == 5'b11111) ? 1 :
+						(CYCLE_P[4:0] == 5'b00000) ? 1 : 0;
 	
+	// UPDATED !
+	assign S1H1 = CYCLE_P[3];
+
 	// 28px backporch
 	
 	/*
@@ -117,75 +131,63 @@ module p_cycle(
 		S1H1 = div2 from negedge of 6M ?
 	*/
 	
-	assign CYCLE_PCK = CYCLE_P[4:1];
-	
-	// Todo: Probably wrong, needs shift
-	// 10000 = 0 (00000 too)
-	// 10001 = 1
-	assign S1H1 = CYCLE_P[4] & |{CYCLE_P[3:0]} | ~|{CYCLE_P[4:0]};
-	
 	always @(posedge CLK_24M or posedge nCLK_24M)
 	begin
 		if (HSYNC)
 		begin
 			CYCLE_P <= 0;
-			CYCLE_LOAD <= 0;
 		end
 		else
 		begin
 			CYCLE_P <= CYCLE_P + 1;
-			if (CLK_24M)
-				CYCLE_LOAD <= CYCLE_LOAD + 1;		// Pos
+			//if (CLK_24M)
+			//	CYCLE_LOAD <= CYCLE_LOAD + 1;		// Pos
 			//else
 			//	CYCLE_PCK <= CYCLE_PCK + 1;		// Neg
 			
-			// Can nVCS be assigned from CYCLE_L instead ?
-			if (CYCLE_LOAD == 9) nVCS <= 1'b0;
-			if (CYCLE_LOAD == 14) nVCS <= 1'b1;
+			// UPDATED !
+			if (CYCLE_P == 2) nVCS <= 1'b0;
+			if (CYCLE_P == 12) nVCS <= 1'b1;
 			
+			// UPDATED !
 			case (CYCLE_P)
-				1, 2, 3 :
-				begin
-					// FIXT
-					PBUS_L <= {FIX_ADDR[4], FIX_ADDR[2:0], FIX_ADDR[16:5]};
-					PBUS_U <= 8'b00000000;			// z?
-					//S2H1 <= FIX_ADDR[3];
-				end
-				4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14:
-				begin
-					// FF0000
-					PBUS_L <= 16'b0000000000000000;
-					PBUS_U <= 8'b11111111;			// Probably z
-				end
-				15, 16:
-				begin
-					// FP
-					PBUS_L <= 16'b0000000000000000;
-					PBUS_U <= {4'b0000, FIX_PAL};
-				end
-				17, 18, 19:
+				0 :
 				begin
 					// SPRT
 					PBUS_L <= SPR_ADDR[20:5];
 					PBUS_U <= {SPR_ADDR[24:21], SPR_ADDR[3:0]};
 					//CA4 <= SPR_ADDR[4];
 				end
-				20, 21, 22, 23, 24, 25, 26, 27, 28, 29:
+				3 :
 				begin
 					// L0
 					PBUS_L <= L0_ADDR;
 					PBUS_U <= 8'bzzzzzzzz;
 				end
-				30:
-				begin
-					// Special case, so probably wrong. Read from L0
-					L0_DATA <= PBUS_U;
-				end
-				31, 0:
+				13 :
 				begin
 					// SP
 					PBUS_L <= {SPR_XPOS, 8'b00000000};
 					PBUS_U <= SPR_PAL;
+				end
+				16 :
+				begin
+					// FIXT
+					PBUS_L <= {FIX_ADDR[4], FIX_ADDR[2:0], FIX_ADDR[16:5]};
+					PBUS_U <= 8'b00000000;			// z?
+					//S2H1 <= FIX_ADDR[3];
+				end
+				19:
+				begin
+					// FF0000
+					PBUS_L <= 16'b0000000000000000;
+					PBUS_U <= 8'b11111111;			// Maybe z ?
+				end
+				29:
+				begin
+					// FP
+					PBUS_L <= 16'b0000000000000000;
+					PBUS_U <= {4'b0000, FIX_PAL};
 				end
 			endcase
 		end
