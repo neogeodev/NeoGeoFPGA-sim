@@ -16,18 +16,18 @@ module c1_regs(
 	reg [7:0] SDD_LATCH;			// Z80 data latch
 
 	// REG_P1CNT
-	assign M68K_DATA = (~nCTRL1ZONE) ? P1_IN[7:0] : 8'bzzzzzzzz;
+	assign M68K_DATA = nCTRL1ZONE ? 8'bzzzzzzzz : P1_IN[7:0];
 	// REG_P2CNT
-	assign M68K_DATA = (~nCTRL2ZONE) ? P2_IN[7:0] : 8'bzzzzzzzz;
+	assign M68K_DATA = nCTRL2ZONE ? 8'bzzzzzzzz : P2_IN[7:0];
 	
 	// REG_STATUS_B
-	assign M68K_DATA = (~nSTATUSBZONE) ? {CONSOLE_MODE, nWP, nCD2, nCD1, P2_IN[9:8], P1_IN[9:8]} : 8'bzzzzzzzz;
+	assign M68K_DATA = nSTATUSBZONE ? 8'bzzzzzzzz : {CONSOLE_MODE, nWP, nCD2, nCD1, P2_IN[9:8], P1_IN[9:8]};
 	
 	// REG_SOUND - Is Z80 data latch really 2 different latches ?
 	assign M68K_DATA = (RW & ~nICOMZONE) ? SDD_LATCH : 8'bzzzzzzzz;
 	always @(RW or nICOMZONE)
 	begin
-		if (~RW & ~nICOMZONE) SDD_LATCH <= M68K_DATA;
+		if (!(RW | nICOMZONE)) SDD_LATCH <= M68K_DATA;
 	end
 	
 endmodule

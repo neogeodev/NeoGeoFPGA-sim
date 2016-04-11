@@ -35,7 +35,6 @@ module neogeo_mvs(
 
 	// Todo: Z80 controller (NEO-D0)
 	// Todo: VPA for interrupt ACK (NEO-C1)
-	// Todo: MEMCARD zone has a fixed 2 (6 clks) waitstate (NEO-C1)
 	// Todo: Check watchdog timing
 
 	// Register implementation:
@@ -85,7 +84,7 @@ module neogeo_mvs(
 	//    REG_SETCL2    0b0011100x xxxxxxxx x1110111    380051    3E0071
 	//?                 0b0011101x xxxxxxxx xxxxxxx0    3A0000    3E0001
 	//nBITW1(WR) =      0b0011101x xxxxxxxx xxxxxxx1    3A0001    3E0001 (system latch)
-	//nLSPCZONE(W/RD) = 0b0011110x xxxxxxxx xxxxxxx0    3C0000    3E0001
+	//nLSPCZONE(W/RD) = 0b0011110x xxxxxxxx xxxxxxx0    3C0000    3E0001 (changed ? see neo_c1.v)
 	
 	wire A22Z, A23Z;
 	wire [22:0] M68K_ADDR;	// Really A23~A1
