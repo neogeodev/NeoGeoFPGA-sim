@@ -10,6 +10,8 @@ module videosync(
 	output HSYNC
 );
 
+	// CSYNC low 56px (224mclk) before TMS0, up 28px (112mclk) before TMS0
+
 	always @(posedge CLK_6M or negedge nRESET)
 	begin
 		if (!nRESET)

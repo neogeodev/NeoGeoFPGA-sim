@@ -1,6 +1,7 @@
 `timescale 1ns/1ns
 
 module p_cycle(
+	input nRESET,
 	input CLK_24M,
 	input HSYNC,
 	input [16:0] FIX_ADDR,
@@ -12,21 +13,13 @@ module p_cycle(
 	
 	output PCK1, PCK2,
 	output LOAD,
-	output S1H1,
+	output S1H1, S2H1,
 	output reg nVCS,
 	output reg [7:0] L0_DATA,
 	inout [23:0] PBUS
 );
 
-	// 25 bits = 33554431
-	// 32bits/address: 4 bytes
-	// 1sprtile = 128 bytes
-	// /4 = 32
-	// 1048576 tiles
-
-	reg [4:0] CYCLE_P;		// Both
-	//wire [3:0] CYCLE_PCK;	// Neg
-	//reg [3:0] CYCLE_LOAD;	// Pos
+	reg [4:0] CYCLE_P;		// Both edges
 	
 	reg [23:16] PBUS_U;		// inout
 	reg [15:0] PBUS_L;		// out
@@ -36,11 +29,13 @@ module p_cycle(
 	assign PBUS = {PBUS_U, PBUS_L};
 
 	// UPDATED !
-	assign PCK1 = (CYCLE_P[4:1] == 4'b0000) ? 0 : 1;		// CYCLE_P = 0,1
-	assign PCK2 = (CYCLE_P[4:1] == 4'b1000) ? 0 : 1;		// CYCLE_P = 16,17
+	// 0,1
+	assign PCK1 = (CYCLE_P[4:1] == 4'b0000) ? 0 : 1;
+	// 16,17
+	assign PCK2 = (CYCLE_P[4:1] == 4'b1000) ? 0 : 1;
 	
 	// UPDATED !
-	// 13,14,15,16  29,30,31,0
+	// 13,14,15,16 and 29,30,31,0
 	assign LOAD = (CYCLE_P[4:0] == 5'b01101) ? 1 :
 						(CYCLE_P[4:0] == 5'b01110) ? 1 :
 						(CYCLE_P[4:0] == 5'b01111) ? 1 :
@@ -52,6 +47,7 @@ module p_cycle(
 	
 	// UPDATED !
 	assign S1H1 = CYCLE_P[3];
+	assign S2H1 = ~CYCLE_P[4];		// Fix quarter selection
 
 	// 28px backporch
 	
@@ -133,7 +129,7 @@ module p_cycle(
 	
 	always @(posedge CLK_24M or posedge nCLK_24M)
 	begin
-		if (HSYNC)
+		if (nRESET)
 		begin
 			CYCLE_P <= 0;
 		end

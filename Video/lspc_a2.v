@@ -123,8 +123,8 @@ module lspc_a2(
 	// Todo: assign CA4 = SPR_ADDR[4]; ?
 	
 	// This needs SPR_XPOS, L0_ADDR
-	p_cycle PCY(CLK_24M, HSYNC, FIX_ADDR, FIX_TILEPAL, SPR_ADDR, SPR_TILEPAL, SPR_XPOS, L0_ADDR,
-					PCK1, PCK2, LOAD, nVCS, L0_DATA, PBUS, S1H1);
+	p_cycle PCY(nRESET, CLK_24M, HSYNC, FIX_ADDR, FIX_TILEPAL, SPR_ADDR, SPR_TILEPAL, SPR_XPOS, L0_ADDR,
+					PCK1, PCK2, LOAD, nVCS, L0_DATA, PBUS, S1H1, S2H1);
 	
 	autoanim AA(VBLANK, AASPEED, SPR_TILENB, AA_DISABLE, SPR_ATTR_AA, SPR_TILENB_OUT, AACOUNT);
 	hshrink HSHRINK(SPR_ATTR_SHRINK[11:8], SPR_PIXELCNT, WR_PIXEL);
@@ -206,10 +206,6 @@ module lspc_a2(
 	assign nTIMERRUN = (VPALSTOP & BORDERS) | ~VCOUNT[8];
 	
 	// TIMERINT_MODE[1] is used in vblank !
-	
-	// Todo: S2H1 is probably simpler
-	reg [1:0] S2H1_DIV;
-	assign S2H1 = S2H1_DIV[1];
 	
 	// Pixel timer
 	always @(negedge CLK_6M)	// posedge ? negedge needed for video stuff !
