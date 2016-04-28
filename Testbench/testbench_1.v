@@ -9,6 +9,7 @@ module testbench_1();
 	
 	wire [23:0] CDA;
 	wire [15:0] CDD;
+	wire nCRDC, nCRDO, CARD_PIN_nWE, CARD_PIN_nREG, nCD1, nCD2, nWP;
 
 	wire [3:0] EL_OUT;
 	wire [8:0] LED_OUT1;
@@ -29,6 +30,7 @@ module testbench_1();
 		
 		CDA,					// Memcard address
 		CDD,					// Memcard data
+		nCRDC, nCRDO, CARD_PIN_nWE, CARD_PIN_nREG, nCD1, nCD2, nWP,
 		
 		1'b1,					// TEST_BTN
 		8'b11111111,		// DIPSW
@@ -41,6 +43,8 @@ module testbench_1();
 		VIDEO_B,
 		VIDEO_SYNC
 	);
+	
+	memcard MC(CDA, CDD, nCRDC, nCRDO, CARD_PIN_nWE, CARD_PIN_nREG, nCD1, nCD2, nWP);
 	
 	initial
 	begin

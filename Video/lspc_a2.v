@@ -124,7 +124,7 @@ module lspc_a2(
 	
 	// This needs SPR_XPOS, L0_ADDR
 	p_cycle PCY(nRESET, CLK_24M, HSYNC, FIX_ADDR, FIX_TILEPAL, SPR_ADDR, SPR_TILEPAL, SPR_XPOS, L0_ADDR,
-					PCK1, PCK2, LOAD, nVCS, L0_DATA, PBUS, S1H1, S2H1);
+					PCK1, PCK2, LOAD, S1H1, S2H1, nVCS, L0_DATA, PBUS);
 	
 	autoanim AA(VBLANK, AASPEED, SPR_TILENB, AA_DISABLE, SPR_ATTR_AA, SPR_TILENB_OUT, AACOUNT);
 	hshrink HSHRINK(SPR_ATTR_SHRINK[11:8], SPR_PIXELCNT, WR_PIXEL);
@@ -213,7 +213,6 @@ module lspc_a2(
 		if (!nRESET)
 		begin
 			TIMER <= 0;
-			S2H1_DIV <= 0;
 		end
 		else
 		begin
@@ -227,8 +226,6 @@ module lspc_a2(
 					if (TIMERINT_MODE[2]) TIMER <= TIMERLOAD;
 				end
 			end
-			
-			S2H1_DIV <= S2H1_DIV + 1;
 		end
 	end
 	

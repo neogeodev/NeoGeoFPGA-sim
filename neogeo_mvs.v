@@ -16,6 +16,7 @@ module neogeo_mvs(
 	
 	output [23:0] CDA,			// Memcard address
 	output [15:0] CDD,			// Memcard data
+	output nCRDC, nCRDO, CARD_PIN_nWE, CARD_PIN_nREG, nCD1, nCD2, nWP,
 	
 	input TEST_BTN,				// MVS only
 	input [7:0] DIPSW,
@@ -123,6 +124,8 @@ module neogeo_mvs(
 	wire nVEC, SHADOW;
 	wire nBNKB;
 	
+	wire [2:0] BNK;
+	
 	wire [5:0] nSLOT;
 	
 	wire [7:0] SDRAD;
@@ -161,9 +164,12 @@ module neogeo_mvs(
 	
 	// Todo: nSDZ80R, nSDZ80W, nSDZ80CLR comes from C1
 	neo_d0 D0(CLK_24M, nRESET, nRESETP, CLK_12M, CLK_68KCLK, CLK_68KCLKB, CLK_6MB, CLK_1MB,
-				M68K_ADDR[21:0], nBITWD0, M68K_DATA[5:0], CDA, P1_OUT, P2_OUT,
-				SDA, nSDRD, nSDWR, nMREQ, nIORQ, nZ80NMI, nSDZ80R, nSDZ80W, nSDZ80CLR,
-				nSDROM, nSDMRD, nSDMWR, SDRD0, SDRD1, n2610CS, n2610RD, n2610WR, nZRAMCS);
+				M68K_ADDR[3], nBITWD0, M68K_DATA[5:0], {P2_OUT, P1_OUT},
+				SDA[15:11], SDA[4:2], nSDRD, nSDWR, nMREQ, nIORQ, nZ80NMI, nSDZ80R, nSDZ80W, nSDZ80CLR,
+				nSDROM, nSDMRD, nSDMWR, SDRD0, SDRD1, n2610CS, n2610RD, n2610WR, nZRAMCS, BNK);
+	
+	neo_e0 E0(M68K_ADDR[22:0], BNK[2:0], nSROMOEU, nSROMOEL, nSROMOE,
+				nVEC, A23Z, A22Z, CDA[23:0]);
 	
 	neo_f0 F0(nDIPRD0, nDIPRD1, nBITWD0, DIPSW, M68K_ADDR[6:3], M68K_DATA[7:0], SYSTEMB, nSLOT, SLOTA, SLOTB, SLOTC,
 				EL_OUT, LED_OUT1, LED_OUT2);
@@ -191,26 +197,24 @@ module neogeo_mvs(
 	ym2610 YM(CLK_8M, SDD, SDA[1:0], nZ80INT, n2610CS, n2610WR, n2610RD, SDRAD, SDRA_L, SDRA_U, SDRMPX, nSDROE,
 					SDPAD, SDPA, SDPMPX, nSDPOE, ANA, SH1, SH2, OP0, PHI_M);
 	
+	// MVS only
+	upd4990 RTC(CLK_RTC, RTC_CS, RTC_OE, RTC_CLK, RTC_DATA_IN, TP, RTC_DATA_OUT);
+	
+	// Todo: Move all this in the testbench, not part of NeoGeo
+	mvs_cart CART(PBUS, CA4, S2H1, PCK1B, PCK2B, CR, FIXD_CART, M68K_ADDR[18:0], M68K_DATA, nROMOE,
+					nPORTOEL, nPORTOEU, nSLOTCS, nROMWAIT, nPWAIT0, nPWAIT1, PDTACK, SDRAD, SDRA_L, SDRA_U, SDRMPX,
+					nSDROE, SDPAD, SDPA, SDPMPX, nSDPOE, nSDROM, SDA, SDD);
 	// Embedded ROMs
 	rom_l0 L0(PBUS[15:0], PBUS[23:16], nVCS);
 	rom_sps2 SP(M68K_ADDR[15:0], {M68K_DATA[7:0], M68K_DATA[15:8]}, nSROMOE);
 	rom_sfix SFIX({G[15:3], S2H1, G[2:0]}, FIXD_SFIX, nSYSTEM);
 	
-	// MVS only
-	upd4990 RTC(CLK_RTC, RTC_CS, RTC_OE, RTC_CLK, RTC_DATA_IN, TP, RTC_DATA_OUT);
-	
-	// I/Os
-	mvs_cart CART(PBUS, CA4, S2H1, PCK1B, PCK2B, CR, FIXD_CART, M68K_ADDR[18:0], M68K_DATA, nROMOE,
-					nPORTOEL, nPORTOEU, nSLOTCS, nROMWAIT, nPWAIT0, nPWAIT1, PDTACK, SDRAD, SDRA_L, SDRA_U, SDRMPX,
-					nSDROE, SDPAD, SDPA, SDPMPX, nSDPOE, nSDROM, SDA, SDD);
-	memcard MC(CDA, CDD, nCRDC, nCRDO, CARD_PIN_nWE, CARD_PIN_nREG, nCD1, nCD2, nWP);
 	// Todo: REMOVE HCOUNT, it's only used for simulation file output here:
 	videout VOUT(CLK_6MB, nBNKB, SHADOW, PC, VIDEO_R, VIDEO_G, VIDEO_B, HCOUNT);
 	
 	// Gates
 	assign PCK1B = ~PCK1;
 	assign PCK2B = ~PCK2;
-	assign nSROMOE = nSROMOEU & nSROMOEL;
 	assign nPALWE = M68K_RW | nPAL;
 	assign SYSTEMB = ~nSYSTEM;
 	assign nROMOE = nROMOEU & nROMOEL;
@@ -230,10 +234,6 @@ module neogeo_mvs(
 	
 	// SFIX / Cart FIX switch
 	assign FIXD = nSYSTEM ? FIXD_SFIX : FIXD_CART;
-	
-	// This is done by NEO-E0:
-	// A = 1 if nVEC == 0 and A == 11000000000000000xxxxxxx
-	assign {A23Z, A22Z} = M68K_ADDR[22:21] ^ {2{~|{M68K_ADDR[20:6], ^M68K_ADDR[22:21], nVEC}}};
 	
 	// Todo:
 	// Palette data bidir buffer from/to 68k

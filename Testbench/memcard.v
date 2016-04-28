@@ -13,13 +13,14 @@ module memcard(
 	output nWP
 );
 
-	parameter INSERTED = 1'b0;		// :)
+	parameter nINSERTED = 1'b0;		// :)
+	parameter nPROTECT = 1'b1;
 
 	reg [7:0] RAMDATA[0:2047];
 	
-	assign nCD1 = INSERTED;
-	assign nCD2 = INSERTED;
-	assign nWP = 1'b1;
+	assign nCD1 = nINSERTED;
+	assign nCD2 = nINSERTED;
+	assign nWP = nPROTECT;
 
 	assign #10 CDD[7:0] = (nCE & nOE & ~nWE) ? 8'bzzzzzzzz : RAMDATA[CDA[10:0]];
 

@@ -8,15 +8,15 @@ module videout(
 	output reg [6:0] VIDEO_R,
 	output reg [6:0] VIDEO_G,
 	output reg [6:0] VIDEO_B,
-	input [8:0] HCOUNT	// Todo: REMOVE HCOUNT, it's only used here for limiting output to active display
+	input [8:0] HCOUNT			// Sim only: Only used to limit output to active display
 );
 
-	// SIMULATION STUFF
+	// Sim only
 	integer f;
 	initial
 	begin
 		f = $fopen("video_output.txt", "w");
-		#18000000
+		#18000000			// Run for 18ms
 		$fclose(f);
 		$stop;
 	end
@@ -28,7 +28,7 @@ module videout(
 		VIDEO_G <= nBNKB ? {SHADOW, PC[7:4], PC[13], PC[15]} : 7'b0000000;
 		VIDEO_B <= nBNKB ? {SHADOW, PC[3:0], PC[12], PC[15]} : 7'b0000000;
 		
-		// SIMULATION STUFF
+		// Sim only
 		if ((HCOUNT > 9'd2) && (HCOUNT < 9'd323)) $fwrite(f, "%04X ", PC);
 		if (HCOUNT == 9'd328) $fwrite(f, "\n");
 	end
