@@ -4,7 +4,7 @@ module cpu_68k(
 	input CLK_68KCLK,
 	input nRESET,
 	input IPL1, IPL0,
-	output [22:0] M68K_ADDR,
+	output [23:1] M68K_ADDR,
 	output [15:0] M68K_DATA,
 	output nLDS, nUDS,
 	output nAS,
