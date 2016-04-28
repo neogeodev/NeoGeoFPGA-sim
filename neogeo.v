@@ -4,12 +4,13 @@
 // furrtek, Charles MacDonald, Kyuusaku, freem and neogeodev contributors ~ 2016
 // https://github.com/neogeodev/NeoGeoFPGA-sim
 
-module neogeo_mvs(
+module neogeo(
 	input CLK_24M,
-	input nRESET_BTN,				// AES only
+	input nRESET_BTN,				// On AES only
 	
-	inout [15:0] M68K_DATA,
-	output [22:0] M68K_ADDR,	// Really A23~A1
+	inout [15:0] M68K_DATA,		// 68K
+	output [22:0] M68K_ADDR,	// Really A23~A1, todo: shift !
+	output M68K_RW,
 	output nWWL, nWWU, nWRL, nWRU,
 	output nSROMOE, nSYSTEM,
 	output nBITWD0, nDIPRD0,
@@ -17,7 +18,7 @@ module neogeo_mvs(
 	output nROMOE, nPORTOEL, nPORTOEU, nSLOTCS,
 	input nROMWAIT, nPWAIT0, nPWAIT1, PDTACK,
 	
-	input [7:0] SDRAD,
+	input [7:0] SDRAD,			// ADPCM
 	output [9:8]SDRA_L,
 	output [23:20] SDRA_U,
 	output SDRMPX, nSDROE,
@@ -25,31 +26,31 @@ module neogeo_mvs(
 	output [11:8] SDPA,
 	output SDPMPX, nSDPOE,
 	
-	output nSDROM,
-	output [15:0] SDA,			// Z80
+	output nSDROM,					// Z80
+	output [15:0] SDA,
 	inout [7:0] SDD,
 	
-	inout [23:0] PBUS,
+	inout [23:0] PBUS,			// Gfx
 	output nVCS,
 	output S2H1, CA4,
 	output PCK1B, PCK2B,
 	
-	input [31:0] CR,				// Raw sprite data
+	input [31:0] CR,				// Raw sprite data, todo: replace with muxed bus from ZMC2 !
 	input [7:0] FIXD,
 	
-	input [9:0] P1_IN,			// Joypads
-	input [9:0] P2_IN,
-	output [2:0] P1_OUT,
-	output [2:0] P2_OUT,
-	
 	output [23:0] CDA,			// Memcard address
-	output [15:0] CDD,			// Memcard data
-	output nCRDC, nCRDO, CARD_PIN_nWE, CARD_PIN_nREG, nCD1, nCD2, nWP,
+	output nCRDC, nCRDO, CARD_PIN_nWE, CARD_PIN_nREG,
+	output nCD1, nCD2, nWP,
+	
+	output nCTRL1ZONE, nCTRL2ZONE, nSTATUSBZONE,
 	
 	output [6:0] VIDEO_R,
 	output [6:0] VIDEO_G,
 	output [6:0] VIDEO_B,
-	output VIDEO_SYNC
+	output VIDEO_SYNC,
+	
+	// I2S interface
+	output I2S_MCLK, I2S_BICK, I2S_SDTI, I2S_LRCK
 );
 
 	// Dev notes:
@@ -61,7 +62,6 @@ module neogeo_mvs(
 	// Todo: Check watchdog timing
 	
 	wire A22Z, A23Z;
-	wire M68K_RW;
 	wire nDTACK;
 	wire nRESET, nRESETP;
 	wire CLK_68KCLK;
@@ -113,12 +113,13 @@ module neogeo_mvs(
 	
 	neo_c1 C1(M68K_ADDR[20:16], M68K_DATA[15:8], A22Z, A23Z, nLDS, nUDS, M68K_RW, nAS, nROMOEL, nROMOEU, nPORTOEL, nPORTOEU,
 				nPORTWEL, nPORTWEU, nPORTADRS, nWRL, nWRU, nWWL, nWWU, nSROMOEL, nSROMOEU, nSRAMOEL, nSRAMOEU, nSRAMWEL,
-				nSRAMWEU, nLSPOE, nLSPWE, nCRDO, nCRDW, nCRDC, nSDW, P1_IN, P2_IN, nCD1, nCD2, nWP, ROMWAIT, PWAIT0,
-				PWAIT1, PDTACK, SDD, CLK_68KCLK, nDTACK, nBITW0, nBITW1, nDIPRD0, nDIPRD1, nPAL);
+				nSRAMWEU, nLSPOE, nLSPWE, nCRDO, nCRDW, nCRDC, nSDW, nCD1, nCD2, nWP, ROMWAIT, PWAIT0,
+				PWAIT1, PDTACK, SDD, CLK_68KCLK, nDTACK, nBITW0, nBITW1, nDIPRD0, nDIPRD1, nPAL,
+				nCTRL1ZONE, nCTRL2ZONE, nSTATUSBZONE);
 	
 	// Todo: nSDZ80R, nSDZ80W, nSDZ80CLR comes from C1
 	neo_d0 D0(CLK_24M, nRESET, nRESETP, CLK_12M, CLK_68KCLK, CLK_68KCLKB, CLK_6MB, CLK_1MB,
-				M68K_ADDR[3], nBITWD0, M68K_DATA[5:0], {P2_OUT, P1_OUT},
+				M68K_ADDR[3], nBITWD0, M68K_DATA[5:0],
 				SDA[15:11], SDA[4:2], nSDRD, nSDWR, nMREQ, nIORQ, nZ80NMI, nSDZ80R, nSDZ80W, nSDZ80CLR,
 				nSDROM, nSDMRD, nSDMWR, SDRD0, SDRD1, n2610CS, n2610RD, n2610WR, nZRAMCS, BNK);
 	
@@ -151,6 +152,8 @@ module neogeo_mvs(
 	ym2610 YM(CLK_8M, SDD, SDA[1:0], nZ80INT, n2610CS, n2610WR, n2610RD, SDRAD, SDRA_L, SDRA_U, SDRMPX, nSDROE,
 					SDPAD, SDPA, SDPMPX, nSDPOE, ANA, SH1, SH2, OP0, PHI_M);
 	
+	ym2i2s YM2I2S(nRESET, CLK_I2S, ANA, SH1, SH2, OP0, PHI_M, I2S_MCLK, I2S_BICK, I2S_SDTI, I2S_LRCK);
+	
 	// MVS only
 	upd4990 RTC(CLK_RTC, RTC_CS, RTC_OE, RTC_CLK, RTC_DATA_IN, TP, RTC_DATA_OUT);
 
@@ -173,9 +176,6 @@ module neogeo_mvs(
 	// Memcard stuff
 	assign CARD_PIN_nWE = |{nCARDWEN, ~CARDWENB, nCRDW};
 	assign CARD_PIN_nREG = nREGEN | nCRDO;
-	// In NEO-G0 (AES only)
-	assign M68K_DATA = (M68K_RW & ~nCRDC) ? CDD : 16'bzzzzzzzzzzzzzzzz;
-	assign CDD = (~M68K_RW | nCRDC) ? 16'bzzzzzzzzzzzzzzzz : M68K_DATA;
 	
 	// Todo:
 	// Palette data bidir buffer from/to 68k

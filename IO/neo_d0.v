@@ -8,10 +8,9 @@ module neo_d0(
 	output CLK_68KCLKB,
 	output CLK_6MB,
 	output CLK_1MB,
-	input M68K_A4,
+	input M68K_ADDR_A4,
 	input nBITWD0,
 	input [5:0] M68K_DATA,
-	output reg [6:1] P_OUT,
 	input [15:11] SDA_H,
 	input [4:2] SDA_L,
 	input nSDRD, nSDWR, nMREQ, nIORQ,
@@ -33,16 +32,7 @@ module neo_d0(
 	
 	always @(negedge nBITWD0)
 	begin
-		if (!M68K_A4)
-		begin
-			// REG_POUTPUT
-			P_OUT <= M68K_DATA[5:0];
-		end
-		else
-		begin
-			// REG_CRDBANK
-			BNK <= M68K_DATA[2:0];
-		end
+		if (M68K_ADDR_A4) BNK <= M68K_DATA[2:0];	// REG_CRDBANK
 	end
 	
 endmodule

@@ -1,27 +1,14 @@
 `timescale 1ns/1ns
 
 module c1_regs(
-	input nCTRL1ZONE,
-	input nCTRL2ZONE,
-	input nSTATUSBZONE,
 	input nICOMZONE,
 	input CONSOLE_MODE,
 	input nWP, nCD2, nCD1,
-	input [9:0] P1_IN,
-	input [9:0] P2_IN,
 	input RW,
 	inout [15:8] M68K_DATA
 );
 
 	reg [7:0] SDD_LATCH;			// Z80 data latch
-
-	// REG_P1CNT
-	assign M68K_DATA = nCTRL1ZONE ? 8'bzzzzzzzz : P1_IN[7:0];
-	// REG_P2CNT
-	assign M68K_DATA = nCTRL2ZONE ? 8'bzzzzzzzz : P2_IN[7:0];
-	
-	// REG_STATUS_B
-	assign M68K_DATA = nSTATUSBZONE ? 8'bzzzzzzzz : {CONSOLE_MODE, nWP, nCD2, nCD1, P2_IN[9:8], P1_IN[9:8]};
 	
 	// REG_SOUND - Is Z80 data latch really 2 different latches ?
 	assign M68K_DATA = (RW & ~nICOMZONE) ? SDD_LATCH : 8'bzzzzzzzz;

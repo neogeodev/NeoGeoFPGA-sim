@@ -44,16 +44,12 @@
       <association xil_pn:name="Implementation" xil_pn:seqID="12"/>
     </file>
     <file xil_pn:name="trunk/Cartridge/mvs_cart.v" xil_pn:type="FILE_VERILOG">
-      <association xil_pn:name="BehavioralSimulation" xil_pn:seqID="74"/>
+      <association xil_pn:name="BehavioralSimulation" xil_pn:seqID="76"/>
       <association xil_pn:name="Implementation" xil_pn:seqID="70"/>
     </file>
     <file xil_pn:name="trunk/Video/neo_zmc2.v" xil_pn:type="FILE_VERILOG">
       <association xil_pn:name="BehavioralSimulation" xil_pn:seqID="46"/>
       <association xil_pn:name="Implementation" xil_pn:seqID="51"/>
-    </file>
-    <file xil_pn:name="trunk/neogeo_mvs.v" xil_pn:type="FILE_VERILOG">
-      <association xil_pn:name="BehavioralSimulation" xil_pn:seqID="73"/>
-      <association xil_pn:name="Implementation" xil_pn:seqID="72"/>
     </file>
     <file xil_pn:name="trunk/Video/neo_b1.v" xil_pn:type="FILE_VERILOG">
       <association xil_pn:name="BehavioralSimulation" xil_pn:seqID="47"/>
@@ -64,15 +60,15 @@
       <association xil_pn:name="Implementation" xil_pn:seqID="26"/>
     </file>
     <file xil_pn:name="trunk/ROMs/rom_l0.v" xil_pn:type="FILE_VERILOG">
-      <association xil_pn:name="BehavioralSimulation" xil_pn:seqID="71"/>
+      <association xil_pn:name="BehavioralSimulation" xil_pn:seqID="73"/>
       <association xil_pn:name="Implementation" xil_pn:seqID="59"/>
     </file>
     <file xil_pn:name="trunk/ROMs/rom_sp.v" xil_pn:type="FILE_VERILOG">
-      <association xil_pn:name="BehavioralSimulation" xil_pn:seqID="69"/>
+      <association xil_pn:name="BehavioralSimulation" xil_pn:seqID="71"/>
       <association xil_pn:name="Implementation" xil_pn:seqID="57"/>
     </file>
     <file xil_pn:name="trunk/ROMs/rom_sfix.v" xil_pn:type="FILE_VERILOG">
-      <association xil_pn:name="BehavioralSimulation" xil_pn:seqID="70"/>
+      <association xil_pn:name="BehavioralSimulation" xil_pn:seqID="72"/>
       <association xil_pn:name="Implementation" xil_pn:seqID="58"/>
     </file>
     <file xil_pn:name="trunk/System/clocks.v" xil_pn:type="FILE_VERILOG">
@@ -124,7 +120,7 @@
       <association xil_pn:name="Implementation" xil_pn:seqID="50"/>
     </file>
     <file xil_pn:name="trunk/Testbench/memcard.v" xil_pn:type="FILE_VERILOG">
-      <association xil_pn:name="BehavioralSimulation" xil_pn:seqID="66"/>
+      <association xil_pn:name="BehavioralSimulation" xil_pn:seqID="67"/>
       <association xil_pn:name="Implementation" xil_pn:seqID="67"/>
     </file>
     <file xil_pn:name="trunk/CPUs/ao68000.v" xil_pn:type="FILE_VERILOG">
@@ -132,13 +128,13 @@
       <association xil_pn:name="Implementation" xil_pn:seqID="43"/>
     </file>
     <file xil_pn:name="trunk/Testbench/testbench_1.v" xil_pn:type="FILE_VERILOG">
-      <association xil_pn:name="BehavioralSimulation" xil_pn:seqID="75"/>
+      <association xil_pn:name="BehavioralSimulation" xil_pn:seqID="77"/>
       <association xil_pn:name="PostMapSimulation" xil_pn:seqID="30"/>
       <association xil_pn:name="PostRouteSimulation" xil_pn:seqID="30"/>
       <association xil_pn:name="PostTranslateSimulation" xil_pn:seqID="30"/>
     </file>
     <file xil_pn:name="ipcore_dir/mult_a.ngc" xil_pn:type="FILE_NGC">
-      <association xil_pn:name="BehavioralSimulation" xil_pn:seqID="76"/>
+      <association xil_pn:name="BehavioralSimulation" xil_pn:seqID="78"/>
       <association xil_pn:name="Implementation" xil_pn:seqID="18"/>
     </file>
     <file xil_pn:name="ipcore_dir/an_ram.v" xil_pn:type="FILE_VERILOG">
@@ -170,7 +166,7 @@
       <association xil_pn:name="Implementation" xil_pn:seqID="22"/>
     </file>
     <file xil_pn:name="trunk/Audio/ym2610.v" xil_pn:type="FILE_VERILOG">
-      <association xil_pn:name="BehavioralSimulation" xil_pn:seqID="65"/>
+      <association xil_pn:name="BehavioralSimulation" xil_pn:seqID="66"/>
       <association xil_pn:name="Implementation" xil_pn:seqID="71"/>
     </file>
     <file xil_pn:name="trunk/Audio/ym_timer.v" xil_pn:type="FILE_VERILOG">
@@ -254,7 +250,7 @@
       <association xil_pn:name="Implementation" xil_pn:seqID="41"/>
     </file>
     <file xil_pn:name="trunk/RAMs/m68kram.v" xil_pn:type="FILE_VERILOG">
-      <association xil_pn:name="BehavioralSimulation" xil_pn:seqID="72"/>
+      <association xil_pn:name="BehavioralSimulation" xil_pn:seqID="74"/>
       <association xil_pn:name="Implementation" xil_pn:seqID="63"/>
     </file>
     <file xil_pn:name="trunk/RAMs/m68kram_l.v" xil_pn:type="FILE_VERILOG">
@@ -314,12 +310,24 @@
       <association xil_pn:name="Implementation" xil_pn:seqID="112"/>
     </file>
     <file xil_pn:name="trunk/Testbench/latch_sfix.v" xil_pn:type="FILE_VERILOG">
-      <association xil_pn:name="BehavioralSimulation" xil_pn:seqID="67"/>
+      <association xil_pn:name="BehavioralSimulation" xil_pn:seqID="68"/>
       <association xil_pn:name="Implementation" xil_pn:seqID="111"/>
     </file>
     <file xil_pn:name="trunk/Testbench/cab_io.v" xil_pn:type="FILE_VERILOG">
-      <association xil_pn:name="BehavioralSimulation" xil_pn:seqID="68"/>
+      <association xil_pn:name="BehavioralSimulation" xil_pn:seqID="70"/>
       <association xil_pn:name="Implementation" xil_pn:seqID="112"/>
+    </file>
+    <file xil_pn:name="trunk/neogeo.v" xil_pn:type="FILE_VERILOG">
+      <association xil_pn:name="BehavioralSimulation" xil_pn:seqID="75"/>
+      <association xil_pn:name="Implementation" xil_pn:seqID="113"/>
+    </file>
+    <file xil_pn:name="trunk/Testbench/joy_io.v" xil_pn:type="FILE_VERILOG">
+      <association xil_pn:name="BehavioralSimulation" xil_pn:seqID="69"/>
+      <association xil_pn:name="Implementation" xil_pn:seqID="114"/>
+    </file>
+    <file xil_pn:name="trunk/Audio/ym2i2s.v" xil_pn:type="FILE_VERILOG">
+      <association xil_pn:name="BehavioralSimulation" xil_pn:seqID="65"/>
+      <association xil_pn:name="Implementation" xil_pn:seqID="115"/>
     </file>
   </files>
 
@@ -439,9 +447,9 @@
     <property xil_pn:name="ISim UUT Instance Name" xil_pn:value="UUT" xil_pn:valueState="default"/>
     <property xil_pn:name="Ignore User Timing Constraints Map" xil_pn:value="false" xil_pn:valueState="default"/>
     <property xil_pn:name="Ignore User Timing Constraints Par" xil_pn:value="false" xil_pn:valueState="default"/>
-    <property xil_pn:name="Implementation Top" xil_pn:value="Module|neogeo_mvs" xil_pn:valueState="non-default"/>
-    <property xil_pn:name="Implementation Top File" xil_pn:value="trunk/neogeo_mvs.v" xil_pn:valueState="non-default"/>
-    <property xil_pn:name="Implementation Top Instance Path" xil_pn:value="/neogeo_mvs" xil_pn:valueState="non-default"/>
+    <property xil_pn:name="Implementation Top" xil_pn:value="Module|mvs_cart" xil_pn:valueState="non-default"/>
+    <property xil_pn:name="Implementation Top File" xil_pn:value="trunk/Cartridge/mvs_cart.v" xil_pn:valueState="non-default"/>
+    <property xil_pn:name="Implementation Top Instance Path" xil_pn:value="/mvs_cart" xil_pn:valueState="non-default"/>
     <property xil_pn:name="Include 'uselib Directive in Verilog File" xil_pn:value="false" xil_pn:valueState="default"/>
     <property xil_pn:name="Include SIMPRIM Models in Verilog File" xil_pn:value="false" xil_pn:valueState="default"/>
     <property xil_pn:name="Include UNISIM Models in Verilog File" xil_pn:value="false" xil_pn:valueState="default"/>
@@ -505,7 +513,7 @@
     <property xil_pn:name="Other XPWR Command Line Options" xil_pn:value="" xil_pn:valueState="default"/>
     <property xil_pn:name="Other XST Command Line Options" xil_pn:value="" xil_pn:valueState="default"/>
     <property xil_pn:name="Output Extended Identifiers" xil_pn:value="false" xil_pn:valueState="default"/>
-    <property xil_pn:name="Output File Name" xil_pn:value="neogeo_mvs" xil_pn:valueState="default"/>
+    <property xil_pn:name="Output File Name" xil_pn:value="mvs_cart" xil_pn:valueState="default"/>
     <property xil_pn:name="Overwrite Compiled Libraries" xil_pn:value="false" xil_pn:valueState="default"/>
     <property xil_pn:name="Pack I/O Registers into IOBs" xil_pn:value="Auto" xil_pn:valueState="default"/>
     <property xil_pn:name="Pack I/O Registers/Latches into IOBs" xil_pn:value="Off" xil_pn:valueState="default"/>
@@ -518,10 +526,10 @@
     <property xil_pn:name="Placer Effort Level Map" xil_pn:value="High" xil_pn:valueState="default"/>
     <property xil_pn:name="Placer Extra Effort Map" xil_pn:value="None" xil_pn:valueState="default"/>
     <property xil_pn:name="Port to be used" xil_pn:value="Auto - default" xil_pn:valueState="default"/>
-    <property xil_pn:name="Post Map Simulation Model Name" xil_pn:value="neogeo_mvs_map.v" xil_pn:valueState="default"/>
-    <property xil_pn:name="Post Place &amp; Route Simulation Model Name" xil_pn:value="neogeo_mvs_timesim.v" xil_pn:valueState="default"/>
-    <property xil_pn:name="Post Synthesis Simulation Model Name" xil_pn:value="neogeo_mvs_synthesis.v" xil_pn:valueState="default"/>
-    <property xil_pn:name="Post Translate Simulation Model Name" xil_pn:value="neogeo_mvs_translate.v" xil_pn:valueState="default"/>
+    <property xil_pn:name="Post Map Simulation Model Name" xil_pn:value="mvs_cart_map.v" xil_pn:valueState="default"/>
+    <property xil_pn:name="Post Place &amp; Route Simulation Model Name" xil_pn:value="mvs_cart_timesim.v" xil_pn:valueState="default"/>
+    <property xil_pn:name="Post Synthesis Simulation Model Name" xil_pn:value="mvs_cart_synthesis.v" xil_pn:valueState="default"/>
+    <property xil_pn:name="Post Translate Simulation Model Name" xil_pn:value="mvs_cart_translate.v" xil_pn:valueState="default"/>
     <property xil_pn:name="Power Reduction Map spartan6" xil_pn:value="Off" xil_pn:valueState="default"/>
     <property xil_pn:name="Power Reduction Par" xil_pn:value="false" xil_pn:valueState="default"/>
     <property xil_pn:name="Power Reduction Xst" xil_pn:value="false" xil_pn:valueState="default"/>

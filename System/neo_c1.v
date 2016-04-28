@@ -18,15 +18,18 @@ module neo_c1(
 	output nLSPOE, nLSPWE,
 	output nCRDO, nCRDW, nCRDC,
 	output nSDW,
-	input [9:0] P1_IN,
-	input [9:0] P2_IN,
+	//input [9:0] P1_IN,
+	//input [9:0] P2_IN,
 	input nCD1, nCD2, nWP,
 	input nROMWAIT, nPWAIT0, nPWAIT1, PDTACK,
 	input [7:0] SDD,
 	input CLK_68KCLK,
 	output nDTACK,
 	output nBITW0, nBITW1, nDIPRD0, nDIPRD1,
-	output nPAL
+	output nPAL,
+	output nCTRL1ZONE,
+	output nCTRL2ZONE,
+	output nSTATUSBZONE
 );
 
 	parameter CONSOLE_MODE = 1'b1;	// MVS (IN27 of NEO-C1)
@@ -36,10 +39,10 @@ module neo_c1(
 	wire nROM_ZONE;		// Internal
 	wire nWRAM_ZONE;		// Internal
 	wire nPORT_ZONE;		// Internal
-	wire nCTRL1_ZONE;		// Internal
+	wire nCTRL1_ZONE;		// Internal (external for PCB)
 	wire nICOM_ZONE;		// Internal
-	wire nCTRL2_ZONE;		// Internal
-	wire nSTATUSB_ZONE;	// Internal
+	wire nCTRL2_ZONE;		// Internal (external for PCB)
+	wire nSTATUSB_ZONE;	// Internal (external for PCB)
 	wire nLSPC_ZONE;		// Internal
 	wire nCARD_ZONE;		// Internal
 	wire nSROM_ZONE;		// Internal
@@ -48,8 +51,7 @@ module neo_c1(
 	
 	assign nVALID = nAS | (nLDS & nUDS);
 	
-	c1_regs C1REGS(nCTRL1_ZONE, nCTRL2_ZONE, nSTATUSB_ZONE, nICOM_ZONE, CONSOLE_MODE, nWP, nCD2, nCD1,
-					P2_IN, P1_IN, RW, M68K_DATA);
+	c1_regs C1REGS(nICOM_ZONE, CONSOLE_MODE, nWP, nCD2, nCD1, RW, M68K_DATA);
 	
 	c1_wait C1WAIT(CLK_68KCLK, nAS, nROM_ZONE, nPORT_ZONE, nCARD_ZONE, nROMWAIT, nPWAIT0,
 					nPWAIT1, PDTACK, nDTACK);

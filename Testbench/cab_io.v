@@ -7,14 +7,15 @@ module cab_io(
 	input M68K_ADDR_6,
 	inout [5:3] M68K_ADDR,
 	inout [7:0] M68K_DATA,
-	output [7:0] EL_OUT,
-	output [7:0] LED_OUT1,
-	output [7:0] LED_OUT2
+	output [3:0] EL_OUT,
+	output [8:0] LED_OUT1,
+	output [8:0] LED_OUT2
 );
 
 	reg [2:0] LEDLATCH;
 	reg [7:0] LEDDATA;
 	
+	// Todo: get signals from NGCORE instead of doing M68K_ADDR matches
 	always @(posedge nBITWD0)	// ?
 	begin
 		if (M68K_ADDR[5:3] == 3'b011) LEDLATCH <= M68K_DATA[5:3];		// REG_LEDLATCHES
