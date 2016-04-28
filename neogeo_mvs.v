@@ -12,12 +12,30 @@ module neogeo_mvs(
 	output [22:0] M68K_ADDR,	// Really A23~A1
 	output nWWL, nWWU, nWRL, nWRU,
 	output nSROMOE, nSYSTEM,
+	output nBITWD0, nDIPRD0,
+	
+	output nROMOE, nPORTOEL, nPORTOEU, nSLOTCS,
+	input nROMWAIT, nPWAIT0, nPWAIT1, PDTACK,
+	
+	input [7:0] SDRAD,
+	output [9:8]SDRA_L,
+	output [23:20] SDRA_U,
+	output SDRMPX, nSDROE,
+	input [7:0] SDPAD,
+	output [11:8] SDPA,
+	output SDPMPX, nSDPOE,
+	
+	output nSDROM,
+	output [15:0] SDA,			// Z80
+	inout [7:0] SDD,
 	
 	inout [23:0] PBUS,
 	output nVCS,
-	output S2H1,
+	output S2H1, CA4,
+	output PCK1B, PCK2B,
 	
-	input [7:0] FIXD_SFIX,
+	input [31:0] CR,				// Raw sprite data
+	input [7:0] FIXD,
 	
 	input [9:0] P1_IN,			// Joypads
 	input [9:0] P2_IN,
@@ -27,12 +45,6 @@ module neogeo_mvs(
 	output [23:0] CDA,			// Memcard address
 	output [15:0] CDD,			// Memcard data
 	output nCRDC, nCRDO, CARD_PIN_nWE, CARD_PIN_nREG, nCD1, nCD2, nWP,
-	
-	input TEST_BTN,				// MVS only
-	input [7:0] DIPSW,
-	output [3:0] EL_OUT,			// Clock, 3x data
-	output [8:0] LED_OUT1,		// Clock, 8x data
-	output [8:0] LED_OUT2,		// Clock, 8x data
 	
 	output [6:0] VIDEO_R,
 	output [6:0] VIDEO_G,
@@ -47,55 +59,6 @@ module neogeo_mvs(
 	// Todo: Z80 controller (NEO-D0)
 	// Todo: VPA for interrupt ACK (NEO-C1)
 	// Todo: Check watchdog timing
-
-	// Register implementation:
-	// REG_P1CNT		Read ok, check range
-	//	REG_DIPSW		Read ok, Write ok, check range
-	// REG_TYPE			Read mapped, check range
-	// REG_SOUND		Read ok, write todo, check range
-	// REG_STATUS_A	Read mapped, check range
-	// REG_P2CNT		Read ok, check range
-	// REG_STATUS_B	Read ok, check range
-	// REG_POUTPUT		Write ok, check range
-	// REG_CRDBANK		Write ok, check range
-	// REG_SLOT			Write ok, check range
-	// REG_LEDLATCHES	Write ok, check range
-	// REG_LEDDATA		Write ok, check range
-	// REG_RTCCTRL		Write ok, check range
-	
-	// Counter/lockout	Ok, check range, neo_i0.v
-	
-	//Reg/Signal        Address                         Value     Mask
-	//REG_P1CNT(RD) =   0b0011000x xxxxxxxx xxxxxxx0    300000    3E0001
-	//nDIPRD0(RD) =     0b0011000x xxxxxxxx xxxxxxx1    300001    3E0001
-	//  REG_DIPSW(RD)   0b0011000x xxxxxxxx 0xxxxxx1    300001    3E0081
-	//  REG_$300081(RD) 0b0011000x xxxxxxxx 1xxxxxx1    300081    3E0081
-	//REG_SOUND(W/RD) = 0b0011001x xxxxxxxx xxxxxxx0    320000    3E0001
-	//nDIPRD1(RD) =     0b0011001x xxxxxxxx xxxxxxx1    320001    3E0001 \ Unique
-	//  REG_STATUS_A    0b0011001x xxxxxxxx xxxxxxx1    320001    3E0001 /
-	//REG_P2CNT(RD) =   0b001101?x xxxxxxxx xxxxxxx0    340000    3C0001 3E0001 ?
-	//REG_STATUS_B(RD)= 0b0011100x xxxxxxxx xxxxxxx0    380000    3E0001
-	//nBITW0(WR) =      0b0011100x xxxxxxxx xxxxxxx1    380001    3E0001
-	//  nBITWD0(WR) =   0b0011100x xxxxxxxx x00xxxx1    380001    3E0061
-	//      REG_POUTPUT 0b0011100x xxxxxxxx x000xxx1    380001    3E0071
-	//      REG_CRDBANK 0b0011100x xxxxxxxx x001xxx1    380011    3E0071
-	//  REG_SLOT        0b0011100x xxxxxxxx ?010xxx1    380021    3E0071 3E00F1 ?
-	//  REG_LEDLATCHES  0b0011100x xxxxxxxx ?011xxx1    380031    3E0071 3E00F1 ?
-	//  REG_LEDDATA     0b0011100x xxxxxxxx ?100xxx1    380041    3E0071 3E00F1 ?
-	//  REG_RTCCTRL     0b0011100x xxxxxxxx 0101xxx1    380051    3E00F1
-	//  REG_$3800D1     0b0011100x xxxxxxxx 1101xxx1    3800D1    3E00F1
-	//  nCUNTOUT =      0b0011100x xxxxxxxx x11x?xx1    380061    3E0061 3E0069 ?
-	//    REG_RESETCC1  0b0011100x xxxxxxxx x1100001    380051    3E0071
-	//    REG_RESETCC2  0b0011100x xxxxxxxx x1100011    380051    3E0071
-	//    REG_RESETCL1  0b0011100x xxxxxxxx x1100101    380051    3E0071
-	//    REG_RESETCL2  0b0011100x xxxxxxxx x1100111    380051    3E0071
-	//    REG_SETCC1    0b0011100x xxxxxxxx x1110001    380051    3E0071
-	//    REG_SETCC2    0b0011100x xxxxxxxx x1110011    380051    3E0071
-	//    REG_SETCL1    0b0011100x xxxxxxxx x1110101    380051    3E0071
-	//    REG_SETCL2    0b0011100x xxxxxxxx x1110111    380051    3E0071
-	//?                 0b0011101x xxxxxxxx xxxxxxx0    3A0000    3E0001
-	//nBITW1(WR) =      0b0011101x xxxxxxxx xxxxxxx1    3A0001    3E0001 (system latch)
-	//nLSPCZONE(W/RD) = 0b0011110x xxxxxxxx xxxxxxx0    3C0000    3E0001 (changed ? see neo_c1.v)
 	
 	wire A22Z, A23Z;
 	wire M68K_RW;
@@ -106,20 +69,13 @@ module neogeo_mvs(
 	wire CLK_1MB;
 	wire CLK_6MB;
 	
-	wire [15:0] SDA;
-	wire [7:0] SDD;			// Z80 data bus
-	
 	wire nPAL, nPALWE;
 	wire nSROMOEU, nSROMOEL;
 	
-	wire nROMOE;
-	
-	wire [7:0] FIXD;
-	wire [7:0] FIXD_CART;
 	wire [11:0] PA;			// Palette RAM address
 	wire [3:0] GAD, GBD;		// Pixel pair
-	wire [31:0] CR;			// Raw sprite data
 	wire [15:0] PC;			// Palette RAM data
+	
 	wire [3:0] WE;				// LSPC/B1
 	wire [3:0] CK;				// LSPC/B1
 	
@@ -131,12 +87,6 @@ module neogeo_mvs(
 	wire [2:0] BNK;
 	
 	wire [5:0] nSLOT;
-	
-	wire [7:0] SDRAD;
-	wire [23:20] SDRA_U;
-	wire [9:8] SDRA_L;
-	wire [7:0] SDPAD;
-	wire [11:8] SDPA;
 	
 	wire [3:0] ANA;		// PSG audio level
 	
@@ -175,8 +125,7 @@ module neogeo_mvs(
 	neo_e0 E0(M68K_ADDR[22:0], BNK[2:0], nSROMOEU, nSROMOEL, nSROMOE,
 				nVEC, A23Z, A22Z, CDA[23:0]);
 	
-	neo_f0 F0(nDIPRD0, nDIPRD1, nBITWD0, DIPSW, M68K_ADDR[6:3], M68K_DATA[7:0], SYSTEMB, nSLOT, SLOTA, SLOTB, SLOTC,
-				EL_OUT, LED_OUT1, LED_OUT2);
+	neo_f0 F0(nDIPRD1, nBITWD0, M68K_ADDR[6:3], M68K_DATA[7:0], SYSTEMB, nSLOT, SLOTA, SLOTB, SLOTC);
 	
 	neo_i0 I0(nRESET, nCOUNTOUT, M68K_ADDR[2:0], M68K_ADDR[7], COUNTER1, COUNTER2, LOCKOUT1, LOCKOUT2);
 	
@@ -195,6 +144,8 @@ module neogeo_mvs(
 	
 	z80ram ZRAM(SDA[10:0], SDD, nZRAMCS, nSDMRD, nSDMWR);
 	palram PALRAM({PALBNK, PA}, PC, nPALWE);
+	
+	// Todo: Put in testbench
 	sram SRAM(M68K_DATA, M68K_ADDR[14:0], nBWL, nBWU, nSRAMOEL, nSRAMOEU, nSRAMCS);
 	
 	ym2610 YM(CLK_8M, SDD, SDA[1:0], nZ80INT, n2610CS, n2610WR, n2610RD, SDRAD, SDRA_L, SDRA_U, SDRMPX, nSDROE,
@@ -202,11 +153,6 @@ module neogeo_mvs(
 	
 	// MVS only
 	upd4990 RTC(CLK_RTC, RTC_CS, RTC_OE, RTC_CLK, RTC_DATA_IN, TP, RTC_DATA_OUT);
-	
-	// Todo: Move all this in the testbench, not part of NeoGeo
-	mvs_cart CART(PBUS, CA4, S2H1, PCK1B, PCK2B, CR, FIXD_CART, M68K_ADDR[18:0], M68K_DATA, nROMOE,
-					nPORTOEL, nPORTOEU, nSLOTCS, nROMWAIT, nPWAIT0, nPWAIT1, PDTACK, SDRAD, SDRA_L, SDRA_U, SDRMPX,
-					nSDROE, SDPAD, SDPA, SDPMPX, nSDPOE, nSDROM, SDA, SDD);
 
 	// Todo: REMOVE HCOUNT, it's only used for simulation file output here:
 	videout VOUT(CLK_6MB, nBNKB, SHADOW, PC, VIDEO_R, VIDEO_G, VIDEO_B, HCOUNT);
@@ -230,9 +176,6 @@ module neogeo_mvs(
 	// In NEO-G0 (AES only)
 	assign M68K_DATA = (M68K_RW & ~nCRDC) ? CDD : 16'bzzzzzzzzzzzzzzzz;
 	assign CDD = (~M68K_RW | nCRDC) ? 16'bzzzzzzzzzzzzzzzz : M68K_DATA;
-	
-	// SFIX / Cart FIX switch
-	assign FIXD = nSYSTEM ? FIXD_SFIX : FIXD_CART;
 	
 	// Todo:
 	// Palette data bidir buffer from/to 68k

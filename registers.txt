@@ -1,0 +1,49 @@
+Register implementation:
+
+REG_P1CNT		Read ok, check range
+REG_DIPSW		Read ok, Write ok, check range
+REG_TYPE		Read mapped, check range
+REG_SOUND		Read ok, write todo, check range
+REG_STATUS_A		Read mapped, check range
+REG_P2CNT		Read ok, check range
+REG_STATUS_B		Read ok, check range
+REG_POUTPUT		Write ok, check range
+REG_CRDBANK		Write ok, check range
+REG_SLOT		Write ok, check range
+REG_LEDLATCHES		Write ok, check range
+REG_LEDDATA		Write ok, check range
+REG_RTCCTRL		Write ok, check range
+	
+Counter/lockout	Ok, check range, neo_i0.v
+	
+Reg/Signal        Address                         Value     Mask
+REG_P1CNT(RD) =   0b0011000x xxxxxxxx xxxxxxx0    300000    3E0001
+nDIPRD0(RD) =     0b0011000x xxxxxxxx xxxxxxx1    300001    3E0001
+  REG_DIPSW(RD)   0b0011000x xxxxxxxx 0xxxxxx1    300001    3E0081
+  REG_$300081(RD) 0b0011000x xxxxxxxx 1xxxxxx1    300081    3E0081
+REG_SOUND(W/RD) = 0b0011001x xxxxxxxx xxxxxxx0    320000    3E0001
+nDIPRD1(RD) =     0b0011001x xxxxxxxx xxxxxxx1    320001    3E0001 \ Unique
+  REG_STATUS_A    0b0011001x xxxxxxxx xxxxxxx1    320001    3E0001 /
+REG_P2CNT(RD) =   0b001101?x xxxxxxxx xxxxxxx0    340000    3C0001 3E0001 ?
+REG_STATUS_B(RD)= 0b0011100x xxxxxxxx xxxxxxx0    380000    3E0001
+nBITW0(WR) =      0b0011100x xxxxxxxx xxxxxxx1    380001    3E0001
+  nBITWD0(WR) =   0b0011100x xxxxxxxx x00xxxx1    380001    3E0061
+    REG_POUTPUT   0b0011100x xxxxxxxx x000xxx1    380001    3E0071
+    REG_CRDBANK   0b0011100x xxxxxxxx x001xxx1    380011    3E0071
+  REG_SLOT        0b0011100x xxxxxxxx ?010xxx1    380021    3E0071 3E00F1 ?
+  REG_LEDLATCHES  0b0011100x xxxxxxxx ?011xxx1    380031    3E0071 3E00F1 ?
+  REG_LEDDATA     0b0011100x xxxxxxxx ?100xxx1    380041    3E0071 3E00F1 ?
+  REG_RTCCTRL     0b0011100x xxxxxxxx 0101xxx1    380051    3E00F1
+  REG_$3800D1     0b0011100x xxxxxxxx 1101xxx1    3800D1    3E00F1
+  nCUNTOUT =      0b0011100x xxxxxxxx x11x?xx1    380061    3E0061 3E0069 ?
+    REG_RESETCC1  0b0011100x xxxxxxxx x1100001    380051    3E0071
+    REG_RESETCC2  0b0011100x xxxxxxxx x1100011    380051    3E0071
+    REG_RESETCL1  0b0011100x xxxxxxxx x1100101    380051    3E0071
+    REG_RESETCL2  0b0011100x xxxxxxxx x1100111    380051    3E0071
+    REG_SETCC1    0b0011100x xxxxxxxx x1110001    380051    3E0071
+    REG_SETCC2    0b0011100x xxxxxxxx x1110011    380051    3E0071
+    REG_SETCL1    0b0011100x xxxxxxxx x1110101    380051    3E0071
+    REG_SETCL2    0b0011100x xxxxxxxx x1110111    380051    3E0071
+?                 0b0011101x xxxxxxxx xxxxxxx0    3A0000    3E0001
+nBITW1(WR) =      0b0011101x xxxxxxxx xxxxxxx1    3A0001    3E0001 (system latch)
+nLSPCZONE(W/RD) = 0b0011110x xxxxxxxx xxxxxxx0    3C0000    3E0001 (changed ? see neo_c1.v)
