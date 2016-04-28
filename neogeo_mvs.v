@@ -6,8 +6,18 @@
 
 module neogeo_mvs(
 	input CLK_24M,
-	
 	input nRESET_BTN,				// AES only
+	
+	inout [15:0] M68K_DATA,
+	output [22:0] M68K_ADDR,	// Really A23~A1
+	output nWWL, nWWU, nWRL, nWRU,
+	output nSROMOE, nSYSTEM,
+	
+	inout [23:0] PBUS,
+	output nVCS,
+	output S2H1,
+	
+	input [7:0] FIXD_SFIX,
 	
 	input [9:0] P1_IN,			// Joypads
 	input [9:0] P2_IN,
@@ -88,8 +98,6 @@ module neogeo_mvs(
 	//nLSPCZONE(W/RD) = 0b0011110x xxxxxxxx xxxxxxx0    3C0000    3E0001 (changed ? see neo_c1.v)
 	
 	wire A22Z, A23Z;
-	wire [22:0] M68K_ADDR;	// Really A23~A1
-	wire [15:0] M68K_DATA;
 	wire M68K_RW;
 	wire nDTACK;
 	wire nRESET, nRESETP;
@@ -106,20 +114,16 @@ module neogeo_mvs(
 	
 	wire nROMOE;
 	
-	wire [15:0] G;				// SFIX address
 	wire [7:0] FIXD;
 	wire [7:0] FIXD_CART;
-	wire [7:0] FIXD_SFIX;
 	wire [11:0] PA;			// Palette RAM address
 	wire [3:0] GAD, GBD;		// Pixel pair
-	wire [23:0] PBUS;
 	wire [31:0] CR;			// Raw sprite data
 	wire [15:0] PC;			// Palette RAM data
 	wire [3:0] WE;				// LSPC/B1
 	wire [3:0] CK;				// LSPC/B1
 	
-	wire S2H1;
-	wire nSYSTEM, SYSTEMB;
+	wire SYSTEMB;
 	
 	wire nVEC, SHADOW;
 	wire nBNKB;
@@ -192,7 +196,6 @@ module neogeo_mvs(
 	z80ram ZRAM(SDA[10:0], SDD, nZRAMCS, nSDMRD, nSDMWR);
 	palram PALRAM({PALBNK, PA}, PC, nPALWE);
 	sram SRAM(M68K_DATA, M68K_ADDR[14:0], nBWL, nBWU, nSRAMOEL, nSRAMOEU, nSRAMCS);
-	ram_68k M68KRAM(M68K_DATA, M68K_ADDR[14:0], nWWL, nWWU, nWRL, nWRU, 1'b0);
 	
 	ym2610 YM(CLK_8M, SDD, SDA[1:0], nZ80INT, n2610CS, n2610WR, n2610RD, SDRAD, SDRA_L, SDRA_U, SDRMPX, nSDROE,
 					SDPAD, SDPA, SDPMPX, nSDPOE, ANA, SH1, SH2, OP0, PHI_M);
@@ -204,11 +207,7 @@ module neogeo_mvs(
 	mvs_cart CART(PBUS, CA4, S2H1, PCK1B, PCK2B, CR, FIXD_CART, M68K_ADDR[18:0], M68K_DATA, nROMOE,
 					nPORTOEL, nPORTOEU, nSLOTCS, nROMWAIT, nPWAIT0, nPWAIT1, PDTACK, SDRAD, SDRA_L, SDRA_U, SDRMPX,
 					nSDROE, SDPAD, SDPA, SDPMPX, nSDPOE, nSDROM, SDA, SDD);
-	// Embedded ROMs
-	rom_l0 L0(PBUS[15:0], PBUS[23:16], nVCS);
-	rom_sps2 SP(M68K_ADDR[15:0], {M68K_DATA[7:0], M68K_DATA[15:8]}, nSROMOE);
-	rom_sfix SFIX({G[15:3], S2H1, G[2:0]}, FIXD_SFIX, nSYSTEM);
-	
+
 	// Todo: REMOVE HCOUNT, it's only used for simulation file output here:
 	videout VOUT(CLK_6MB, nBNKB, SHADOW, PC, VIDEO_R, VIDEO_G, VIDEO_B, HCOUNT);
 	
