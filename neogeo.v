@@ -44,10 +44,14 @@ module neogeo(
 	
 	output nCTRL1ZONE, nCTRL2ZONE, nSTATUSBZONE,
 	
+	/*
 	output [6:0] VIDEO_R,
 	output [6:0] VIDEO_G,
 	output [6:0] VIDEO_B,
 	output VIDEO_SYNC,
+	*/
+	
+	output VIDEO_R_SER, VIDEO_G_SER, VIDEO_B_SER, VIDEO_CLK_SER, VIDEO_RES_SER,
 	
 	// I2S interface
 	output I2S_MCLK, I2S_BICK, I2S_SDTI, I2S_LRCK
@@ -89,6 +93,9 @@ module neogeo(
 	wire [5:0] nSLOT;
 	
 	wire [3:0] ANA;		// PSG audio level
+	wire [6:0] VIDEO_R;
+	wire [6:0] VIDEO_G;
+	wire [6:0] VIDEO_B;
 	
 	// Implementation specific (unique slot)
 	assign nSLOTCS = nSLOT[0];
@@ -160,6 +167,8 @@ module neogeo(
 
 	// Todo: REMOVE HCOUNT, it's only used for simulation file output here:
 	videout VOUT(CLK_6MB, nBNKB, SHADOW, PC, VIDEO_R, VIDEO_G, VIDEO_B, HCOUNT);
+	ser_video SERVID(CLK_SERVID, CLK_6MB, VIDEO_R, VIDEO_G, VIDEO_B,
+						VIDEO_R_SER, VIDEO_G_SER, VIDEO_B_SER, VIDEO_CLK_SER, VIDEO_RES_SER);
 	
 	// Gates
 	assign PCK1B = ~PCK1;

@@ -3,7 +3,7 @@
 module testbench_1();
 	reg MCLK;
 	reg nRESET_BTN;
-	
+	 
 	wire [15:0] M68K_DATA;
 	wire [23:1] M68K_ADDR;
 	wire nWWL, nWWU, nWRL, nWRU;
@@ -82,20 +82,20 @@ module testbench_1();
 		
 		nCTRL1ZONE, nCTRL2ZONE, nSTATUSBZONE,				// 3
 		
+		/*
 		VIDEO_R,														// 7	Serialize ?
 		VIDEO_G,														// 7	Serialize ?
 		VIDEO_B,														// 7	Serialize ?
 		VIDEO_SYNC,													// 1
-		
-		/*
+		*/
+
 		VIDEO_R_SER,												// 5
 		VIDEO_G_SER,
 		VIDEO_B_SER,
-		VIDEO_CLK,
-		VIDEO_RES,
-		*/
-		
-		I2S_MCLK,
+		VIDEO_CLK_SER,
+		VIDEO_RES_SER,
+
+		I2S_MCLK,													// 4
 		I2S_BICK,
 		I2S_SDTI,
 		I2S_LRCK
