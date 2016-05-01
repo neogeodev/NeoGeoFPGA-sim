@@ -99,6 +99,15 @@ module lspc_a2(
 	wire [7:0] SPR_XPOS;
 	wire [15:0] L0_ADDR;
 	
+	// RESET  '''''|_________|'''''
+	// RESETP '''''|_|'''''''''''''
+	reg nRESET_Q;
+	always @(negedge CLK_24M)
+	begin
+		nRESET_Q <= nRESET;
+	end
+	assign nRESETP = ~(nRESET_Q & !nRESET);
+	
 	slow_cycle SCY(CLK_24M, HSYNC, HCOUNT[8:0], VCOUNT[7:3], SPR_NB, SPR_TILEIDX,	SPR_TILENB, SPR_TILEPAL,
 					SPR_TILEAA, SPR_TILEFLIP, FIX_TILENB, FIX_TILEPAL,
 					CPU_VRAM_ADDR, CPU_VRAM_READ_BUFFER, CPU_VRAM_WRITE_BUFFER, CPU_PENDING, CPU_VRAM_ZONE, CPU_RW);

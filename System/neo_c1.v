@@ -27,9 +27,9 @@ module neo_c1(
 	output nDTACK,
 	output nBITW0, nBITW1, nDIPRD0, nDIPRD1,
 	output nPAL,
-	output nCTRL1ZONE,
-	output nCTRL2ZONE,
-	output nSTATUSBZONE
+	output nCTRL1_ZONE,
+	output nCTRL2_ZONE,
+	output nSTATUSB_ZONE
 );
 
 	wire nIO_ZONE;			// Internal

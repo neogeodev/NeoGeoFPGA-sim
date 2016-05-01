@@ -14,7 +14,7 @@ module cpu_68k(
 	reg [31:0] AO68KDATA_IN;
 	wire [31:0] AO68KDATA_OUT;
 	wire [31:2] AO68KADDR;
-	reg M68K_ACCESS_CNT;
+	reg [2:0] M68K_ACCESS_CNT;
 	reg AO68KDTACK;
 	wire [3:0] AO68KSIZE;
 	
@@ -26,29 +26,31 @@ module cpu_68k(
 	always @(negedge CLK_68KCLK)
 	begin
 		if (nAS)
-			M68K_ACCESS_CNT <= 1'b0;
+		begin
+			M68K_ACCESS_CNT <= 3'b000;
+			AO68KDTACK <= 1'b0;
+		end
 		else
 		begin
 			if (&{AO68KSIZE[3:0]})
 			begin
-				if (!M68K_ACCESS_CNT)
+				if (!M68K_ACCESS_CNT[2])
 				begin
-					AO68KDTACK <= 1'b0;
 					AO68KDATA_IN[31:16] <= M68K_DATA;
-					M68K_ACCESS_CNT <= 1'b1;
 				end
 				else
 				begin
-					AO68KDTACK <= 1'b1;
+					if (M68K_ACCESS_CNT[1:0] == 2'b10) AO68KDTACK <= 1'b1;
+					if (M68K_ACCESS_CNT[1:0] == 2'b11) AO68KDTACK <= 1'b0;	// ?
 					AO68KDATA_IN[15:0] <= M68K_DATA;
-					M68K_ACCESS_CNT <= 1'b0;
 				end
 			end
 			else
 			begin
-				AO68KDTACK <= 1'b1;
+				if (M68K_ACCESS_CNT[1:0] == 2'b10) AO68KDTACK <= 1'b1;
 				AO68KDATA_IN <= {16'b0, M68K_DATA};
 			end
+			M68K_ACCESS_CNT <= M68K_ACCESS_CNT + 1'b1;
 		end
 	end
 	
@@ -64,7 +66,7 @@ module cpu_68k(
 	assign nUDS = ~(AO68KSIZE[3] | AO68KSIZE[1]);
 	assign nLDS = ~(AO68KSIZE[2] | AO68KSIZE[0]);
 	
-	assign M68K_ADDR = (&{AO68KSIZE[3:0]}) ? {AO68KADDR[23:2], M68K_ACCESS_CNT} : {AO68KADDR[23:2], &{AO68KSIZE[1:0]}};
+	assign M68K_ADDR = (&{AO68KSIZE[3:0]}) ? {AO68KADDR[23:2], M68K_ACCESS_CNT[2]} : {AO68KADDR[23:2], &{AO68KSIZE[1:0]}};
 	
 	assign nAS = ~AO68KAS;
 	assign M68K_RW = ~AO68KWE;

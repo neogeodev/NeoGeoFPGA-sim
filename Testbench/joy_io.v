@@ -27,11 +27,11 @@ module joy_io(
 	end
 	
 	// REG_P1CNT
-	assign M68K_DATA = nCTRL1ZONE ? 8'bzzzzzzzz : P1_IN[7:0];
+	assign M68K_DATA[15:8] = nCTRL1ZONE ? 8'bzzzzzzzz : P1_IN[7:0];
 	// REG_P2CNT
-	assign M68K_DATA = nCTRL2ZONE ? 8'bzzzzzzzz : P2_IN[7:0];
+	assign M68K_DATA[15:8] = nCTRL2ZONE ? 8'bzzzzzzzz : P2_IN[7:0];
 	
 	// REG_STATUS_B
-	assign M68K_DATA = nSTATUSBZONE ? 8'bzzzzzzzz : {SYSTEM_MODE, nWP, nCD2, nCD1, P2_IN[9:8], P1_IN[9:8]};
+	assign M68K_DATA[15:8] = nSTATUSBZONE ? 8'bzzzzzzzz : {SYSTEM_MODE, nWP, nCD2, nCD1, P2_IN[9:8], P1_IN[9:8]};
 	
 endmodule
