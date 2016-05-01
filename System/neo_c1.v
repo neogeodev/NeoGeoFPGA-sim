@@ -32,8 +32,6 @@ module neo_c1(
 	output nSTATUSBZONE
 );
 
-	parameter CONSOLE_MODE = 1'b1;	// MVS (IN27 of NEO-C1)
-
 	wire nIO_ZONE;			// Internal
 	wire nC1REGS_ZONE;	// Internal
 	wire nROM_ZONE;		// Internal
@@ -51,7 +49,7 @@ module neo_c1(
 	
 	assign nVALID = nAS | (nLDS & nUDS);
 	
-	c1_regs C1REGS(nICOM_ZONE, CONSOLE_MODE, nWP, nCD2, nCD1, RW, M68K_DATA);
+	c1_regs C1REGS(nICOM_ZONE, RW, M68K_DATA);
 	
 	c1_wait C1WAIT(CLK_68KCLK, nAS, nROM_ZONE, nPORT_ZONE, nCARD_ZONE, nROMWAIT, nPWAIT0,
 					nPWAIT1, PDTACK, nDTACK);

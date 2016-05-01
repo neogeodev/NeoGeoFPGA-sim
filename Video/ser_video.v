@@ -10,7 +10,7 @@ module ser_video(
 	output VIDEO_G_SER,
 	output VIDEO_B_SER,
 	output VIDEO_CLK_SER,
-	output VIDEO_RES_SER
+	output VIDEO_LAT_SER
 );
 
 	reg [6:0] R_SR;
@@ -19,8 +19,8 @@ module ser_video(
 	
 	reg [1:0] VIDEO_LOAD;
 	
-	assign VIDEO_CLK = CLK_SERVID;
-	assign VIDEO_RES = 1'b0;			// Todo
+	assign VIDEO_CLK_SER = CLK_SERVID;
+	assign VIDEO_LAT_SER = 1'b0;			// Todo
 	
 	assign VIDEO_R_SER = R_SR[6];
 	assign VIDEO_G_SER = G_SR[6];

@@ -8,11 +8,21 @@ module neo_f0(
 	inout [7:0] M68K_DATA,
 	input SYSTEMB,
 	output [5:0] nSLOT,
-	output SLOTA, SLOTB, SLOTC
+	output SLOTA, SLOTB, SLOTC,
+	output nLED_LATCH, nLED_DATA
 	//output [3:0] EL_OUT,
 	//output [8:0] LED_OUT1,
 	//output [8:0] LED_OUT2
 );
+
+	assign nLED_LATCH = (M68K_ADDR[6:4] == 3'b011) ? nBITWD0 : 1'b1;
+	assign nLED_DATA = (M68K_ADDR[6:4] == 3'b100) ? nBITWD0 : 1'b1;
+	
+	/*always @(posedge nBITWD0)	// ?
+	begin
+		if (M68K_ADDR[6:4] == 3'b011) LEDLATCH <= M68K_DATA[5:3];		// REG_LEDLATCHES
+		if (M68K_ADDR[6:4] == 3'b100) LEDDATA <= M68K_DATA[7:0];			// REG_LEDDATA
+	end*/
 
 	reg [2:0] REG_RTCCTRL;		// Todo
 	
@@ -37,6 +47,6 @@ module neo_f0(
 						(SLOTS == 3'b011) ? 6'b110111 :
 						(SLOTS == 3'b100) ? 6'b101111 :
 						(SLOTS == 3'b101) ? 6'b011111 :
-						6'b111110;	// Not sure ?
+						6'b111111;	// Not sure ?
 	
 endmodule

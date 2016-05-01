@@ -1,4 +1,5 @@
 `timescale 1ns/1ns
+// `default_nettype none
 
 // SNK NeoGeo FPGA hardware definitions (for simulation only)
 // furrtek, Charles MacDonald, Kyuusaku, freem and neogeodev contributors ~ 2016
@@ -9,11 +10,13 @@ module neogeo(
 	input nRESET_BTN,				// On AES only
 	
 	inout [15:0] M68K_DATA,		// 68K
-	output [23:1] M68K_ADDR,
+	output [19:1] M68K_ADDR_OUT,
 	output M68K_RW,
 	output nWWL, nWWU, nWRL, nWRU,
+	output nSRAMWEN, nSRAMWEL, nSRAMWEU, nSRAMOEL, nSRAMOEU,
 	output nSROMOE, nSYSTEM,
 	output nBITWD0, nDIPRD0,
+	output nLED_LATCH, nLED_DATA,
 	
 	output nROMOE, nPORTOEL, nPORTOEU, nSLOTCS,
 	input nROMWAIT, nPWAIT0, nPWAIT1, PDTACK,
@@ -35,14 +38,16 @@ module neogeo(
 	output S2H1, CA4,
 	output PCK1B, PCK2B,
 	
-	input [31:0] CR,				// Raw sprite data, todo: replace with muxed bus from ZMC2 !
+	output CLK_12M, EVEN, LOAD, H,
+	input [3:0] GAD, GBD,
 	input [7:0] FIXD,
 	
-	output [23:0] CDA,			// Memcard address
+	output [4:0] CDA_U,			// Memcard upper address lines
 	output nCRDC, nCRDO, CARD_PIN_nWE, CARD_PIN_nREG,
 	output nCD1, nCD2, nWP,
 	
 	output nCTRL1ZONE, nCTRL2ZONE, nSTATUSBZONE,
+	output COUNTER1, COUNTER2, LOCKOUT1, LOCKOUT2,
 	
 	/*
 	output [6:0] VIDEO_R,
@@ -51,7 +56,7 @@ module neogeo(
 	output VIDEO_SYNC,
 	*/
 	
-	output VIDEO_R_SER, VIDEO_G_SER, VIDEO_B_SER, VIDEO_CLK_SER, VIDEO_RES_SER,
+	output VIDEO_R_SER, VIDEO_G_SER, VIDEO_B_SER, VIDEO_CLK_SER, VIDEO_LAT_SER,
 	
 	// I2S interface
 	output I2S_MCLK, I2S_BICK, I2S_SDTI, I2S_LRCK
@@ -65,29 +70,46 @@ module neogeo(
 	// Todo: VPA for interrupt ACK (NEO-C1)
 	// Todo: Check watchdog timing
 	
-	wire A22Z, A23Z;
-	wire nDTACK;
-	wire nRESET, nRESETP;
-	wire CLK_68KCLK;
+	wire CLK_68KCLK, CLK_68KCLKB, CLK_1MB, CLK_4M, CLK_6MB, CLK_8M, CLK_I2S, CLK_RTC, CLK_SERVID;
 	
-	wire CLK_1MB;
-	wire CLK_6MB;
+	wire A22Z, A23Z;
+	wire nDTACK, nAS, nHALT, IPL1, IPL0, nLDS, nUDS;
+	wire nRESET, nRESETP;
 	
 	wire nPAL, nPALWE;
 	wire nSROMOEU, nSROMOEL;
 	
+	wire [23:1] M68K_ADDR;
+	
+	assign M68K_ADDR_OUT = M68K_ADDR[19:1];
+	
 	wire [11:0] PA;			// Palette RAM address
-	wire [3:0] GAD, GBD;		// Pixel pair
 	wire [15:0] PC;			// Palette RAM data
 	
 	wire [3:0] WE;				// LSPC/B1
 	wire [3:0] CK;				// LSPC/B1
 	
+	wire nZRAMCS;				// Z80
+	wire nIORQ, nMREQ, nSDRD, nSDWR, nZ80INT, nZ80NMI;
+	wire nSDMRD, nSDMWR;		// Z80 RAM
+	wire nSDW, nSDZ80R, nSDZ80W, nSDZ80CLR, SDRD0, SDRD1;
+	wire n2610CS, n2610RD, n2610WR;
+	
+	wire nPORTWEL, nPORTWEU, nPORTADRS;
+	wire nROMOEL, nROMOEU;
 	wire SYSTEMB;
+	wire nCOUNTOUT, nBITW0, nBITW1, nDIPRD1, nLSPOE, nLSPWE;
+	wire PWAIT0, PWAIT1;
+	wire CARDWENB, nCRDW, nCARDWEN;
+	wire EVEN1, EVEN2, DOTA, DOTB, SS1, SS2, PCK1, PCK2;
+	wire nREGEN;
+	wire S1H1, LD1, LD2, SH1, SH2;
+	wire CHBL, VIDEO_SYNC;
 	
 	wire nVEC, SHADOW;
 	wire nBNKB;
 	
+	wire PALBNK;
 	wire [2:0] BNK;
 	
 	wire [5:0] nSLOT;
@@ -116,11 +138,11 @@ module neogeo(
 	assign TMS0 = CHG;
 	
 	cpu_68k M68KCPU(CLK_68KCLK, nRESET, IPL1, IPL0, M68K_ADDR, M68K_DATA, nLDS, nUDS, nAS, M68K_RW);
-	cpu_z80 Z80CPU(CLK_4M, nRESET, SDD, SDA, nIORQ, nMREQ, nRD, nWR, nINT, nNMI);
+	cpu_z80 Z80CPU(CLK_4M, nRESET, SDD, SDA, nIORQ, nMREQ, nSDRD, nSDWR, nZ80INT, nNMI);
 	
 	neo_c1 C1(M68K_ADDR[21:17], M68K_DATA[15:8], A22Z, A23Z, nLDS, nUDS, M68K_RW, nAS, nROMOEL, nROMOEU, nPORTOEL, nPORTOEU,
 				nPORTWEL, nPORTWEU, nPORTADRS, nWRL, nWRU, nWWL, nWWU, nSROMOEL, nSROMOEU, nSRAMOEL, nSRAMOEU, nSRAMWEL,
-				nSRAMWEU, nLSPOE, nLSPWE, nCRDO, nCRDW, nCRDC, nSDW, nCD1, nCD2, nWP, ROMWAIT, PWAIT0,
+				nSRAMWEU, nLSPOE, nLSPWE, nCRDO, nCRDW, nCRDC, nSDW, nCD1, nCD2, nWP, nROMWAIT, PWAIT0,
 				PWAIT1, PDTACK, SDD, CLK_68KCLK, nDTACK, nBITW0, nBITW1, nDIPRD0, nDIPRD1, nPAL,
 				nCTRL1ZONE, nCTRL2ZONE, nSTATUSBZONE);
 	
@@ -130,18 +152,19 @@ module neogeo(
 				SDA[15:11], SDA[4:2], nSDRD, nSDWR, nMREQ, nIORQ, nZ80NMI, nSDZ80R, nSDZ80W, nSDZ80CLR,
 				nSDROM, nSDMRD, nSDMWR, SDRD0, SDRD1, n2610CS, n2610RD, n2610WR, nZRAMCS, BNK);
 	
-	neo_e0 E0(M68K_ADDR[23:1], BNK[2:0], nSROMOEU, nSROMOEL, nSROMOE,
-				nVEC, A23Z, A22Z, CDA[23:0]);
+	neo_e0 E0(M68K_ADDR[22:6], BNK[2:0], nSROMOEU, nSROMOEL, nSROMOE,
+				nVEC, A23Z, A22Z, CDA_U);
 	
-	neo_f0 F0(nDIPRD1, nBITWD0, M68K_ADDR[7:4], M68K_DATA[7:0], SYSTEMB, nSLOT, SLOTA, SLOTB, SLOTC);
+	neo_f0 F0(nDIPRD1, nBITWD0, M68K_ADDR[7:4], M68K_DATA[7:0], SYSTEMB, nSLOT, SLOTA, SLOTB, SLOTC,
+				nLED_LATCH, nLED_DATA);
 	
 	neo_i0 I0(nRESET, nCOUNTOUT, M68K_ADDR[3:1], M68K_ADDR[7], COUNTER1, COUNTER2, LOCKOUT1, LOCKOUT2);
 	
 	syslatch SL(M68K_ADDR[4:1], nBITW1, nRESET,
-				SHADOW, nVEC, nCARDWEN, CARDWENB, nREGEN, nSYSTEM, SRAMWEN, PALBNK);
-	
-	// Video
-	neo_zmc2 ZMC2(CLK_12M, EVEN, LOAD, H, CR, GAD, GBD, DOTA, DOTB);
+				SHADOW, nVEC, nCARDWEN, CARDWENB, nREGEN, nSYSTEM, nSRAMWEN, PALBNK);
+
+	// Normally in ZMC2, saves 2 FPGA inputs
+	assign {DOTA, DOTB} = {|GAD, |GBD};
 	
 	// Todo: REMOVE HCOUNT, it's only used for simulation in videout
 	lspc_a2 LSPC(CLK_24M, nRESET, PBUS, M68K_ADDR[3:1], M68K_DATA, nLSPOE, nLSPWE, DOTA, DOTB, CA4, S2H1,
@@ -154,9 +177,6 @@ module neogeo(
 	z80ram ZRAM(SDA[10:0], SDD, nZRAMCS, nSDMRD, nSDMWR);
 	palram PALRAM({PALBNK, PA}, PC, nPALWE);
 	
-	// Todo: Put in testbench
-	sram SRAM(M68K_DATA, M68K_ADDR[15:1], nBWL, nBWU, nSRAMOEL, nSRAMOEU, nSRAMCS);
-	
 	ym2610 YM(CLK_8M, SDD, SDA[1:0], nZ80INT, n2610CS, n2610WR, n2610RD, SDRAD, SDRA_L, SDRA_U, SDRMPX, nSDROE,
 					SDPAD, SDPA, SDPMPX, nSDPOE, ANA, SH1, SH2, OP0, PHI_M);
 	
@@ -168,7 +188,7 @@ module neogeo(
 	// Todo: REMOVE HCOUNT, it's only used for simulation file output here:
 	videout VOUT(CLK_6MB, nBNKB, SHADOW, PC, VIDEO_R, VIDEO_G, VIDEO_B, HCOUNT);
 	ser_video SERVID(CLK_SERVID, CLK_6MB, VIDEO_R, VIDEO_G, VIDEO_B,
-						VIDEO_R_SER, VIDEO_G_SER, VIDEO_B_SER, VIDEO_CLK_SER, VIDEO_RES_SER);
+						VIDEO_R_SER, VIDEO_G_SER, VIDEO_B_SER, VIDEO_CLK_SER, VIDEO_LAT_SER);
 	
 	// Gates
 	assign PCK1B = ~PCK1;
@@ -176,12 +196,6 @@ module neogeo(
 	assign nPALWE = M68K_RW | nPAL;
 	assign SYSTEMB = ~nSYSTEM;
 	assign nROMOE = nROMOEU & nROMOEL;
-	
-	// nSRAMCS comes from inverter transistor in analog circuit (MVS schematics page 1)
-	assign nSRAMCS = 0;	// Todo: For debug only
-	assign nSRAMWE = SRAMWEN | nSRAMCS;
-	assign nBWU = nSRAMWEU | nSRAMWE;
-	assign nBWL = nSRAMWEL | nSRAMWE;
 	
 	// Memcard stuff
 	assign CARD_PIN_nWE = |{nCARDWEN, ~CARDWENB, nCRDW};

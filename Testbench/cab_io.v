@@ -1,8 +1,15 @@
 `timescale 1ns/1ns
 
+// SIMULATION
+// Latches and buffers on the 68K bus for MVS cab I/Os
+// 273s and 245s on the verification board
+// Signals: nBITWD0, nDIPRD0, nLED_LATCH, nLED_DATA
+
 module cab_io(
 	input nBITWD0,
 	input nDIPRD0,
+	input nLED_LATCH,
+	input nLED_DATA,
 	input [7:0] DIPSW,
 	input [7:4] M68K_ADDR,
 	inout [7:0] M68K_DATA,
@@ -14,11 +21,14 @@ module cab_io(
 	reg [2:0] LEDLATCH;
 	reg [7:0] LEDDATA;
 	
-	// Todo: get signals from NGCORE instead of doing M68K_ADDR matches
-	always @(posedge nBITWD0)	// ?
+	always @(posedge nLED_LATCH)
 	begin
-		if (M68K_ADDR[6:4] == 3'b011) LEDLATCH <= M68K_DATA[5:3];		// REG_LEDLATCHES
-		if (M68K_ADDR[6:4] == 3'b100) LEDDATA <= M68K_DATA[7:0];			// REG_LEDDATA
+		LEDLATCH <= M68K_DATA[5:3];		// REG_LEDLATCHES
+	end
+	
+	always @(posedge nLED_DATA)
+	begin
+		LEDDATA <= M68K_DATA[7:0];			// REG_LEDDATA
 	end
 	
 	assign EL_OUT = {LEDLATCH[0], LEDDATA[2:0]};

@@ -2,8 +2,6 @@
 
 module c1_regs(
 	input nICOMZONE,
-	input CONSOLE_MODE,
-	input nWP, nCD2, nCD1,
 	input RW,
 	inout [15:8] M68K_DATA
 );

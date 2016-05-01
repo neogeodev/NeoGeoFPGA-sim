@@ -1,18 +1,18 @@
 Register implementation:
 
-REG_P1CNT		Read ok, check range
-REG_DIPSW		Read ok, Write ok, check range
+REG_P1CNT		Read ok, check range			joy_io.v
+REG_DIPSW		Read ok, Write ok, check range		cab_io.v
 REG_TYPE		Read mapped, check range
-REG_SOUND		Read ok, write todo, check range
-REG_STATUS_A		Read mapped, check range
-REG_P2CNT		Read ok, check range
-REG_STATUS_B		Read ok, check range
-REG_POUTPUT		Write ok, check range
-REG_CRDBANK		Write ok, check range
-REG_SLOT		Write ok, check range
-REG_LEDLATCHES		Write ok, check range
-REG_LEDDATA		Write ok, check range
-REG_RTCCTRL		Write ok, check range
+REG_SOUND		Read ok, write todo, check range	neo_c1.v TODO
+REG_STATUS_A		Read mapped, check range		neo_f0.v TODO
+REG_P2CNT		Read ok, check range			joy_io.v
+REG_STATUS_B		Read ok, check range			joy_io.v
+REG_POUTPUT		Write ok, check range			joy_io.v
+REG_CRDBANK		Write ok, check range			neo_d0.v
+REG_SLOT		Write ok, check range			neo_f0.v
+REG_LEDLATCHES		Write ok, check range			cab_io.v
+REG_LEDDATA		Write ok, check range			cab_io.v
+REG_RTCCTRL		Write ok, check range			neo_f0.v
 	
 Counter/lockout	Ok, check range, neo_i0.v
 	
