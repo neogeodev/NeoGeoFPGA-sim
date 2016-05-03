@@ -10,7 +10,7 @@ module videout(
 	output reg [6:0] VIDEO_B,
 	input [8:0] HCOUNT			// Sim only: Only used to limit output to active display
 );
-
+/*
 	// Sim only
 	integer f;
 	initial
@@ -20,7 +20,7 @@ module videout(
 		$fclose(f);
 		$stop;
 	end
-
+*/
 	// Color data latch/blanking
 	always @(posedge CLK_6MB)
 	begin
@@ -29,8 +29,8 @@ module videout(
 		VIDEO_B <= nBNKB ? {SHADOW, PC[3:0], PC[12], PC[15]} : 7'b0000000;
 		
 		// Sim only
-		if ((HCOUNT > 9'd2) && (HCOUNT < 9'd323)) $fwrite(f, "%04X ", PC);
-		if (HCOUNT == 9'd328) $fwrite(f, "\n");
+		//if ((HCOUNT > 9'd2) && (HCOUNT < 9'd323)) $fwrite(f, "%04X ", PC);
+		//if (HCOUNT == 9'd328) $fwrite(f, "\n");
 	end
 	
 endmodule

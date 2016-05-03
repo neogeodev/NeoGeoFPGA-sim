@@ -37,10 +37,10 @@ module neo_c1(
 	wire nROM_ZONE;		// Internal
 	wire nWRAM_ZONE;		// Internal
 	wire nPORT_ZONE;		// Internal
-	wire nCTRL1_ZONE;		// Internal (external for PCB)
+//	wire nCTRL1_ZONE;		// Internal (external for PCB)
 	wire nICOM_ZONE;		// Internal
-	wire nCTRL2_ZONE;		// Internal (external for PCB)
-	wire nSTATUSB_ZONE;	// Internal (external for PCB)
+//	wire nCTRL2_ZONE;		// Internal (external for PCB)
+//	wire nSTATUSB_ZONE;	// Internal (external for PCB)
 	wire nLSPC_ZONE;		// Internal
 	wire nCARD_ZONE;		// Internal
 	wire nSROM_ZONE;		// Internal
@@ -130,10 +130,10 @@ module neo_c1(
 	assign nSRAMWEU = RW | nUDS | nSRAM_ZONE | nAS;
 
 	// Not sure about word access ?
-	assign nLSPOE = RW | nWORDACCESS | nLSPC_ZONE | nAS;
-	assign nLSPWE = ~RW | nWORDACCESS | nLSPC_ZONE | nAS;
-	assign nCRDO = RW | nWORDACCESS | nCARD_ZONE | nAS;
-	assign nCRDW = ~RW | nWORDACCESS | nCARD_ZONE | nAS;
+	assign nLSPOE = ~RW | nWORDACCESS | nLSPC_ZONE | nAS;
+	assign nLSPWE = RW | nWORDACCESS | nLSPC_ZONE | nAS;
+	assign nCRDO = ~RW | nWORDACCESS | nCARD_ZONE | nAS;
+	assign nCRDW = RW | nWORDACCESS | nCARD_ZONE | nAS;
 	assign nCRDC = nCRDO & nCRDW;
 
 endmodule

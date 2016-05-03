@@ -125,10 +125,10 @@ module testbench_1();
 	/*memcard MC({CDA_U, M68K_ADDR[19:1]}, CDD, nCRDC, nCRDO, CARD_PIN_nWE, CARD_PIN_nREG, nCD1, nCD2, nWP);
 	
 	assign M68K_DATA = (M68K_RW & ~nCRDC) ? CDD : 16'bzzzzzzzzzzzzzzzz;
-	assign CDD = (~M68K_RW | nCRDC) ? 16'bzzzzzzzzzzzzzzzz : M68K_DATA;
+	assign CDD = (~M68K_RW | nCRDC) ? 16'bzzzzzzzzzzzzzzzz : M68K_DATA;*/
 	
 	// 68K RAM is external, not enough BRAM in XC6SLX16
-	ram_68k M68KRAM(M68K_ADDR[15:1], M68K_DATA, nWWL, nWWU, nWRL, nWRU);*/
+	ram_68k M68KRAM(M68K_ADDR[15:1], M68K_DATA, nWWL, nWWU, nWRL, nWRU);
 	// Embedded ROMs (flash)
 	rom_sps2 SP(M68K_ADDR[16:1], {M68K_DATA[7:0], M68K_DATA[15:8]}, nSROMOE);
 	rom_l0 L0(PBUS[15:0], PBUS[23:16], nVCS);
@@ -141,14 +141,14 @@ module testbench_1();
 	
 	// nSRAMCS comes from analog battery backup circuit
 	assign nSRAMCS = 1'b0;
-	// sram SRAM(M68K_DATA, M68K_ADDR[15:1], nBWL, nBWU, nSRAMOEL, nSRAMOEU, nSRAMCS);
+	sram SRAM(M68K_DATA, M68K_ADDR[15:1], nBWL, nBWU, nSRAMOEL, nSRAMOEU, nSRAMCS);
 	assign nSWE = nSRAMWEN | nSRAMCS;
 	assign nBWL = nSRAMWEL | nSWE;
 	assign nBWU = nSRAMWEU | nSWE;
 	
 	// MVS cab I/O
-	/*cab_io CABIO(nBITWD0, nDIPRD0, nLED_LATCH, nLED_DATA, DIPSW, M68K_ADDR[7:4], M68K_DATA[7:0],
-						EL_OUT, LED_OUT1, LED_OUT2);*/
+	cab_io CABIO(nBITWD0, nDIPRD0, nLED_LATCH, nLED_DATA, DIPSW, M68K_ADDR[7:4], M68K_DATA[7:0],
+						EL_OUT, LED_OUT1, LED_OUT2);
 	
 	parameter SYSTEM_MODE = 1'b1;		// MVS
 	
@@ -171,9 +171,9 @@ module testbench_1();
 		
 	initial
 	begin
-		#500
+		#100
 		nRESET_BTN = 0;
-		#500
+		#1000
 		nRESET_BTN = 1;
 	end
 	

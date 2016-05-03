@@ -16,7 +16,7 @@ module sram_u(
 		//$readmemh("raminit_sram_u.txt", RAMDATA);
 	end
 
-	assign #120 DATA = (nCE & nOE & ~nWE) ? 8'bzzzzzzzz : RAMDATA[ADDR];
+	assign #120 DATA = (nCE | nOE | ~nWE) ? 8'bzzzzzzzz : RAMDATA[ADDR];
 
 	always @(nCE or nWE or DATA)
 	  if (!(nCE & nWE))

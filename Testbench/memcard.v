@@ -21,8 +21,8 @@ module memcard(
 	assign nCD1 = nINSERTED;
 	assign nCD2 = nINSERTED;
 	assign nWP = nPROTECT;
-
-	assign #10 CDD[7:0] = (nCE & nOE & ~nWE) ? 8'bzzzzzzzz : RAMDATA[CDA[10:0]];
+	
+	assign #10 CDD[7:0] = (nCE | nOE | ~nWE) ? 8'bzzzzzzzz : RAMDATA[CDA[10:0]];
 
 	always @(nCE or nWE)
 	  if (!(nCE & nWE))

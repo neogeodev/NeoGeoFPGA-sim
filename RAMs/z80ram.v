@@ -12,7 +12,7 @@ module z80ram(
 
 	reg [7:0] RAMDATA[0:2047];
 
-	assign #100 SDD[7:0] = (nCE & nOE & ~nWE) ? 8'bzzzzzzzz : RAMDATA[SDA];
+	assign #100 SDD[7:0] = (nCE | nOE | ~nWE) ? 8'bzzzzzzzz : RAMDATA[SDA];
 
 	always @(nCE or nWE)
 	  if (!(nCE & nWE))

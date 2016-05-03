@@ -16,7 +16,7 @@ module ram68k_l(
 		//$readmemh("raminit_68kram_l.txt", RAMDATA);
 	end
 
-	assign #120 DATA = (nCE & nOE & ~nWE) ? 8'bzzzzzzzz : RAMDATA[ADDR];
+	assign #120 DATA = (nCE | nOE | ~nWE) ? 8'bzzzzzzzz : RAMDATA[ADDR];
 
 	always @(nCE or nWE)
 	  if (!(nCE & nWE))
