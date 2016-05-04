@@ -5,6 +5,7 @@ module videosync(
 	input nRESET,
 	output reg [8:0] VCOUNT,	// F8 ~ 1FF
 	output reg [8:0] HCOUNT,	// 0 ~ 17F
+	output reg TMS0,
 	output reg VBLANK,
 	output nVSYNC,
 	output HSYNC
@@ -18,6 +19,7 @@ module videosync(
 		begin
 			HCOUNT <= 9'd328;		// 384-56
 			VCOUNT <= 0;
+			TMS0 <= 0;
 		end
 		else
 		begin
@@ -36,7 +38,10 @@ module videosync(
 					VBLANK <= 1;
 			end
 			if (HCOUNT == 9'd383)
+			begin
 				HCOUNT <= 9'd0;
+				TMS0 <= ~TMS0;
+			end
 			else
 				HCOUNT <= HCOUNT + 1;
 		end

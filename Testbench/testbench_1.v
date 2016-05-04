@@ -4,6 +4,7 @@
 module testbench_1();
 	reg MCLK;
 	reg nRESET_BTN;
+	reg VCCON;
 	reg [9:0] P1_IN;
 	reg [9:0] P2_IN;
 	reg nTEST_BTN;				// MVS only
@@ -63,6 +64,7 @@ module testbench_1();
 	neogeo NG(
 		MCLK,															// 2
 		nRESET_BTN,
+		VCCON,
 		
 		M68K_DATA, M68K_ADDR[19:1],							// 16 + 20
 		M68K_RW,														// 1
@@ -109,9 +111,9 @@ module testbench_1();
 	);																	// Total: 189 :)
 	
 	// MVS cartridge
-	/*mvs_cart MVSCART(PBUS, CA4, S2H1, PCK1B, PCK2B, CR, FIXD_CART, M68K_ADDR[19:1], M68K_DATA, nROMOE,
+	mvs_cart MVSCART(PBUS, CA4, S2H1, PCK1B, PCK2B, CR, FIXD_CART, M68K_ADDR[19:1], M68K_DATA, nROMOE,
 					nPORTOEL, nPORTOEU, nSLOTCS, nROMWAIT, nPWAIT0, nPWAIT1, PDTACK, SDRAD, SDRA_L, SDRA_U, SDRMPX,
-					nSDROE, SDPAD, SDPA, SDPMPX, nSDPOE, nSDROM, SDA, SDD);*/
+					nSDROE, SDPAD, SDPA, SDPMPX, nSDPOE, nSDROM, SDA, SDD);
 	
 	// AES cartridge
 	/*aes_cart AESCART(PBUS, CA4, S2H1, PCK1B, PCK2B, GAD, GBD, EVEN, H, LOAD, FIXD_CART, M68K_ADDR[19:1], M68K_DATA,
@@ -122,10 +124,9 @@ module testbench_1();
 	neo_zmc2 ZMC2(CLK_12M, EVEN, LOAD, H, CR, GAD, GBD, , );
 	
 	// Memory card
-	/*memcard MC({CDA_U, M68K_ADDR[19:1]}, CDD, nCRDC, nCRDO, CARD_PIN_nWE, CARD_PIN_nREG, nCD1, nCD2, nWP);
-	
+	memcard MC({CDA_U, M68K_ADDR[19:1]}, CDD, nCRDC, nCRDO, CARD_PIN_nWE, CARD_PIN_nREG, nCD1, nCD2, nWP);
 	assign M68K_DATA = (M68K_RW & ~nCRDC) ? CDD : 16'bzzzzzzzzzzzzzzzz;
-	assign CDD = (~M68K_RW | nCRDC) ? 16'bzzzzzzzzzzzzzzzz : M68K_DATA;*/
+	assign CDD = (~M68K_RW | nCRDC) ? 16'bzzzzzzzzzzzzzzzz : M68K_DATA;
 	
 	// 68K RAM is external, not enough BRAM in XC6SLX16
 	ram_68k M68KRAM(M68K_ADDR[15:1], M68K_DATA, nWWL, nWWU, nWRL, nWRU);
@@ -160,10 +161,11 @@ module testbench_1();
 	begin
 		MCLK = 0;
 		nRESET_BTN = 1;
-		nTEST_BTN = 1;				// MVS only
+		nTEST_BTN = 1;					// MVS only
 		DIPSW = 8'b11111111;
 		P1_IN = 10'b1111111111;
 		P2_IN = 10'b1111111111;
+		VCCON = 0;
 	end
 	
 	always
@@ -171,7 +173,9 @@ module testbench_1();
 		
 	initial
 	begin
-		#100
+		#30
+		VCCON = 1;
+		#70
 		nRESET_BTN = 0;
 		#1000
 		nRESET_BTN = 1;

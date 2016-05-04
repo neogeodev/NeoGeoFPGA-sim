@@ -15,6 +15,7 @@ module neo_f0(
 	//output [8:0] LED_OUT2
 );
 
+	// These might have to be positive logic to match clock polarity of used chips
 	assign nLED_LATCH = (M68K_ADDR[6:4] == 3'b011) ? nBITWD0 : 1'b1;
 	assign nLED_DATA = (M68K_ADDR[6:4] == 3'b100) ? nBITWD0 : 1'b1;
 	

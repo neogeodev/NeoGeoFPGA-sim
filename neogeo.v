@@ -8,6 +8,7 @@
 module neogeo(
 	input CLK_24M,
 	input nRESET_BTN,				// On AES only
+	input VCCON,
 	
 	inout [15:0] M68K_DATA,		// 68K
 	output [19:1] M68K_ADDR_OUT,
@@ -131,10 +132,7 @@ module neogeo(
 	
 	wire [8:0] HCOUNT;				// Todo: remove
 	
-	// Renaming :)
-	wire CHG;
 	wire TMS0;
-	assign TMS0 = CHG;
 	
 	cpu_68k M68KCPU(CLK_68KCLK, nRESET, IPL1, IPL0, nDTACK, M68K_ADDR, M68K_DATA, nLDS, nUDS, nAS, M68K_RW);
 	cpu_z80 Z80CPU(CLK_4M, nRESET, SDD, SDA, nIORQ, nMREQ, nSDRD, nSDWR, nZ80INT, nNMI);
@@ -167,7 +165,7 @@ module neogeo(
 	
 	// Todo: REMOVE HCOUNT, it's only used for simulation in videout
 	lspc_a2 LSPC(CLK_24M, nRESET, PBUS, M68K_ADDR[3:1], M68K_DATA, nLSPOE, nLSPWE, DOTA, DOTB, CA4, S2H1,
-				S1H1, LOAD, H, EVEN1, EVEN2, IPL0, IPL1, CHG, LD1, LD1, PCK1, PCK2, WE[3:0], CK[3:0], SS1,
+				S1H1, LOAD, H, EVEN1, EVEN2, IPL0, IPL1, TMS0, LD1, LD1, PCK1, PCK2, WE[3:0], CK[3:0], SS1,
 				SS2, nRESETP, VIDEO_SYNC, CHBL, nBNKB, nVCS, CLK_8M, CLK_4M, HCOUNT);
 	
 	neo_b1 B1(CLK_6MB, CLK_1MB, PBUS, FIXD, PCK1, PCK2, GAD, GBD, WE, CK, TMS0, LD1, LD2, SS1, SS2, S1H1,

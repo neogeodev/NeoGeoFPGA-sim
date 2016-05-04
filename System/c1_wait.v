@@ -29,9 +29,9 @@ module c1_wait(
 			else if (!nPORT_ZONE)
 				WAIT_CNT <= ~{nPWAIT0,nPWAIT1};	// Needs checking
 			else if (!nCARD_ZONE)
-				WAIT_CNT <= 3;
+				WAIT_CNT <= 2;
 			else
-				WAIT_CNT <= 3;
+				WAIT_CNT <= 0;
 		end
 	end
 	

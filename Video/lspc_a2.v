@@ -13,7 +13,7 @@ module lspc_a2(
 	output S1H1,						// ?
 	output LOAD, H, EVEN1, EVEN2,	// For ZMC2
 	output IPL0, IPL1,
-	output CHG,							// Also called SCH, TMS0 in B1
+	output TMS0,						// Also called SCH and CHG
 	output LD1, LD2,
 	output PCK1, PCK2,
 	output [3:0] WE,
@@ -79,7 +79,7 @@ module lspc_a2(
 	wire HSYNC;
 	
 	irq IRQ(nIRQS, IPL0, IPL1);		// nRESETP ?
-	videosync VS(CLK_6M, nRESET, VCOUNT, HCOUNT, VBLANK, nVSYNC, HSYNC);
+	videosync VS(CLK_6M, nRESET, VCOUNT, HCOUNT, TMS0, VBLANK, nVSYNC, HSYNC);
 	
 	wire [11:0] SPR_ATTR_SHRINK;
 	

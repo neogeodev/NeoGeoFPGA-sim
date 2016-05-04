@@ -10,7 +10,7 @@ module neo_b1(
 	input [3:0] GAD, GBD,
 	input [3:0] WE,			// LB writes
 	input [3:0] CK,			// LB clocks
-	input TMS0,					// LB flip
+	input TMS0,					// LB flip, watchdog ?
 	input LD1, LD2,			// Latch x position of sprite from P bus ?
 	input SS1, SS2,			// """""
 	input S1H1,					// ?
@@ -18,7 +18,7 @@ module neo_b1(
 	output [11:0] PA,
 	input nLDS,					// For watchdog
 	input RW,
-	input [20:16] M68K_ADDR_WD,
+	input [21:17] M68K_ADDR_WD,
 	input [11:0] M68K_ADDR_PAL,
 	output nHALT,				// Todo
 	output nRESET,
@@ -44,8 +44,7 @@ module neo_b1(
 	// $400000~$7FFFFF why not use nPAL ?
 	assign PAL_ACCESS = &{~A23Z, A22Z};
 	
-	// Todo: What in the world is the watchdog timer clocked with ? CLK
-	watchdog WD(nLDS, RW, A23Z, A22Z, M68K_ADDR_WD, CLK, nHALT, nRESET, VCCON);
+	watchdog WD(nLDS, RW, A23Z, A22Z, M68K_ADDR_WD, TMS0, nHALT, nRESET, VCCON);
 
 	// Is WE used as OE when in output mode ? (=CK)
 	// assign LBDATA1 = LB_A_W ? {SPR_PAL, GAD} : 12'bzzzzzzzzzzzz;
