@@ -115,7 +115,7 @@ module neogeo(
 	
 	wire [5:0] nSLOT;
 	
-	wire [3:0] ANA;		// PSG audio level
+	wire [5:0] ANA;		// PSG audio level
 	wire [6:0] VIDEO_R;
 	wire [6:0] VIDEO_G;
 	wire [6:0] VIDEO_B;
@@ -169,7 +169,7 @@ module neogeo(
 				SS2, nRESETP, VIDEO_SYNC, CHBL, nBNKB, nVCS, CLK_8M, CLK_4M, HCOUNT);
 	
 	neo_b1 B1(CLK_6MB, CLK_1MB, PBUS, FIXD, PCK1, PCK2, GAD, GBD, WE, CK, TMS0, LD1, LD2, SS1, SS2, S1H1,
-				A23Z, A22Z, PA, nLDS, M68K_RW, M68K_ADDR[21:17], M68K_ADDR[12:1], nHALT, nRESET, VCCON, HCOUNT);
+				A23Z, A22Z, PA, nLDS, M68K_RW, nAS, M68K_ADDR[21:17], M68K_ADDR[12:1], nHALT, nRESET, VCCON, HCOUNT);
 	
 	z80ram ZRAM(SDA[10:0], SDD, nZRAMCS, nSDMRD, nSDMWR);
 	palram PALRAM({PALBNK, PA}, PC, nPALWE);

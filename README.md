@@ -30,27 +30,30 @@ Yellow are RAMs, orange are possibly copyrighted ROMs, blue will be interfaces t
  * rom_v2.v : Sound ROM
 * mvs_cart.v : Just wires both CHA and PROG boards into a cartridge model
 
-# Memory card model
+# External memory
 
-* memcard.v : Just some RAM :)
-
-# NeoGeo model
-
-* cpu_68k.v : Wrapper for ao68000, exposing real 68k connections
- * ao68000.v : ao68000 Motorola 68000 CPU core (https://github.com/alfikpl/ao68000)
-* cpu_z80.v : Wrapper for TVZ80
- * tv80_core.v : TV80 Z80 CPU core
 * m68kram.v : 68k work RAM helper
  * ram68k_l.v : 68k work RAM LSBs
  * ram68k_u.v : 68k work RAM MSBs
-* bram.v : Backup RAM (MVS) helper
- * bram_l.v : Backup RAM LSBs
- * bram_u.v : Backup RAM MSBs
+* sram.v : Backup RAM (MVS) helper
+ * sram_l.v : Backup RAM LSBs
+ * sram_u.v : Backup RAM MSBs
+* memcard.v : Memory card
+* rom_l0.v : Shrink lookup table (L0) ROM
+* rom_sp.v : System program (SP-S2 BIOS) ROM
+* rom_sfix.v : Embeded fix graphics (SFIX) ROM
+
+# NeoGeo model
+
+* cpu_68k.v : Wrapper for TG68K
+ * tg68k.vhd : TG68KMotorola 68000 CPU core (VHDL)
+* cpu_z80.v : Wrapper for TVZ80
+ * tv80_core.v : TV80 Z80 CPU core
 * palram.v : Palette RAM helper
  * palram_l.v : Palette RAM LSBs
  * palram_u.v : Palette RAM MSBs
 * zram.v : Z80 work RAM
-* upd4990.v : NEC uPD4990 interface to some modern compatible RTC chip
+* upd4990.v : NEC uPD4990 interface to some modern RTC chip
 * neo_zmc2.v : SNK graphics chip (most of it done by Kyuusaku)
  * zmc2_dot.v : Graphics serializer part
 * neo_c1.v : SNK address decoding, joypad inputs, system maestro chip
@@ -77,17 +80,13 @@ Yellow are RAMs, orange are possibly copyrighted ROMs, blue will be interfaces t
  * linebuffer.v : Pixel line buffers (x4)
 * neo_i0.v : SNK MVS cab I/O chip
 * syslatch.v : System latch/register
-* rom_l0.v : Shrink lookup table (L0) ROM
-* rom_sp.v : System program (SP-S2 BIOS) ROM
-* rom_sfix.v : Embeded fix graphics (SFIX) ROM
-* bram.v : Backup RAM
- * bram_l.v : Backup RAM low
- * bram_u.v : Backup RAM high
 * palram_l.v : Palette RAM LSB
 * palram_u.v : Palette RAM MSB
 * videout.v : Video output latch
+* ser_video.v : Video serial interface
 * ym2610.v : Yamaha YM2610 sound chip
  * ym_timer.v : Timer and IRQ part
  * ym_ssg.v : Simple Sound Generator part
  * ym_pcma.v : ADPCM-A voices part
  * ym_pcmb.v : ADPCM-B voice part
+* ym2i2s.v : Sound serial interface

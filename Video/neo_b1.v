@@ -18,11 +18,12 @@ module neo_b1(
 	output [11:0] PA,
 	input nLDS,					// For watchdog
 	input RW,
+	input nAS,
 	input [21:17] M68K_ADDR_WD,
 	input [11:0] M68K_ADDR_PAL,
 	output nHALT,				// Todo
 	output nRESET,
-	input VCCON,				// Todo
+	input nRST,					// Reset button and reset gen on AES, VCCON on MVS ?
 	input [8:0] HCOUNT		// Todo: REMOVE HCOUNT, used here but shouldn't. Hack to replace proper CLK_1MB ?
 );
 
@@ -39,12 +40,12 @@ module neo_b1(
 	wire [3:0] FIX_PIXEL;
 	wire FIX_OPAQUE;
 	
-	wire PAL_ACCESS;
+	wire nPAL_ACCESS;
 	
 	// $400000~$7FFFFF why not use nPAL ?
-	assign PAL_ACCESS = &{~A23Z, A22Z};
+	assign nPAL_ACCESS = |{A23Z, ~A22Z, nAS};
 	
-	watchdog WD(nLDS, RW, A23Z, A22Z, M68K_ADDR_WD, TMS0, nHALT, nRESET, VCCON);
+	watchdog WD(nLDS, RW, A23Z, A22Z, M68K_ADDR_WD, TMS0, nHALT, nRESET, nRST);
 
 	// Is WE used as OE when in output mode ? (=CK)
 	// assign LBDATA1 = LB_A_W ? {SPR_PAL, GAD} : 12'bzzzzzzzzzzzz;
@@ -53,22 +54,24 @@ module neo_b1(
 	linebuffer LB3(CK[2], WE[2], PCK2, PBUS[15:8], LBDATA_B_E, ~TMS0);
 	linebuffer LB4(CK[3], WE[3], PCK2, PBUS[15:8], LBDATA_B_O, ~TMS0);
 	
-	// Line buffer: clear value, for now. This is inherited from the Alpha68k system
+	// Line buffer: clear value for now. This is inherited from the Alpha68k system
 	assign LBDATA = 12'hFFF;
 
-	assign HALF = HCOUNT[0]; 	// Todo: fix this. CLK_1MB ?
-	assign FIX_PIXEL = HALF ? FIX_DATA[7:4] : FIX_DATA[3:0];
+	assign FIX_HALF = HCOUNT[0]; 	// Todo: fix this. CLK_1MB ?
+	assign FIX_PIXEL = FIX_HALF ? FIX_DATA[7:4] : FIX_DATA[3:0];
 	assign FIX_OPAQUE = |{FIX_PIXEL};
 	
 	// Priority for palette address bus PA:
 	// -CPU over everything else
 	// -FIXD_HALF if opaque
 	// -Line buffer (sprites) output is last
-	assign PA = PAL_ACCESS ? M68K_ADDR_PAL :
+	assign PA = nPAL_ACCESS ?
 					FIX_OPAQUE ? {FIX_PAL, FIX_PIXEL} :
-					LBDATA;
+					LBDATA :
+					M68K_ADDR_PAL;
 	
-	// Wrong, needs real hw measurements. Does this work with PCK* signals ?
+	// Todo: Check sync of 1H1, 1HB on real hw
+	// Does this work with PCK* signals ?
 	wire nS1H1;
 	assign nS1H1 = ~S1H1;
 	always @(posedge S1H1 or posedge nS1H1)

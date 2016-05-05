@@ -8,7 +8,8 @@ module ym_timer(
 	output reg nIRQ
 );
 
-	always @(posedge PHI_S)		// posedge ?
+
+	always @(posedge PHI_S)		// ?
 	begin
 		nIRQ <= 1'b1;	// Todo
 	end

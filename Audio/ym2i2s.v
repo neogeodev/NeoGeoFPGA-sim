@@ -3,7 +3,7 @@
 module ym2i2s(
 	input nRESET,
 	input CLK_I2S,
-	input [3:0] ANA,
+	input [5:0] ANA,
 	input SH1, SH2, OP0, PHI_M,
 	output I2S_MCLK, I2S_BICK, I2S_SDTI, I2S_LRCK
 );
