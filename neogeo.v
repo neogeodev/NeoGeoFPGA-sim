@@ -7,10 +7,11 @@
 
 module neogeo(
 	input CLK_24M,
-	input nRESET_BTN,				// On AES only
+	input nRESET_BTN,		// On AES only
 	input VCCON,
 	
-	inout [15:0] M68K_DATA,		// 68K
+	// 68K CPU
+	inout [15:0] M68K_DATA,
 	output [19:1] M68K_ADDR_OUT,
 	output M68K_RW,
 	output nWWL, nWWU, nWRL, nWRU,
@@ -19,9 +20,11 @@ module neogeo(
 	output nBITWD0, nDIPRD0,
 	output nLED_LATCH, nLED_DATA,
 	
+	// Cartridge 68K ROMs
 	output nROMOE, nPORTOEL, nPORTOEU, nSLOTCS,
 	input nROMWAIT, nPWAIT0, nPWAIT1, PDTACK,
 	
+	// Cartridge PCM ROMs
 	input [7:0] SDRAD,			// ADPCM
 	output [9:8]SDRA_L,
 	output [23:20] SDRA_U,
@@ -30,23 +33,28 @@ module neogeo(
 	output [11:8] SDPA,
 	output SDPMPX, nSDPOE,
 	
+	// Cartridge Z80 ROMs
 	output nSDROM,					// Z80
 	output [15:0] SDA,
 	inout [7:0] SDD,
 	
+	// Cartridge/onboard gfx ROMs
 	inout [23:0] PBUS,			// Gfx
 	output nVCS,
 	output S2H1, CA4,
 	output PCK1B, PCK2B,
 	
+	// Gfx
 	output CLK_12M, EVEN, LOAD, H,
 	input [3:0] GAD, GBD,
 	input [7:0] FIXD,
 	
+	// Memcard
 	output [4:0] CDA_U,			// Memcard upper address lines
 	output nCRDC, nCRDO, CARD_PIN_nWE, CARD_PIN_nREG,
 	output nCD1, nCD2, nWP,
 	
+	// Decodes
 	output nCTRL1_ZONE, nCTRL2_ZONE, nSTATUSB_ZONE,
 	output COUNTER1, COUNTER2, LOCKOUT1, LOCKOUT2,
 	
@@ -57,15 +65,12 @@ module neogeo(
 	output VIDEO_SYNC,
 	*/
 	
+	// Serial video output
 	output VIDEO_R_SER, VIDEO_G_SER, VIDEO_B_SER, VIDEO_CLK_SER, VIDEO_LAT_SER,
 	
 	// I2S interface
 	output I2S_MCLK, I2S_BICK, I2S_SDTI, I2S_LRCK
 );
-
-	// Dev notes:
-	// ao68000 loads SSP and PC properly, reads word opcode 4EF9 for JMP at C00402
-	// but reads 2x longword after, decoder_micropc is good for JMP but isn't used...
 
 	// Todo: Z80 controller (NEO-D0)
 	// Todo: VPA for interrupt ACK (NEO-C1)
@@ -128,7 +133,7 @@ module neogeo(
 	assign nCOUNTOUT = |{nBITW0, ~M68K_ADDR[6:5]};
 	
 	// Todo: VCCON ?
-	assign nRESET = nRESET_BTN;	// DEBUG TODO
+	assign nRESET = nRESET_BTN;	// Todo
 	
 	wire [8:0] HCOUNT;				// Todo: remove
 	
@@ -184,10 +189,10 @@ module neogeo(
 
 	// Todo: REMOVE HCOUNT, it's only used for simulation file output here:
 	videout VOUT(CLK_6MB, nBNKB, SHADOW, PC, VIDEO_R, VIDEO_G, VIDEO_B, HCOUNT);
-	ser_video SERVID(CLK_SERVID, CLK_6MB, VIDEO_R, VIDEO_G, VIDEO_B,
+	ser_video SERVID(nRESET, CLK_SERVID, CLK_6MB, VIDEO_R, VIDEO_G, VIDEO_B,
 						VIDEO_R_SER, VIDEO_G_SER, VIDEO_B_SER, VIDEO_CLK_SER, VIDEO_LAT_SER);
 	
-	// Gates
+	// Unique gates
 	assign PCK1B = ~PCK1;
 	assign PCK2B = ~PCK2;
 	assign nPALWE = M68K_RW | nPAL;
@@ -197,10 +202,9 @@ module neogeo(
 	// Memcard stuff
 	assign CARD_PIN_nWE = |{nCARDWEN, ~CARDWENB, nCRDW};
 	assign CARD_PIN_nREG = nREGEN | nCRDO;
-	
-	// Todo:
+
 	// Palette data bidir buffer from/to 68k
-	//assign M68K_DATA = (M68K_RW & ~nPAL) ? PC : 16'bzzzzzzzzzzzzzzzz;
-	//assign PC = nPALWE ? 16'bzzzzzzzzzzzzzzzz : M68K_DATA;
+	assign M68K_DATA = (M68K_RW & ~nPAL) ? PC : 16'bzzzzzzzzzzzzzzzz;
+	assign PC = nPALWE ? 16'bzzzzzzzzzzzzzzzz : M68K_DATA;
 
 endmodule

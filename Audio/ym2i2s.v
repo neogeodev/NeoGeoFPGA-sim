@@ -13,7 +13,7 @@ module ym2i2s(
 	reg [3:0] SR_CNT;
 	reg [7:0] CLKDIV;
 	
-	assign I2S_SAMPLE = {20'b00000000000000000000, ANA};			// Todo :)
+	assign I2S_SAMPLE = {18'b000000000000000000, ANA};			// Todo :)
 	
 	assign I2S_MCLK = CLK_I2S;
 	assign I2S_LRCK = CLKDIV[7];		// LRCK = I2S_MCLK/512

@@ -1,6 +1,8 @@
 `timescale 1ns/1ns
 // `default_nettype none
 
+// Todo: delegate some stuff to CPLD ? Like clock divider for cartridge and SROM, SRAM and WRAM control ?
+
 module testbench_1();
 	reg MCLK;
 	reg nRESET_BTN;
