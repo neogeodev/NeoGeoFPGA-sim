@@ -3,7 +3,7 @@ Simulation project for a SNK NeoGeo hardware definition. This does not go in a F
 
 This is being made possible by neogeodev contributors cited in neogeo_mvs.v and Patreon donators: **Alexis Bezverkhyy, Alexis Huet, Ange Albertini, Artemio Urbina, Arthur Lemoine, Blastar, Charly, Cyrille Jouineau, Jonathan Bayle, Laurent Lieben, Lewis Waddington, Mahen, Marshall H. (Retroactive), Maxime Mouflard, Valérianne Lagrange**.
 
-![Diagram](ngfpgad1.png)
+![Diagram](doc/ngfpgad1.png)
 
 Green is what this project is all about. Yellow is simulation/testbench files. Grey are results from simulation.
 
@@ -11,7 +11,7 @@ Converted ROM files for the cartridge model initialization aren't provided for o
 
 Top file is neogeo_mvs.v, currently used testbench is testbench_1.v .
 
-![Diagram](ngfpgad2.png)
+![Diagram](doc/ngfpgad2.png)
 
 Yellow are RAMs, orange are possibly copyrighted ROMs, blue will be interfaces to external chips, purple are cores I didn't write, white are disabled modules in MVS mode.
 
