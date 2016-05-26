@@ -14,14 +14,15 @@ module neogeo(
 	inout [15:0] M68K_DATA,
 	output [19:1] M68K_ADDR_OUT,
 	output M68K_RW,
-	output nWWL, nWWU, nWRL, nWRU,
-	output nSRAMWEN, nSRAMWEL, nSRAMWEU, nSRAMOEL, nSRAMOEU,
+	output nAS,
+	output nLDS, nUDS,
+	output nSRAMWEN,
 	output nSROMOE, nSYSTEM,
 	output nBITWD0, nDIPRD0,
 	output nLED_LATCH, nLED_DATA,
 	
 	// Cartridge 68K ROMs
-	output nROMOE, nPORTOEL, nPORTOEU, nSLOTCS,
+	output nROMOE, nSLOTCS,
 	input nROMWAIT, nPWAIT0, nPWAIT1, PDTACK,
 	
 	// Cartridge PCM ROMs
@@ -52,10 +53,10 @@ module neogeo(
 	// Memcard
 	output [4:0] CDA_U,			// Memcard upper address lines
 	output nCRDC, nCRDO, CARD_PIN_nWE, CARD_PIN_nREG,
-	output nCD1, nCD2, nWP,
+	input nCD1, nCD2, nWP,
 	
 	// Decodes
-	output nCTRL1_ZONE, nCTRL2_ZONE, nSTATUSB_ZONE,
+	output nWRAM_ZONE, nPORT_ZONE, nCTRL1_ZONE, nCTRL2_ZONE, nSTATUSB_ZONE, nSRAM_ZONE,
 	output COUNTER1, COUNTER2, LOCKOUT1, LOCKOUT2,
 	
 	/*
@@ -76,15 +77,6 @@ module neogeo(
 	// Todo: VPA for interrupt ACK (NEO-C1)
 	// Todo: Check watchdog timing
 	
-	wire CLK_68KCLK, CLK_68KCLKB, CLK_1MB, CLK_4M, CLK_6MB, CLK_8M, CLK_I2S, CLK_RTC, CLK_SERVID;
-	
-	wire A22Z, A23Z;
-	wire nDTACK, nAS, nHALT, IPL1, IPL0, nLDS, nUDS;
-	wire nRESET, nRESETP;
-	
-	wire nPAL, nPALWE;
-	wire nSROMOEU, nSROMOEL;
-	
 	wire [23:1] M68K_ADDR;
 	
 	assign M68K_ADDR_OUT = M68K_ADDR[19:1];
@@ -95,27 +87,6 @@ module neogeo(
 	wire [3:0] WE;				// LSPC/B1
 	wire [3:0] CK;				// LSPC/B1
 	
-	wire nZRAMCS;				// Z80
-	wire nIORQ, nMREQ, nSDRD, nSDWR, nZ80INT, nZ80NMI;
-	wire nSDMRD, nSDMWR;		// Z80 RAM
-	wire nSDW, nSDZ80R, nSDZ80W, nSDZ80CLR, SDRD0, SDRD1;
-	wire n2610CS, n2610RD, n2610WR;
-	
-	wire nPORTWEL, nPORTWEU, nPORTADRS;
-	wire nROMOEL, nROMOEU;
-	wire SYSTEMB;
-	wire nCOUNTOUT, nBITW0, nBITW1, nDIPRD1, nLSPOE, nLSPWE;
-	wire PWAIT0, PWAIT1;
-	wire CARDWENB, nCRDW, nCARDWEN;
-	wire EVEN1, EVEN2, DOTA, DOTB, SS1, SS2, PCK1, PCK2;
-	wire nREGEN;
-	wire S1H1, LD1, LD2, SH1, SH2;
-	wire CHBL, VIDEO_SYNC;
-	
-	wire nVEC, SHADOW;
-	wire nBNKB;
-	
-	wire PALBNK;
 	wire [2:0] BNK;
 	
 	wire [5:0] nSLOT;
@@ -142,11 +113,10 @@ module neogeo(
 	cpu_68k M68KCPU(CLK_68KCLK, nRESET, IPL1, IPL0, nDTACK, M68K_ADDR, M68K_DATA, nLDS, nUDS, nAS, M68K_RW);
 	cpu_z80 Z80CPU(CLK_4M, nRESET, SDD, SDA, nIORQ, nMREQ, nSDRD, nSDWR, nZ80INT, nNMI);
 	
-	neo_c1 C1(M68K_ADDR[21:17], M68K_DATA[15:8], A22Z, A23Z, nLDS, nUDS, M68K_RW, nAS, nROMOEL, nROMOEU, nPORTOEL, nPORTOEU,
-				nPORTWEL, nPORTWEU, nPORTADRS, nWRL, nWRU, nWWL, nWWU, nSROMOEL, nSROMOEU, nSRAMOEL, nSRAMOEU, nSRAMWEL,
-				nSRAMWEU, nLSPOE, nLSPWE, nCRDO, nCRDW, nCRDC, nSDW, nCD1, nCD2, nWP, nROMWAIT, PWAIT0,
-				PWAIT1, PDTACK, SDD, CLK_68KCLK, nDTACK, nBITW0, nBITW1, nDIPRD0, nDIPRD1, nPAL,
-				nCTRL1_ZONE, nCTRL2_ZONE, nSTATUSB_ZONE);
+	neo_c1 C1(M68K_ADDR[21:17], M68K_DATA[15:8], A22Z, A23Z, nLDS, nUDS, M68K_RW, nAS, nROMOEL, nROMOEU,
+				nSROMOEL, nSROMOEU, nLSPOE, nLSPWE, nCRDO, nCRDW, nCRDC, nSDW, nCD1, nCD2, nWP, nROMWAIT,
+				PWAIT0, PWAIT1, PDTACK, SDD, CLK_68KCLK, nDTACK, nBITW0, nBITW1, nDIPRD0, nDIPRD1, nPAL,
+				nWRAM_ZONE, nPORT_ZONE, nCTRL1_ZONE, nCTRL2_ZONE, nSTATUSB_ZONE, nSRAM_ZONE);
 	
 	// Todo: nSDZ80R, nSDZ80W, nSDZ80CLR comes from C1
 	neo_d0 D0(CLK_24M, nRESET, nRESETP, CLK_12M, CLK_68KCLK, CLK_68KCLKB, CLK_6MB, CLK_1MB,

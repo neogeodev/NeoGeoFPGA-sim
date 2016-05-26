@@ -11,12 +11,10 @@ module autoanim(
 );
 
 	reg [7:0] AATIMER;
-	
-	// nnnnnnnnnnnnnnnnnAAA
-	// nnnnnnnnnnnnnnnnnnAA
-	assign TILENB_OUT = AA_DISABLE ? TILENB_IN :
-								AA_ATTR[1] ? {TILENB_IN[19:3], AACOUNT} :
-								AA_ATTR[0] ? {TILENB_IN[19:2], AACOUNT[1:0]} :
+
+	assign TILENB_OUT = AA_DISABLE ? TILENB_IN :									// nnnnnnnnnnnnnnnnnnnn	No AA
+								AA_ATTR[1] ? {TILENB_IN[19:3], AACOUNT} :			// nnnnnnnnnnnnnnnnnAAA	3-bit AA
+								AA_ATTR[0] ? {TILENB_IN[19:2], AACOUNT[1:0]} :	// nnnnnnnnnnnnnnnnnnAA	2-bit AA
 								TILENB_IN;
 	
 	always @(posedge VBLANK)

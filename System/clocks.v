@@ -20,14 +20,18 @@ module clocks(
 	output CLK_1MB
 );
 
+	reg CLKDIV_68K;
 	reg [1:0] CLKDIV_A;
 	reg [1:0] CLKDIV_B;
 	
 	assign CLK_12M = CLKDIV_A[0];
 	assign CLK_6MB = CLKDIV_A[1];
-	assign CLK_68KCLK = ~CLK_12M;
+	assign CLK_68KCLK = CLKDIV_68K;
 	assign CLK_68KCLKB = ~CLK_68KCLK;	// ?
 	assign CLK_1MB = CLKDIV_B[1];
+	
+	always @(negedge CLK_24M)
+		CLKDIV_68K <= ~CLKDIV_68K;			// Is CLK_68KCLK free runing ?
 	
 	always @(negedge CLK_24M or negedge nRESETP)
 	begin

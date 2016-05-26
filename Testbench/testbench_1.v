@@ -12,20 +12,10 @@ module testbench_1();
 	reg nTEST_BTN;				// MVS only
 	reg [7:0] DIPSW;
 	
-	wire COUNTER1, COUNTER2, LOCKOUT1, LOCKOUT2;		// MVS only
-	
 	wire [15:0] M68K_DATA;
 	wire [19:1] M68K_ADDR;
-	wire M68K_RW;
-	wire nSRAMCS, nBWL, nBWU, nSWE;
-	wire nSRAMWEN, nSRAMWEL, nSRAMWEU, nSRAMOEL, nSRAMOEU;
-	
-	wire nWWL, nWWU, nWRL, nWRU;
-	wire nSLOTCS, nROMOE, nSROMOE, nSYSTEM, nROMWAIT;
-	wire nPORTOEL, nPORTOEU, nPWAIT0, nPWAIT1, PDTACK;
 	
 	wire [23:0] PBUS;
-	wire nVCS, S2H1, CA4, PCK1B, PCK2B;
 	
 	wire [7:0] FIXD;
 	wire [7:0] FIXD_SFIX;
@@ -35,7 +25,6 @@ module testbench_1();
 	
 	wire [4:0] CDA_U;
 	wire [15:0] CDD;			// Memcard data (is this a register ?)
-	wire nCRDC, nCRDO, CARD_PIN_nWE, CARD_PIN_nREG, nCD1, nCD2, nWP;
 
 	wire [3:0] EL_OUT;
 	wire [8:0] LED_OUT1;
@@ -43,7 +32,6 @@ module testbench_1();
 	
 	wire [15:0] G;				// SFIX address
 
-	wire SDRMPX, SDPMPX, nSDROE, nSDPOE;
 	wire [7:0] SDRAD;
 	wire [9:8] SDRA_L;
 	wire [23:20] SDRA_U;
@@ -52,32 +40,24 @@ module testbench_1();
 
 	wire [15:0] SDA;			// Z80
 	wire [7:0] SDD;
-	wire nSDROM;
 	
-	wire CLK_12M, EVEN, H, LOAD;
 	wire [3:0] GAD, GBD;
 	wire [31:0] CR;
-	
-	wire nBITWD0, nDIPRD0;
-	wire nCTRL1_ZONE, nCTRL2_ZONE, nSTATUSB_ZONE, nLED_LATCH, nLED_DATA;
-	wire VIDEO_R_SER, VIDEO_G_SER, VIDEO_B_SER, VIDEO_CLK_SER, VIDEO_LAT_SER;
-	wire I2S_MCLK, I2S_BICK, I2S_SDTI, I2S_LRCK;
 
 	neogeo NG(
-		MCLK,															// 2
+		MCLK,															// 3
 		nRESET_BTN,
 		VCCON,
 		
 		M68K_DATA, M68K_ADDR[19:1],							// 16 + 20
-		M68K_RW,														// 1
-		nWWL, nWWU, nWRL, nWRU,									// 4
-		nSRAMWEN, nSRAMWEL, nSRAMWEU,							// 5
-		nSRAMOEL, nSRAMOEU, 
+		M68K_RW,	nAS,												// 4
+		nLDS, nUDS,
+		nSRAMWEN,													// 1
 		nSROMOE, nSYSTEM,											// 2
 		nBITWD0, nDIPRD0,											// 2
 		nLED_LATCH, nLED_DATA,									// 2
 
-		nROMOE, nPORTOEL, nPORTOEU, nSLOTCS,				// 4
+		nROMOE, nSLOTCS,											// 2
 		nROMWAIT, nPWAIT0, nPWAIT1, PDTACK,					// 4
 		SDRAD, SDRA_L, SDRA_U, SDRMPX, nSDROE,				// 7 + 2 + 4 + 2
 		SDPAD, SDPA, SDPMPX, nSDPOE,							// 7 + 4 + 2
@@ -89,16 +69,19 @@ module testbench_1();
 		S2H1, CA4,													// 2
 		PCK1B, PCK2B,												// 2
 		
-		CLK_12M, EVEN, LOAD, H, GAD, GBD, 					// 12		get CLK_12M from MCLK ?
+		CLK_12M, EVEN, LOAD, H,									// 4		Get CLK_12M from MCLK ? -1
+		GAD, GBD, 													// 8
 		FIXD,															// 8
 		
 		CDA_U,														// 5
 		nCRDC, nCRDO,												// 2
 		CARD_PIN_nWE, CARD_PIN_nREG,							// 2
-		nCD1, nCD2, nWP,											// 3
+		nCD1, nCD2, nWP,											// 3		nCD1 | nCD2 in CPLD ? -1
 		
-		nCTRL1_ZONE, nCTRL2_ZONE, nSTATUSB_ZONE,			// 3
-		COUNTER1, COUNTER2, LOCKOUT1, LOCKOUT2,			// 4
+		nWRAM_ZONE, nPORT_ZONE, nCTRL1_ZONE,				// 3		Decode some ranges in CPLD ?
+		nCTRL2_ZONE, nSTATUSB_ZONE, nSRAM_ZONE,			// 3
+		
+		COUNTER1, COUNTER2, LOCKOUT1, LOCKOUT2,			// 4		Output from CPLD ?
 
 		VIDEO_R_SER,												// 5
 		VIDEO_G_SER,
@@ -110,9 +93,12 @@ module testbench_1();
 		I2S_BICK,
 		I2S_SDTI,
 		I2S_LRCK
-	);																	// Total: 189 :)
+	);																	// Total: 189
 	
 	// MVS cartridge
+	// Missing:
+	// (24M, 12M, 8M), nRESET, SDRD0, SDRD1, nSDROM, nSDMRD, 68KCLKB,
+	// (4MB, nPORTADRS, nPORTWEL, nPORTWEU, nROMOEL, nROMOEU, nAS, M68K_RW)
 	mvs_cart MVSCART(PBUS, CA4, S2H1, PCK1B, PCK2B, CR, FIXD_CART, M68K_ADDR[19:1], M68K_DATA, nROMOE,
 					nPORTOEL, nPORTOEU, nSLOTCS, nROMWAIT, nPWAIT0, nPWAIT1, PDTACK, SDRAD, SDRA_L, SDRA_U, SDRMPX,
 					nSDROE, SDPAD, SDPA, SDPMPX, nSDPOE, nSDROM, SDA, SDD);
@@ -122,9 +108,6 @@ module testbench_1();
 					nROMOE, nPORTOEL, nPORTOEU, nSLOTCS, nROMWAIT, nPWAIT0, nPWAIT1, PDTACK, SDRAD, SDRA_L, SDRA_U,
 					SDRMPX, nSDROE, SDPAD, SDPA, SDPMPX, nSDPOE, nSDROM, SDA, SDD);*/
 
-	// Do not use DOTA and DOTB, done in NG from GAD and GBD
-	neo_zmc2 ZMC2(CLK_12M, EVEN, LOAD, H, CR, GAD, GBD, , );
-	
 	// Memory card
 	memcard MC({CDA_U, M68K_ADDR[19:1]}, CDD, nCRDC, nCRDO, CARD_PIN_nWE, CARD_PIN_nREG, nCD1, nCD2, nWP);
 	assign M68K_DATA = (M68K_RW & ~nCRDC) ? CDD : 16'bzzzzzzzzzzzzzzzz;
@@ -141,6 +124,23 @@ module testbench_1();
 	latch_sfix LATCH_SFIX(PBUS[15:0], PCK2B, G);
 	// SFIX / Cart FIX switch
 	assign FIXD = nSYSTEM ? FIXD_SFIX : FIXD_CART;
+	
+	// Put the following in the CPLD !
+	neo_zmc2 ZMC2(CLK_12M, EVEN, LOAD, H, CR, GAD, GBD, , ); // DOTA and DOTB not used, done in NG from GAD and GBD
+	assign nVALID = nAS | (nLDS & nUDS);
+	assign nSRAMWEL = M68K_RW | nLDS | nSRAM_ZONE | nAS;
+	assign nSRAMWEU = M68K_RW | nUDS | nSRAM_ZONE | nAS;
+	assign nPORTOEL = ~M68K_RW | nLDS | nPORT_ZONE | nAS;
+	assign nPORTOEU = ~M68K_RW | nUDS | nPORT_ZONE | nAS;
+	assign nPORTWEL = M68K_RW | nLDS | nPORT_ZONE | nAS;
+	assign nPORTWEU = M68K_RW | nUDS | nPORT_ZONE | nAS;
+	assign nPADRS = nPORT_ZONE | nVALID;
+	assign nWRL = ~M68K_RW | nLDS | nWRAM_ZONE | nAS;
+	assign nWRU = ~M68K_RW | nUDS | nWRAM_ZONE | nAS;
+	assign nWWL = M68K_RW | nLDS | nWRAM_ZONE | nAS;
+	assign nWWU = M68K_RW | nUDS | nWRAM_ZONE | nAS;
+	assign nSRAMOEL = ~M68K_RW | nLDS | nSRAM_ZONE | nAS;
+	assign nSRAMOEU = ~M68K_RW | nUDS | nSRAM_ZONE | nAS;
 	
 	// nSRAMCS comes from analog battery backup circuit
 	assign nSRAMCS = 1'b0;
