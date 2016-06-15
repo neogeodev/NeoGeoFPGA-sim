@@ -10,7 +10,7 @@ module c1_regs(
 	
 	// REG_SOUND - Is Z80 data latch really 2 different latches ?
 	assign M68K_DATA = (RW & ~nICOMZONE) ? SDD_LATCH : 8'bzzzzzzzz;
-	always @(RW or nICOMZONE)
+	always @(RW, nICOMZONE, M68K_DATA)
 	begin
 		if (!(RW | nICOMZONE)) SDD_LATCH <= M68K_DATA;
 	end

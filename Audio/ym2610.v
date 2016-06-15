@@ -83,7 +83,7 @@ module ym2610(
 	
 	assign PCMA_CH = REG2_ADDR[2:0];
 	
-	always @(nWR, nCS)
+	always @(nWR, nCS, SDD)
 	begin
 		if (!(nWR | nCS | ~nRD))
 		begin

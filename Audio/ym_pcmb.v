@@ -2,15 +2,20 @@
 
 module ym_pcmb(
 	input PHI_S,
-	output reg [7:0] PAD,
+	inout [7:0] PAD,
 	output reg [11:8] PA,
 	output reg PMPX,
 	output reg nPOE
 );
 
+	reg [7:0] ADDRESS;
+	reg MUX;
+
+	assign PAD = MUX ? ADDRESS : 8'bzzzzzzzz;
+
 	always @(posedge PHI_S)		// posedge ?
 	begin
-		PAD <= 8'b00000000;
+		ADDRESS <= 8'b00000000;
 		PA <= 4'b0000;
 		PMPX <= 0;
 		nPOE <= 1;

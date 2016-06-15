@@ -42,7 +42,7 @@ module ym_ssg(
 	always @(posedge PHI_S)		// ?
 	begin
 		if (CNT_A)
-			CNT_A <= CNT_A - 1;
+			CNT_A <= CNT_A - 1'b1;
 		else
 		begin
 			CNT_A <= SSG_FREQ_A;
@@ -50,7 +50,7 @@ module ym_ssg(
 		end
 		
 		if (CNT_B)
-			CNT_B <= CNT_B - 1;
+			CNT_B <= CNT_B - 1'b1;
 		else
 		begin
 			CNT_B <= SSG_FREQ_B;
@@ -58,7 +58,7 @@ module ym_ssg(
 		end
 		
 		if (CNT_C)
-			CNT_C <= CNT_C - 1;
+			CNT_C <= CNT_C - 1'b1;
 		else
 		begin
 			CNT_C <= SSG_FREQ_C;
@@ -66,7 +66,7 @@ module ym_ssg(
 		end
 		
 		if (CNT_NOISE)
-			CNT_NOISE <= CNT_NOISE - 1;
+			CNT_NOISE <= CNT_NOISE - 1'b1;
 		else
 		begin		
 			CNT_NOISE <= SSG_NOISE;
@@ -83,12 +83,12 @@ module ym_ssg(
 		if (ENV_RUN)
 		begin
 			if (CNT_ENV)
-				CNT_ENV <= CNT_ENV - 1;
+				CNT_ENV <= CNT_ENV - 1'b1;
 			else
 			begin
 				CNT_ENV <= SSG_ENV_FREQ;
 				if (ENV_STEP)
-					ENV_STEP <= ENV_STEP - 1;
+					ENV_STEP <= ENV_STEP - 1'b1;
 				else
 				begin
 					if (SSG_ENV[0])	// Hold

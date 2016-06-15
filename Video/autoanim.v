@@ -20,11 +20,11 @@ module autoanim(
 	always @(posedge VBLANK)
 	begin
 		if (AATIMER)
-			AATIMER <= AATIMER + 1;
+			AATIMER <= AATIMER + 1'b1;
 		else
 		begin
 			AATIMER <= AASPEED;
-			AACOUNT <= AACOUNT + 1;
+			AACOUNT <= AACOUNT + 1'b1;
 		end
 	end
 

@@ -2,16 +2,21 @@
 
 module ym_pcma(
 	input PHI_S,
-	output reg [7:0] RAD,
+	inout [7:0] RAD,
 	output reg [9:8] RA_L,
 	output reg [23:20] RA_U,
 	output reg RMPX,
 	output reg nROE
 );
 
+	reg [7:0] ADDRESS;
+	reg MUX;
+
+	assign RAD = MUX ? ADDRESS : 8'bzzzzzzzz;
+
 	always @(posedge PHI_S)		// posedge ?
 	begin
-		RAD <= 8'b00000000;
+		ADDRESS <= 8'b00000000;
 		RA_L <= 2'b00;
 		RA_U <= 4'b0000;
 		RMPX <= 0;

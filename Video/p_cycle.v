@@ -30,20 +30,20 @@ module p_cycle(
 
 	// UPDATED !
 	// 0,1
-	assign PCK1 = (CYCLE_P[4:1] == 4'b0000) ? 0 : 1;
+	assign PCK1 = (CYCLE_P[4:1] == 4'b0000) ? 1'b0 : 1'b1;
 	// 16,17
-	assign PCK2 = (CYCLE_P[4:1] == 4'b1000) ? 0 : 1;
+	assign PCK2 = (CYCLE_P[4:1] == 4'b1000) ? 1'b0 : 1'b1;
 	
 	// UPDATED !
 	// 13,14,15,16 and 29,30,31,0
-	assign LOAD = (CYCLE_P[4:0] == 5'b01101) ? 1 :
-						(CYCLE_P[4:0] == 5'b01110) ? 1 :
-						(CYCLE_P[4:0] == 5'b01111) ? 1 :
-						(CYCLE_P[4:0] == 5'b10000) ? 1 :
-						(CYCLE_P[4:0] == 5'b11101) ? 1 :
-						(CYCLE_P[4:0] == 5'b11110) ? 1 :
-						(CYCLE_P[4:0] == 5'b11111) ? 1 :
-						(CYCLE_P[4:0] == 5'b00000) ? 1 : 0;
+	assign LOAD = (CYCLE_P[4:0] == 5'b01101) ? 1'b1 :
+						(CYCLE_P[4:0] == 5'b01110) ? 1'b1 :
+						(CYCLE_P[4:0] == 5'b01111) ? 1'b1 :
+						(CYCLE_P[4:0] == 5'b10000) ? 1'b1 :
+						(CYCLE_P[4:0] == 5'b11101) ? 1'b1 :
+						(CYCLE_P[4:0] == 5'b11110) ? 1'b1 :
+						(CYCLE_P[4:0] == 5'b11111) ? 1'b1 :
+						(CYCLE_P[4:0] == 5'b00000) ? 1'b1 : 1'b0;
 	
 	// UPDATED !
 	assign S1H1 = CYCLE_P[3];
@@ -127,9 +127,9 @@ module p_cycle(
 		S1H1 = div2 from negedge of 6M ?
 	*/
 	
-	always @(posedge CLK_24M or posedge nCLK_24M)
+	always @(posedge CLK_24M)	// or posedge nCLK_24M
 	begin
-		if (nRESET)
+		if (!nRESET)
 		begin
 			CYCLE_P <= 0;
 		end

@@ -154,9 +154,10 @@ module lspc_a2(
 								16'bzzzzzzzzzzzzzzzz;
 	
 	// Write
-	always @(negedge nLSPWE or negedge nRESET)	// ?
+	assign RESET = ~nRESET;
+	always @(posedge nLSPWE or posedge RESET)	// ?
 	begin
-		if (!nRESET)
+		if (RESET)
 			nIRQS <= 3'b111;
 		else
 		begin
@@ -191,7 +192,7 @@ module lspc_a2(
 				3'b101 :
 				begin
 					TIMERLOAD[15:0] <= M68K_DATA;
-					if (TIMERINT_MODE[0]) TIMER <= TIMERLOAD;
+					// if (TIMERINT_MODE[0]) TIMER <= TIMERLOAD;
 				end
 				// 3C000C: Interrupt ack
 				3'b110 : nIRQS <= nIRQS | M68K_DATA[2:0];
@@ -228,10 +229,10 @@ module lspc_a2(
 			if (!nTIMERRUN)
 			begin
 				if (TIMER)
-					TIMER <= TIMER - 1;
+					TIMER <= TIMER - 1'b1;
 				else
 				begin
-					if (TIMERINT_EN) nIRQS[1] <= 1'b0;	// IRQ2 plz
+					//if (TIMERINT_EN) nIRQS[1] <= 1'b0;	// IRQ2 plz
 					if (TIMERINT_MODE[2]) TIMER <= TIMERLOAD;
 				end
 			end
@@ -260,14 +261,14 @@ module lspc_a2(
 		end
 		else
 		begin
-			CLKDIV <= CLKDIV + 1;
+			CLKDIV <= CLKDIV + 1'b1;
 			if (CLKDIV_D3 == 3)
 			begin
 				CLKDIV_D3 <= 0;
-				CLKDIV2 <= CLKDIV2 + 1;
+				CLKDIV2 <= CLKDIV2 + 1'b1;
 			end
 			else
-				CLKDIV_D3 <= CLKDIV_D3 + 1;
+				CLKDIV_D3 <= CLKDIV_D3 + 1'b1;
 		end
 	end
 	
