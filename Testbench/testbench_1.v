@@ -45,9 +45,8 @@ module testbench_1();
 	wire [31:0] CR;
 
 	neogeo NG(
-		MCLK,															// 3
+		MCLK,															// 2
 		nRESET_BTN,
-		VCCON,
 		
 		M68K_DATA, M68K_ADDR[19:1],							// 16 + 20
 		M68K_RW,	nAS,												// 4

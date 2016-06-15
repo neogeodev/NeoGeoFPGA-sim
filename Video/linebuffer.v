@@ -3,29 +3,32 @@
 module linebuffer(
 	input CK,
 	input WE,
-	input LDX,
+	input nLDX,
 	input [7:0] XPOS,
 	inout [11:0] DATA,
 	input MODE
 );
 
 	reg [7:0] X_CNT;
-	reg [7:0] LBRAM[0:191];
+	reg [11:0] LBRAM[0:191];
 
-	assign DATA = MODE ? LBRAM[X_CNT] : 8'bzzzzzzzz;
+	// TMS0=0:Output, =1:Write
+	assign DATA = MODE ? 12'bzzzzzzzzzzzz : LBRAM[X_CNT];
 
-	always @(posedge CK)
+	always @(negedge CK)
 	begin
-		if (!MODE)
-		begin
-			// Render
-			if (WE) LBRAM[X_CNT] <= DATA;
-		end
-		
-		if (LDX)
-			X_CNT <= XPOS;
+		if (!nLDX)
+			X_CNT <= XPOS;			// Disabled in MODE=0 ?
 		else
 			X_CNT <= X_CNT + 1;
+	end
+	
+	always @(posedge WE)
+	begin
+		if (!MODE)
+			LBRAM[X_CNT] <= 12'hFFF;	// Clear to backdrop. This is inherited from the Alpha68k
+		else
+			LBRAM[X_CNT] <= DATA;		// Render
 	end
 
 endmodule

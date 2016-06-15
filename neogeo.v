@@ -7,8 +7,7 @@
 
 module neogeo(
 	input CLK_24M,
-	input nRESET_BTN,		// On AES only
-	input VCCON,
+	input nRESET_BTN,		// VCCON on MVS
 	
 	// 68K CPU
 	inout [15:0] M68K_DATA,
@@ -103,9 +102,6 @@ module neogeo(
 	assign nBITWD0 = |{nBITW0, M68K_ADDR[6:5]};
 	assign nCOUNTOUT = |{nBITW0, ~M68K_ADDR[6:5]};
 	
-	// Todo: VCCON ?
-	assign nRESET = nRESET_BTN;	// Todo
-	
 	wire [8:0] HCOUNT;				// Todo: remove
 	
 	wire TMS0;
@@ -143,8 +139,8 @@ module neogeo(
 				S1H1, LOAD, H, EVEN1, EVEN2, IPL0, IPL1, TMS0, LD1, LD1, PCK1, PCK2, WE[3:0], CK[3:0], SS1,
 				SS2, nRESETP, VIDEO_SYNC, CHBL, nBNKB, nVCS, CLK_8M, CLK_4M, HCOUNT);
 	
-	neo_b1 B1(CLK_6MB, CLK_1MB, PBUS, FIXD, PCK1, PCK2, GAD, GBD, WE, CK, TMS0, LD1, LD2, SS1, SS2, S1H1,
-				A23Z, A22Z, PA, nLDS, M68K_RW, nAS, M68K_ADDR[21:17], M68K_ADDR[12:1], nHALT, nRESET, VCCON, HCOUNT);
+	neo_b1 B1(CLK_6MB, CLK_1MB, PBUS, FIXD, PCK1, PCK2, CHBL, GAD, GBD, WE, CK, TMS0, LD1, LD2, SS1, SS2, S1H1,
+				A23Z, A22Z, PA, nLDS, M68K_RW, nAS, M68K_ADDR[21:17], M68K_ADDR[12:1], nHALT, nRESET, nRESET_BTN);
 	
 	z80ram ZRAM(SDA[10:0], SDD, nZRAMCS, nSDMRD, nSDMWR);
 	palram PALRAM({PALBNK, PA}, PC, nPALWE);

@@ -2,11 +2,12 @@
 
 module neo_b1(
 	input CLK_6MB,
-	input CLK_1MB,				// What for ?
+	input CLK_1MB,				// Even/odd pixel selection ?
 	input [23:0] PBUS,
 	input [7:0] FIXD,
 	input PCK1,					// What for ?
 	input PCK2,					// What for ?
+	input CHBL,
 	input [3:0] GAD, GBD,
 	input [3:0] WE,			// LB writes
 	input [3:0] CK,			// LB clocks
@@ -20,14 +21,13 @@ module neo_b1(
 	input RW,
 	input nAS,
 	input [21:17] M68K_ADDR_WD,
-	input [11:0] M68K_ADDR_PAL,
+	input [12:1] M68K_ADDR_PAL,
 	output nHALT,				// Todo
 	output nRESET,
-	input nRST,					// Reset button and reset gen on AES, VCCON on MVS ?
-	input [8:0] HCOUNT		// Todo: REMOVE HCOUNT, used here but shouldn't. Hack to replace proper CLK_1MB ?
+	input nRST
 );
 
-	reg [7:0] SPR_PAL;		// Needs to be registered, as palette shows up on P bus only every 4 pixels
+	reg [7:0] SPR_PAL;			// Needs to be registered, as palette shows up on P bus only every 4 pixels
 	reg [3:0] FIX_PAL;
 	reg [7:0] FIX_DATA;
 	
@@ -35,39 +35,51 @@ module neo_b1(
 	wire [11:0] LBDATA_A_O;
 	wire [11:0] LBDATA_B_E;
 	wire [11:0] LBDATA_B_O;
-	wire [11:0] LBDATA;		// Muxed
+	wire [11:0] LBDATA_OUT;		// Muxed
 	
 	wire [3:0] FIX_PIXEL;
 	wire FIX_OPAQUE;
 	
 	wire nPAL_ACCESS;
 	
+	assign nRESET = nRST;		// Todo: Wrong, nRESET is sync'd to frame start
+	
 	// $400000~$7FFFFF why not use nPAL ?
 	assign nPAL_ACCESS = |{A23Z, ~A22Z, nAS};
 	
-	watchdog WD(nLDS, RW, A23Z, A22Z, M68K_ADDR_WD, TMS0, nHALT, nRESET, nRST);
+	watchdog WD(nLDS, RW, A23Z, A22Z, M68K_ADDR_WD, M68K_ADDR_PAL, TMS0, nHALT, nRESET, nRST);
 
-	// Is WE used as OE when in output mode ? (=CK)
-	// assign LBDATA1 = LB_A_W ? {SPR_PAL, GAD} : 12'bzzzzzzzzzzzz;
-	linebuffer LB1(CK[0], WE[0], PCK2, PBUS[15:8], LBDATA_A_E, TMS0);
-	linebuffer LB2(CK[1], WE[1], PCK2, PBUS[15:8], LBDATA_A_O, TMS0);
+	linebuffer LB1(CK[0], WE[0], PCK1, PBUS[15:8], LBDATA_A_E, TMS0);
+	linebuffer LB2(CK[1], WE[1], PCK1, PBUS[15:8], LBDATA_A_O, TMS0);
 	linebuffer LB3(CK[2], WE[2], PCK2, PBUS[15:8], LBDATA_B_E, ~TMS0);
 	linebuffer LB4(CK[3], WE[3], PCK2, PBUS[15:8], LBDATA_B_O, ~TMS0);
 	
-	// Line buffer: clear value for now. This is inherited from the Alpha68k system
-	assign LBDATA = 12'hFFF;
+	assign LBDATA_A_E = TMS0 ? {GAD, SPR_PAL} : 12'bzzzzzzzzzzzz;
+	assign LBDATA_A_O = TMS0 ? {GBD, SPR_PAL} : 12'bzzzzzzzzzzzz;
+	assign LBDATA_B_E = TMS0 ? 12'bzzzzzzzzzzzz : {GAD, SPR_PAL};
+	assign LBDATA_B_O = TMS0 ? 12'bzzzzzzzzzzzz : {GBD, SPR_PAL};
+	
+	assign LBDATA_OUT = TMS0 ?
+								CLK_1MB ?
+									LBDATA_B_O :	// TMS0,1MB=11
+									LBDATA_B_E		// TMS0,1MB=10
+								:
+								CLK_1MB ?
+									LBDATA_A_O :	// TMS0,1MB=01
+									LBDATA_A_E;		// TMS0,1MB=00
 
-	assign FIX_HALF = HCOUNT[0]; 	// Todo: fix this. CLK_1MB ?
-	assign FIX_PIXEL = FIX_HALF ? FIX_DATA[7:4] : FIX_DATA[3:0];
+	assign FIX_PIXEL = CLK_1MB ? FIX_DATA[7:4] : FIX_DATA[3:0];		// Opposite ?
 	assign FIX_OPAQUE = |{FIX_PIXEL};
 	
 	// Priority for palette address bus PA:
-	// -CPU over everything else
-	// -FIXD_HALF if opaque
+	// -CPU over everything else (?)
+	// -CHBL (priority over CPU ?)
+	// -FIX pixel if opaque
 	// -Line buffer (sprites) output is last
 	assign PA = nPAL_ACCESS ?
+					CHBL ? 12'b000000000000 :
 					FIX_OPAQUE ? {FIX_PAL, FIX_PIXEL} :
-					LBDATA :
+					LBDATA_OUT :
 					M68K_ADDR_PAL;
 	
 	// Todo: Check sync of 1H1, 1HB on real hw
