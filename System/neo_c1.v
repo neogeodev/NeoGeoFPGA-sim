@@ -7,47 +7,41 @@ module neo_c1(
 	input nLDS, nUDS,
 	input RW, nAS,
 	output nROMOEL, nROMOEU,
-	//output nPORTOEL, nPORTOEU,
-	//output nPORTWEL, nPORTWEU,
-	//output nPORTADRS,
-	//output nWRL, nWRU,
-	//output nWWL, nWWU,
+	output nPORTOEL, nPORTOEU,
+	output nPORTWEL, nPORTWEU,
+	output nPORTADRS,
+	output nWRL, nWRU,
+	output nWWL, nWWU,
 	output nSROMOEL, nSROMOEU,
-	//output nSRAMOEL, nSRAMOEU,
-	//output nSRAMWEL, nSRAMWEU,
+	output nSRAMOEL, nSRAMOEU,
+	output nSRAMWEL, nSRAMWEU,
 	output nLSPOE, nLSPWE,
 	output nCRDO, nCRDW, nCRDC,
 	output nSDW,
-	//input [9:0] P1_IN,
-	//input [9:0] P2_IN,
+	input [9:0] P1_IN,
+	input [9:0] P2_IN,
 	input nCD1, nCD2, nWP,
 	input nROMWAIT, nPWAIT0, nPWAIT1, PDTACK,
 	input [7:0] SDD,
 	input CLK_68KCLK,
 	output nDTACK,
 	output nBITW0, nBITW1, nDIPRD0, nDIPRD1,
-	output nPAL,
-	output nWRAM_ZONE,
-	output nPORT_ZONE,
-	output nCTRL1_ZONE,
-	output nCTRL2_ZONE,
-	output nSTATUSB_ZONE,
-	output nSRAM_ZONE
+	output nPAL
 );
 
 	wire nIO_ZONE;			// Internal
 	wire nC1REGS_ZONE;	// Internal
 	wire nROM_ZONE;		// Internal
-//	wire nWRAM_ZONE;		// Internal (external for PCB)
-//	wire nPORT_ZONE;		// Internal (external for PCB)
-//	wire nCTRL1_ZONE;		// Internal (external for PCB)
+	wire nWRAM_ZONE;		// Internal (external for PCB)
+	wire nPORT_ZONE;		// Internal (external for PCB)
+	wire nCTRL1_ZONE;		// Internal (external for PCB)
 	wire nICOM_ZONE;		// Internal
-//	wire nCTRL2_ZONE;		// Internal (external for PCB)
-//	wire nSTATUSB_ZONE;	// Internal (external for PCB)
+	wire nCTRL2_ZONE;		// Internal (external for PCB)
+	wire nSTATUSB_ZONE;	// Internal (external for PCB)
 	wire nLSPC_ZONE;		// Internal
 	wire nCARD_ZONE;		// Internal
 	wire nSROM_ZONE;		// Internal
-//	wire nSRAM_ZONE;		// Internal (external for PCB)
+	wire nSRAM_ZONE;		// Internal (external for PCB)
 	wire nWORDACCESS;		// Internal
 	
 	//assign nVALID = nAS | (nLDS & nUDS);
@@ -116,21 +110,20 @@ module neo_c1(
 	// Outputs:
 	assign nROMOEL = ~RW | nLDS | nROM_ZONE | nAS;
 	assign nROMOEU = ~RW | nUDS | nROM_ZONE | nAS;
-	//assign nPORTOEL = ~RW | nLDS | nPORT_ZONE | nAS;
-	//assign nPORTOEU = ~RW | nUDS | nPORT_ZONE | nAS;
-	//assign nPORTWEL = RW | nLDS | nPORT_ZONE | nAS;
-	//assign nPORTWEU = RW | nUDS | nPORT_ZONE | nAS;
-	//assign nPADRS = nPORT_ZONE | nVALID;
-	//assign nWRL = ~RW | nLDS | nWRAM_ZONE | nAS;
-	//assign nWRU = ~RW | nUDS | nWRAM_ZONE | nAS;
-	//assign nWWL = RW | nLDS | nWRAM_ZONE | nAS;
-	//assign nWWU = RW | nUDS | nWRAM_ZONE | nAS;
+	assign nPORTOEL = ~RW | nLDS | nPORT_ZONE | nAS;
+	assign nPORTOEU = ~RW | nUDS | nPORT_ZONE | nAS;
+	assign nPORTWEL = RW | nLDS | nPORT_ZONE | nAS;
+	assign nPORTWEU = RW | nUDS | nPORT_ZONE | nAS;
+	assign nWRL = ~RW | nLDS | nWRAM_ZONE | nAS;
+	assign nWRU = ~RW | nUDS | nWRAM_ZONE | nAS;
+	assign nWWL = RW | nLDS | nWRAM_ZONE | nAS;
+	assign nWWU = RW | nUDS | nWRAM_ZONE | nAS;
 	assign nSROMOEL = ~RW | nLDS | nSROM_ZONE | nAS;
 	assign nSROMOEU = ~RW | nUDS | nSROM_ZONE | nAS;
-	//assign nSRAMOEL = ~RW | nLDS | nSRAM_ZONE | nAS;
-	//assign nSRAMOEU = ~RW | nUDS | nSRAM_ZONE | nAS;
-	//assign nSRAMWEL = RW | nLDS | nSRAM_ZONE | nAS;
-	//assign nSRAMWEU = RW | nUDS | nSRAM_ZONE | nAS;
+	assign nSRAMOEL = ~RW | nLDS | nSRAM_ZONE | nAS;
+	assign nSRAMOEU = ~RW | nUDS | nSRAM_ZONE | nAS;
+	assign nSRAMWEL = RW | nLDS | nSRAM_ZONE | nAS;
+	assign nSRAMWEU = RW | nUDS | nSRAM_ZONE | nAS;
 
 	// Not sure about word access ?
 	assign nLSPOE = ~RW | nWORDACCESS | nLSPC_ZONE | nAS;

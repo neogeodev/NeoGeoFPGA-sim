@@ -1,6 +1,7 @@
 `timescale 1ns/1ns
 // `default_nettype none
 
+// Todo: make WAY better models for RAMs and ROMs
 // Todo: delegate some stuff to CPLD ? Like clock divider for cartridge and SROM, SRAM and WRAM control ?
 
 module testbench_1();

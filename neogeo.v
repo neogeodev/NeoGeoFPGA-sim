@@ -5,6 +5,10 @@
 // furrtek, Charles MacDonald, Kyuusaku, freem and neogeodev contributors ~ 2016
 // https://github.com/neogeodev/NeoGeoFPGA-sim
 
+// Todo: Z80 controller (NEO-D0)
+// Todo: VPA for interrupt ACK (NEO-C1)
+// Todo: Check watchdog timing
+
 module neogeo(
 	input CLK_24M,
 	input nRESET_BTN,		// VCCON on MVS
@@ -26,7 +30,7 @@ module neogeo(
 	
 	// Cartridge PCM ROMs
 	input [7:0] SDRAD,			// ADPCM
-	output [9:8]SDRA_L,
+	output [9:8] SDRA_L,
 	output [23:20] SDRA_U,
 	output SDRMPX, nSDROE,
 	input [7:0] SDPAD,
@@ -71,10 +75,6 @@ module neogeo(
 	// I2S interface
 	output I2S_MCLK, I2S_BICK, I2S_SDTI, I2S_LRCK
 );
-
-	// Todo: Z80 controller (NEO-D0)
-	// Todo: VPA for interrupt ACK (NEO-C1)
-	// Todo: Check watchdog timing
 	
 	wire [23:1] M68K_ADDR;
 	
@@ -90,7 +90,7 @@ module neogeo(
 	
 	wire [5:0] nSLOT;
 	
-	wire [5:0] ANA;		// PSG audio level
+	wire [5:0] ANA;			// PSG audio level
 	wire [6:0] VIDEO_R;
 	wire [6:0] VIDEO_G;
 	wire [6:0] VIDEO_B;
@@ -102,7 +102,7 @@ module neogeo(
 	assign nBITWD0 = |{nBITW0, M68K_ADDR[6:5]};
 	assign nCOUNTOUT = |{nBITW0, ~M68K_ADDR[6:5]};
 	
-	wire [8:0] HCOUNT;				// Todo: remove
+	wire [8:0] HCOUNT;		// Todo: remove
 	
 	wire TMS0;
 	
@@ -110,9 +110,10 @@ module neogeo(
 	cpu_z80 Z80CPU(CLK_4M, nRESET, SDD, SDA, nIORQ, nMREQ, nSDRD, nSDWR, nZ80INT, nNMI);
 	
 	neo_c1 C1(M68K_ADDR[21:17], M68K_DATA[15:8], A22Z, A23Z, nLDS, nUDS, M68K_RW, nAS, nROMOEL, nROMOEU,
-				nSROMOEL, nSROMOEU, nLSPOE, nLSPWE, nCRDO, nCRDW, nCRDC, nSDW, nCD1, nCD2, nWP, nROMWAIT,
-				PWAIT0, PWAIT1, PDTACK, SDD, CLK_68KCLK, nDTACK, nBITW0, nBITW1, nDIPRD0, nDIPRD1, nPAL,
-				nWRAM_ZONE, nPORT_ZONE, nCTRL1_ZONE, nCTRL2_ZONE, nSTATUSB_ZONE, nSRAM_ZONE);
+				nPORTOEL, nPORTOEU, nPORTWEL, nPORTWEU, nPORTADRS, nWRL, nWRU, nWWL, nWWU, nSROMOEL, nSROMOEU, 
+				nSRAMOEL, nSRAMOEU, nSRAMWEL, nSRAMWEU, nLSPOE, nLSPWE, nCRDO, nCRDW, nCRDC, nSDW, P1_IN, P2_IN,
+				nCD1, nCD2, nWP, nROMWAIT, PWAIT0, PWAIT1, PDTACK, SDD, CLK_68KCLK, nDTACK, nBITW0, nBITW1, nDIPRD0,
+				nDIPRD1, nPAL);
 	
 	// Todo: nSDZ80R, nSDZ80W, nSDZ80CLR comes from C1
 	neo_d0 D0(CLK_24M, nRESET, nRESETP, CLK_12M, CLK_68KCLK, CLK_68KCLKB, CLK_6MB, CLK_1MB,
