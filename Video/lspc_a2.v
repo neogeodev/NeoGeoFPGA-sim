@@ -19,7 +19,7 @@ module lspc_a2(
 	output [3:0] WE,
 	output [3:0] CK,
 	input SS1, SS2,
-	output nRESETP,					// Output ?
+	output reg nRESETP = 1'b1,
 	output SYNC,
 	output CHBL,
 	output nBNKB,
@@ -28,6 +28,8 @@ module lspc_a2(
 	output CLK_4M,
 	output [8:0] HCOUNT	// Todo: REMOVE HCOUNT, it's only used for debug in videout and as a hack in B1
 );
+
+	assign HCOUNT = MAIN_CNT[10:2];
 
 	// Todo: Merge VRAM cycle counters together if possible ? Even with P bus ?
 
@@ -78,8 +80,10 @@ module lspc_a2(
 	wire nVSYNC;
 	wire HSYNC;
 	
+	wire [11:0] MAIN_CNT;
+	
 	irq IRQ(nIRQS, IPL0, IPL1);		// nRESETP ?
-	videosync VS(CLK_6M, nRESET, VCOUNT, HCOUNT, TMS0, VBLANK, nVSYNC, HSYNC);
+	videosync VS(CLK_24M, nRESETP, VCOUNT, MAIN_CNT, TMS0, VBLANK, nVSYNC, HSYNC, nBNKB);
 	
 	wire [11:0] SPR_ATTR_SHRINK;
 	
@@ -99,14 +103,18 @@ module lspc_a2(
 	wire [7:0] SPR_XPOS;
 	wire [15:0] L0_ADDR;
 	
-	// RESET  '''''|_________|'''''
-	// RESETP '''''|_|'''''''''''''
-	reg nRESET_Q;
+	// nRESET  '''''|_________|'''''
+	// nRESETP '''''''''''''''|_|'''
 	always @(negedge CLK_24M)
 	begin
-		nRESET_Q <= nRESET;
+		nRESETP <= (nRESETP | ~nRESET);
 	end
-	assign nRESETP = ~(nRESET_Q & !nRESET);
+	
+	// old new resetp
+	//  0   0     1
+	//  0   1     0
+	//  1   0     1
+	//  1   1     1
 	
 	slow_cycle SCY(CLK_24M, HSYNC, HCOUNT[8:0], VCOUNT[7:3], SPR_NB, SPR_TILEIDX,	SPR_TILENB, SPR_TILEPAL,
 					SPR_TILEAA, SPR_TILEFLIP, FIX_TILENB, FIX_TILEPAL,
@@ -216,9 +224,9 @@ module lspc_a2(
 	assign nTIMERRUN = (VPALSTOP & BORDERS) | ~VCOUNT[8];
 	
 	// TIMERINT_MODE[1] is used in vblank !
-	
+
 	// Pixel timer
-	always @(negedge CLK_6M)	// posedge ? negedge needed for video stuff !
+	always @(negedge MAIN_CNT[2])	// posedge ? pixel clock
 	begin
 		if (!nRESET)
 		begin
@@ -242,34 +250,21 @@ module lspc_a2(
 	
 	// -------------------------------- Pixel clock --------------------------------
 	
-	reg [1:0] CLKDIV;
-	reg [1:0] CLKDIV_D3;
-	reg [1:0] CLKDIV2;
+	reg [1:0] CLKDIV_D3 = 2'd0;
+	reg [1:0] CLKDIV = 2'd0;
+
+	assign CLK_8M = CLKDIV[0];		// Used internally or just outputs ?
+	assign CLK_4M = CLKDIV[1];
 	
-	assign CLK_6M = CLKDIV[1];		// Internal ?, only 6MB which comes from D0 is used for color latches
-	
-	assign CLK_8M = CLKDIV2[0];	// Used internally or just outputs ?
-	assign CLK_4M = CLKDIV2[1];
-	
-	always @(posedge CLK_24M)
+	always @(negedge CLK_24M)
 	begin
-		if (!nRESET)
+		if (CLKDIV_D3 == 3)
 		begin
-			CLKDIV <= 0;
 			CLKDIV_D3 <= 0;
-			CLKDIV2 <= 0;
+			CLKDIV <= CLKDIV + 1'b1;
 		end
 		else
-		begin
-			CLKDIV <= CLKDIV + 1'b1;
-			if (CLKDIV_D3 == 3)
-			begin
-				CLKDIV_D3 <= 0;
-				CLKDIV2 <= CLKDIV2 + 1'b1;
-			end
-			else
-				CLKDIV_D3 <= CLKDIV_D3 + 1'b1;
-		end
+			CLKDIV_D3 <= CLKDIV_D3 + 1'b1;
 	end
 	
 endmodule

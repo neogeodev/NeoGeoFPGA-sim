@@ -13,15 +13,13 @@ module neogeo(
 	input CLK_24M,
 	input nRESET_BTN,		// VCCON on MVS
 	
+	input [9:0] P1_IN,
+	input [9:0] P2_IN,
+	
 	// 68K CPU
 	inout [15:0] M68K_DATA,
 	output [19:1] M68K_ADDR_OUT,
-	output M68K_RW,
-	output nAS,
-	output nLDS, nUDS,
-	output nSRAMWEN,
-	output nSROMOE, nSYSTEM,
-	output nBITWD0, nDIPRD0,
+	output M68K_RW, nAS, nLDS, nUDS,
 	output nLED_LATCH, nLED_DATA,
 	
 	// Cartridge 68K ROMs
@@ -59,21 +57,18 @@ module neogeo(
 	input nCD1, nCD2, nWP,
 	
 	// Decodes
-	output nWRAM_ZONE, nPORT_ZONE, nCTRL1_ZONE, nCTRL2_ZONE, nSTATUSB_ZONE, nSRAM_ZONE,
-	output COUNTER1, COUNTER2, LOCKOUT1, LOCKOUT2,
+	output nSRAMWEL, nSRAMWEU,
 	
-	/*
 	output [6:0] VIDEO_R,
 	output [6:0] VIDEO_G,
 	output [6:0] VIDEO_B,
-	output VIDEO_SYNC,
-	*/
+	output VIDEO_SYNC
 	
 	// Serial video output
-	output VIDEO_R_SER, VIDEO_G_SER, VIDEO_B_SER, VIDEO_CLK_SER, VIDEO_LAT_SER,
+	//output VIDEO_R_SER, VIDEO_G_SER, VIDEO_B_SER, VIDEO_CLK_SER, VIDEO_LAT_SER,
 	
 	// I2S interface
-	output I2S_MCLK, I2S_BICK, I2S_SDTI, I2S_LRCK
+	//output I2S_MCLK, I2S_BICK, I2S_SDTI, I2S_LRCK
 );
 	
 	wire [23:1] M68K_ADDR;
@@ -91,9 +86,9 @@ module neogeo(
 	wire [5:0] nSLOT;
 	
 	wire [5:0] ANA;			// PSG audio level
-	wire [6:0] VIDEO_R;
+/*	wire [6:0] VIDEO_R;
 	wire [6:0] VIDEO_G;
-	wire [6:0] VIDEO_B;
+	wire [6:0] VIDEO_B;*/
 	
 	// Implementation specific (unique slot)
 	assign nSLOTCS = nSLOT[0];
@@ -103,8 +98,6 @@ module neogeo(
 	assign nCOUNTOUT = |{nBITW0, ~M68K_ADDR[6:5]};
 	
 	wire [8:0] HCOUNT;		// Todo: remove
-	
-	wire TMS0;
 	
 	cpu_68k M68KCPU(CLK_68KCLK, nRESET, IPL1, IPL0, nDTACK, M68K_ADDR, M68K_DATA, nLDS, nUDS, nAS, M68K_RW);
 	cpu_z80 Z80CPU(CLK_4M, nRESET, SDD, SDA, nIORQ, nMREQ, nSDRD, nSDWR, nZ80INT, nNMI);
@@ -140,7 +133,7 @@ module neogeo(
 				S1H1, LOAD, H, EVEN1, EVEN2, IPL0, IPL1, TMS0, LD1, LD1, PCK1, PCK2, WE[3:0], CK[3:0], SS1,
 				SS2, nRESETP, VIDEO_SYNC, CHBL, nBNKB, nVCS, CLK_8M, CLK_4M, HCOUNT);
 	
-	neo_b1 B1(CLK_6MB, CLK_1MB, PBUS, FIXD, PCK1, PCK2, CHBL, GAD, GBD, WE, CK, TMS0, LD1, LD2, SS1, SS2, S1H1,
+	neo_b1 B1(CLK_6MB, CLK_1MB, PBUS, FIXD, PCK1, PCK2, CHBL, nBNKB, GAD, GBD, WE, CK, TMS0, LD1, LD2, SS1, SS2, S1H1,
 				A23Z, A22Z, PA, nLDS, M68K_RW, nAS, M68K_ADDR[21:17], M68K_ADDR[12:1], nHALT, nRESET, nRESET_BTN);
 	
 	z80ram ZRAM(SDA[10:0], SDD, nZRAMCS, nSDMRD, nSDMWR);
@@ -156,8 +149,15 @@ module neogeo(
 
 	// Todo: REMOVE HCOUNT, it's only used for simulation file output here:
 	videout VOUT(CLK_6MB, nBNKB, SHADOW, PC, VIDEO_R, VIDEO_G, VIDEO_B, HCOUNT);
-	ser_video SERVID(nRESET, CLK_SERVID, CLK_6MB, VIDEO_R, VIDEO_G, VIDEO_B,
-						VIDEO_R_SER, VIDEO_G_SER, VIDEO_B_SER, VIDEO_CLK_SER, VIDEO_LAT_SER);
+	/*ser_video SERVID(nRESET, CLK_SERVID, CLK_6MB, VIDEO_R, VIDEO_G, VIDEO_B,
+						VIDEO_R_SER, VIDEO_G_SER, VIDEO_B_SER, VIDEO_CLK_SER, VIDEO_LAT_SER);*/
+	
+	// nSRAMCS comes from analog battery backup circuit
+	assign nSRAMCS = 1'b0;
+	sram SRAM(M68K_DATA, M68K_ADDR[15:1], nBWL, nBWU, nSRAMOEL, nSRAMOEU, nSRAMCS);
+	assign nSWE = nSRAMWEN | nSRAMCS;
+	assign nBWL = nSRAMWEL | nSWE;
+	assign nBWU = nSRAMWEU | nSWE;
 	
 	// Unique gates
 	assign PCK1B = ~PCK1;

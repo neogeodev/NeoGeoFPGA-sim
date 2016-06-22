@@ -1,6 +1,18 @@
 `timescale 1ns/1ns
 
 module mvs_cart(
+	input nRESET,
+	input CLK_24M, CLK_12M, CLK_8M, CLK_68KCLKB, CLK_4MB,
+	
+	input nAS, M68K_RW,
+	input [18:0] M68K_ADDR,
+	inout [15:0] M68K_DATA,
+	input nROMOE, nROMOEL, nROMOEU,
+	input nPORTADRS, nPORTOEL, nPORTOEU, nPORTWEL, nPORTWEU, 
+	output nROMWAIT, nPWAIT0, nPWAIT1, PDTACK,
+	
+	input nSLOTCS,
+	
 	input [23:0] PBUS,
 	input CA4,
 	input S2H1,
@@ -8,14 +20,6 @@ module mvs_cart(
 	input PCK2B,
 	output [31:0] CR,
 	output [7:0] FIXD,
-	
-	input [18:0] M68K_ADDR,
-	inout [15:0] M68K_DATA,
-	input nROMOE,
-	input nPORTOEL,
-	input nPORTOEU,
-	input nSLOTCS,
-	output nROMWAIT, nPWAIT0, nPWAIT1, PDTACK,
 	
 	inout [7:0] SDRAD,
 	input [9:8] SDRA_L,
@@ -26,13 +30,16 @@ module mvs_cart(
 	input [11:8] SDPA,
 	input SDPMPX, nSDPOE,
 	
-	input nSDROM,
+	input SDRD0, SDRD1, nSDROM, nSDMRD,
 	input [15:0] SDA,
 	inout [7:0] SDD
 );
 	
-	cha_board CHA(PBUS, CA4, S2H1, PCK1B, PCK2B, SDA, nSDROM, SDD, CR, FIXD, SDRD0);
-	prog_board PROG(M68K_ADDR, M68K_DATA, nROMOE, nPORTOEL, nPORTOEU, nROMWAIT, nPWAIT0, nPWAIT1, PDTACK,
-						SDRAD, SDRA_L, SDRA_U, SDRMPX, nSDROE, SDPAD, SDPA, SDPMPX, nSDPOE);
+	prog_board PROG(nSDROE, SDRMPX, SDRA_U, SDRA_L, nSDPOE, SDPMPX, SDPA, nSLOTCS, nPORTADRS, nPORTWEL, nPORTWEU,
+						nPORTOEL, nPORTOEU, nROMOEL, nROMOEU, nAS, M68K_RW, M68K_DATA, M68K_ADDR, CLK_68KCLKB, nROMWAIT,
+						nPWAIT0, nPWAIT1, PDTACK, nROMOE, CLK_4MB, nRESET, SDPAD, SDRAD);
+	
+	cha_board CHA(SDA, nSLOTCS, CR, CA4, S2H1, PCK2B, PCK1B, PBUS, CLK_24M, CLK_12M, CLK_8M, nRESET, FIXD,
+						SDRD0, SDRD1, nSDROM, nSDMRD, SDD);
 
 endmodule

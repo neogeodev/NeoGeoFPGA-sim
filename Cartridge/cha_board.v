@@ -1,17 +1,23 @@
 `timescale 1ns/1ns
 
 module cha_board(
-	input [23:0] PBUS,
-	input CA4,
-	input S2H1,
-	input PCK1B,
-	input PCK2B,
 	input [15:0] SDA,
-	input nSDROM,
-	inout [7:0] SDD,
+	
+	input nSLOTCS,
+	
 	output [31:0] CR,
+	input CA4, S2H1,
+	input PCK2B, PCK1B,
+	input [23:0] PBUS,
+	
+	input CLK_24M, CLK_12M, CLK_8M,
+	input nRESET,
+	
 	output [7:0] FIXD,
-	input SDRD0
+
+	input SDRD0, SDRD1, nSDROM, nSDMRD,
+	
+	inout [7:0] SDD
 );
 
 	wire [19:0] C_LATCH;

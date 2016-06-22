@@ -11,23 +11,30 @@ module watchdog(
 	input nRST
 );
 
-	reg [10:0] WDCNT;
+	reg [3:0] WDCNT;
 	
-	assign nRESET = WDCNT[10];
+	// IMPORTANT:
+	// nRESET is an open-collector output on B1, so that the 68k can drive it (RESET instruction)
+	// The line has a 4.7k pullup (schematics page 1)
+	// nRESET changes state on posedge nBNKB (posedge mclk), but takes a slightly variable amount of time to
+	// return high after it is released. Low during 8 frames, released during 8 frames.
+	assign nRESET = WDCNT[3];
 	assign nHALT = 1'b1;			// Todo
 	
 	// 300001 (LDS)
 	// 0011000xxxx0000000000001
 	assign WDKICK = &{~|{nLDS, RW}, ~|{A23Z, A22Z}, M68K_ADDR_U[21:20], ~|{M68K_ADDR_U[19:17], M68K_ADDR_L[12:1]}};
-	
-	always @(posedge WDCLK or posedge WDKICK)
+
+	// posedge WDCLK: 
+	// posedge WDKICK: not sure.
+	always @(posedge WDCLK or posedge WDKICK or negedge nRST)
 	begin
 		if (!nRST)
-			WDCNT <= 11'b00000000000;
+			WDCNT <= 4'b0000;
 		else
 		begin
 			if (WDKICK)
-				WDCNT <= 11'b10000000000;
+				WDCNT <= 4'b1000;
 			else
 				WDCNT <= WDCNT + 1;
 		end

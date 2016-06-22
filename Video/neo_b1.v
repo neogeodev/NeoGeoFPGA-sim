@@ -8,6 +8,7 @@ module neo_b1(
 	input PCK1,					// What for ?
 	input PCK2,					// What for ?
 	input CHBL,
+	input BNKB,
 	input [3:0] GAD, GBD,
 	input [3:0] WE,			// LB writes
 	input [3:0] CK,			// LB clocks
@@ -42,12 +43,11 @@ module neo_b1(
 	
 	wire nPAL_ACCESS;
 	
-	assign nRESET = nRST;		// Todo: Wrong, nRESET is sync'd to frame start
-	
 	// $400000~$7FFFFF why not use nPAL ?
 	assign nPAL_ACCESS = |{A23Z, ~A22Z, nAS};
 	
-	watchdog WD(nLDS, RW, A23Z, A22Z, M68K_ADDR_WD, M68K_ADDR_PAL, TMS0, nHALT, nRESET, nRST);
+	// Todo: Wrong, nRESET is sync'd to frame start
+	watchdog WD(nLDS, RW, A23Z, A22Z, M68K_ADDR_WD, M68K_ADDR_PAL, BNKB, nHALT, nRESET, nRST);
 
 	linebuffer LB1(CK[0], WE[0], PCK1, PBUS[15:8], LBDATA_A_E, TMS0);
 	linebuffer LB2(CK[1], WE[1], PCK1, PBUS[15:8], LBDATA_A_O, TMS0);
