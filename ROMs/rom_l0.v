@@ -14,6 +14,6 @@ module rom_l0(
 		$readmemh("rom_l0.txt", ROMDATA);
 	end
 
-	assign #12 OUT = nCE ? 8'bzzzzzzzz : ROMDATA[ADDR];
+	assign #120 OUT = nCE ? 8'bzzzzzzzz : ROMDATA[ADDR];
 
 endmodule

@@ -21,6 +21,9 @@ module neogeo(
 	output [19:1] M68K_ADDR_OUT,
 	output M68K_RW, nAS, nLDS, nUDS,
 	output nLED_LATCH, nLED_DATA,
+
+	// Cartridge clocks
+	output CLK_68KCLKB, CLK_8M,
 	
 	// Cartridge 68K ROMs
 	output nROMOE, nSLOTCS,
@@ -49,7 +52,7 @@ module neogeo(
 	// Gfx
 	output CLK_12M, EVEN, LOAD, H,
 	input [3:0] GAD, GBD,
-	input [7:0] FIXD,
+	input [7:0] FIXD_CART,
 	
 	// Memcard
 	output [4:0] CDA_U,			// Memcard upper address lines
@@ -58,6 +61,7 @@ module neogeo(
 	
 	// Decodes
 	output nSRAMWEL, nSRAMWEU,
+	output nDIPRD0,
 	
 	output [6:0] VIDEO_R,
 	output [6:0] VIDEO_G,
@@ -70,6 +74,13 @@ module neogeo(
 	// I2S interface
 	//output I2S_MCLK, I2S_BICK, I2S_SDTI, I2S_LRCK
 );
+
+	parameter SYSTEM_MODE = 1'b1;		// MVS
+	
+	
+	
+	wire [7:0] FIXD;
+	wire [7:0] FIXD_SFIX;
 	
 	wire [23:1] M68K_ADDR;
 	
@@ -99,6 +110,8 @@ module neogeo(
 	
 	wire [8:0] HCOUNT;		// Todo: remove
 	
+	wire [15:0] G;				// SFIX address bus
+	
 	cpu_68k M68KCPU(CLK_68KCLK, nRESET, IPL1, IPL0, nDTACK, M68K_ADDR, M68K_DATA, nLDS, nUDS, nAS, M68K_RW);
 	cpu_z80 Z80CPU(CLK_4M, nRESET, SDD, SDA, nIORQ, nMREQ, nSDRD, nSDWR, nZ80INT, nNMI);
 	
@@ -106,7 +119,7 @@ module neogeo(
 				nPORTOEL, nPORTOEU, nPORTWEL, nPORTWEU, nPORTADRS, nWRL, nWRU, nWWL, nWWU, nSROMOEL, nSROMOEU, 
 				nSRAMOEL, nSRAMOEU, nSRAMWEL, nSRAMWEU, nLSPOE, nLSPWE, nCRDO, nCRDW, nCRDC, nSDW, P1_IN, P2_IN,
 				nCD1, nCD2, nWP, nROMWAIT, PWAIT0, PWAIT1, PDTACK, SDD, CLK_68KCLK, nDTACK, nBITW0, nBITW1, nDIPRD0,
-				nDIPRD1, nPAL);
+				nDIPRD1, nPAL, SYSTEM_MODE);
 	
 	// Todo: nSDZ80R, nSDZ80W, nSDZ80CLR comes from C1
 	neo_d0 D0(CLK_24M, nRESET, nRESETP, CLK_12M, CLK_68KCLK, CLK_68KCLKB, CLK_6MB, CLK_1MB,
@@ -129,15 +142,26 @@ module neogeo(
 	assign {DOTA, DOTB} = {|GAD, |GBD};
 	
 	// Todo: REMOVE HCOUNT, it's only used for simulation in videout
-	lspc_a2 LSPC(CLK_24M, nRESET, PBUS, M68K_ADDR[3:1], M68K_DATA, nLSPOE, nLSPWE, DOTA, DOTB, CA4, S2H1,
+	lspc_a2 LSPC(CLK_24M, nRESET, PBUS[15:0], PBUS[23:16], M68K_ADDR[3:1], M68K_DATA, nLSPOE, nLSPWE, DOTA, DOTB, CA4, S2H1,
 				S1H1, LOAD, H, EVEN1, EVEN2, IPL0, IPL1, TMS0, LD1, LD1, PCK1, PCK2, WE[3:0], CK[3:0], SS1,
 				SS2, nRESETP, VIDEO_SYNC, CHBL, nBNKB, nVCS, CLK_8M, CLK_4M, HCOUNT);
 	
 	neo_b1 B1(CLK_6MB, CLK_1MB, PBUS, FIXD, PCK1, PCK2, CHBL, nBNKB, GAD, GBD, WE, CK, TMS0, LD1, LD2, SS1, SS2, S1H1,
 				A23Z, A22Z, PA, nLDS, M68K_RW, nAS, M68K_ADDR[21:17], M68K_ADDR[12:1], nHALT, nRESET, nRESET_BTN);
 	
+	ram_68k M68KRAM(M68K_ADDR[15:1], M68K_DATA, nWWL, nWWU, nWRL, nWRU);
 	z80ram ZRAM(SDA[10:0], SDD, nZRAMCS, nSDMRD, nSDMWR);
 	palram PALRAM({PALBNK, PA}, PC, nPALWE);
+	
+	// Embedded ROMs (flash)
+	rom_sps2 SP(M68K_ADDR[16:1], {M68K_DATA[7:0], M68K_DATA[15:8]}, nSROMOE);
+	rom_l0 L0(PBUS[15:0], PBUS[23:16], nVCS);
+	rom_sfix SFIX({G[15:3], S2H1, G[2:0]}, FIXD_SFIX, nSYSTEM);
+	
+	// SFIX P bus latch (16-bit 273)
+	latch_sfix LATCH_SFIX(PBUS[15:0], PCK2B, G);
+	// SFIX / Cart FIX switch
+	assign FIXD = nSYSTEM ? FIXD_SFIX : FIXD_CART;
 	
 	ym2610 YM(CLK_8M, SDD, SDA[1:0], nZ80INT, n2610CS, n2610WR, n2610RD, SDRAD, SDRA_L, SDRA_U, SDRMPX, nSDROE,
 					SDPAD, SDPA, SDPMPX, nSDPOE, ANA, SH1, SH2, OP0, PHI_M);

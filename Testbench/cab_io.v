@@ -6,7 +6,6 @@
 // Signals: nBITWD0, nDIPRD0, nLED_LATCH, nLED_DATA
 
 module cab_io(
-	input nBITWD0,
 	input nDIPRD0,
 	input nLED_LATCH,
 	input nLED_DATA,

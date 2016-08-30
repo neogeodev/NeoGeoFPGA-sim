@@ -1,5 +1,7 @@
 `timescale 1ns/1ns
 
+// Missing: IN3, VPA, IN00~07, IN10~17, IN20~27, SDZ80R, SDZ80W, SDZ80CLR, 
+
 module neo_c1(
 	input [21:17] M68K_ADDR,
 	output [15:8] M68K_DATA,
@@ -26,7 +28,8 @@ module neo_c1(
 	input CLK_68KCLK,
 	output nDTACK,
 	output nBITW0, nBITW1, nDIPRD0, nDIPRD1,
-	output nPAL
+	output nPAL,
+	input SYSTEM_MODE
 );
 
 	wire nIO_ZONE;			// Internal
@@ -50,6 +53,9 @@ module neo_c1(
 	
 	c1_wait C1WAIT(CLK_68KCLK, nAS, nROM_ZONE, nPORT_ZONE, nCARD_ZONE, nROMWAIT, nPWAIT0,
 					nPWAIT1, PDTACK, nDTACK);
+	
+	c1_inputs C1INPUTS(nCTRL1_ZONE, nCTRL2_ZONE, nSTATUSB_ZONE, M68K_DATA, P1_IN[9:0], P2_IN[9:0],
+						nWP, nCD2, nCD1, SYSTEM_MODE);
 	
 	// 000000~0FFFFF read/write
 	assign nROM_ZONE = |{A23Z, A22Z, M68K_ADDR[21], M68K_ADDR[20]};

@@ -1,11 +1,12 @@
 `timescale 1ns/1ns
 
 module lspc_a2(
-	// All pins listed ok, DIVI and DIVO only used as /2 on AES ?
+	// All pins listed ok. REF, DIVI and DIVO only used on AES
 	input CLK_24M,
 	input nRESET,
-	inout [23:0] PBUS,
-	input [2:0] M68K_ADDR,
+	output [15:0] PBUS_OUT,
+	inout [23:16] PBUS_IO,
+	input [3:1] M68K_ADDR,
 	inout [15:0] M68K_DATA,
 	input nLSPOE, nLSPWE,
 	input DOTA, DOTB,
@@ -19,21 +20,22 @@ module lspc_a2(
 	output [3:0] WE,
 	output [3:0] CK,
 	input SS1, SS2,
-	output reg nRESETP = 1'b1,
+	output nRESETP,
 	output SYNC,
 	output CHBL,
 	output nBNKB,
 	output nVCS,
 	output CLK_8M,
 	output CLK_4M,
+	//output CLK_4M,					// Which chip gives 4MB ?
 	output [8:0] HCOUNT	// Todo: REMOVE HCOUNT, it's only used for debug in videout and as a hack in B1
 );
 
+	parameter VIDEO_MODE = 0;		// NTSC
+	
 	assign HCOUNT = MAIN_CNT[10:2];
 
 	// Todo: Merge VRAM cycle counters together if possible ? Even with P bus ?
-
-	parameter VIDEO_MODE = 1;	// PAL
 	
 	wire [15:0] REG_LSPCMODE;
 
@@ -103,18 +105,9 @@ module lspc_a2(
 	wire [7:0] SPR_XPOS;
 	wire [15:0] L0_ADDR;
 	
-	// nRESET  '''''|_________|'''''
-	// nRESETP '''''''''''''''|_|'''
-	always @(negedge CLK_24M)
-	begin
-		nRESETP <= (nRESETP | ~nRESET);
-	end
-	
-	// old new resetp
-	//  0   0     1
-	//  0   1     0
-	//  1   0     1
-	//  1   1     1
+	resetp RSTP(CLK_24M, nRESET, nRESETP);
+
+	odd_clk ODDCLK(CLK_24M, nRESETP, CLK_8M, CLK_4M, CLK_4MB);
 	
 	slow_cycle SCY(CLK_24M, HSYNC, HCOUNT[8:0], VCOUNT[7:3], SPR_NB, SPR_TILEIDX,	SPR_TILENB, SPR_TILEPAL,
 					SPR_TILEAA, SPR_TILEFLIP, FIX_TILENB, FIX_TILEPAL,
@@ -141,7 +134,7 @@ module lspc_a2(
 	
 	// This needs SPR_XPOS, L0_ADDR
 	p_cycle PCY(nRESET, CLK_24M, HSYNC, FIX_ADDR, FIX_TILEPAL, SPR_ADDR, SPR_TILEPAL, SPR_XPOS, L0_ADDR,
-					PCK1, PCK2, LOAD, S1H1, S2H1, nVCS, L0_DATA, PBUS);
+					PCK1, PCK2, LOAD, S1H1, S2H1, nVCS, L0_DATA, {PBUS_IO, PBUS_OUT});
 	
 	autoanim AA(VBLANK, AASPEED, SPR_TILENB, AA_DISABLE, SPR_ATTR_AA, SPR_TILENB_OUT, AACOUNT);
 	hshrink HSHRINK(SPR_ATTR_SHRINK[11:8], SPR_PIXELCNT, WR_PIXEL);
@@ -155,10 +148,10 @@ module lspc_a2(
 	
 	// Read
 	assign M68K_DATA = (nLSPOE | ~nLSPWE) ? 16'bzzzzzzzzzzzzzzzz :
-								(M68K_ADDR[1:0] == 2'b00) ? CPU_VRAM_READ_BUFFER :	// 3C0000
-								(M68K_ADDR[1:0] == 2'b01) ? CPU_VRAM_READ_BUFFER :	// 3C0002
-								(M68K_ADDR[1:0] == 2'b10) ? REG_VRAMMOD :				// 3C0004
-								(M68K_ADDR[1:0] == 2'b11) ? REG_LSPCMODE :			// 3C0006
+								(M68K_ADDR[2:1] == 2'b00) ? CPU_VRAM_READ_BUFFER :	// 3C0000
+								(M68K_ADDR[2:1] == 2'b01) ? CPU_VRAM_READ_BUFFER :	// 3C0002
+								(M68K_ADDR[2:1] == 2'b10) ? REG_VRAMMOD :				// 3C0004
+								(M68K_ADDR[2:1] == 2'b11) ? REG_LSPCMODE :			// 3C0006
 								16'bzzzzzzzzzzzzzzzz;
 	
 	// Write
@@ -169,7 +162,7 @@ module lspc_a2(
 			nIRQS <= 3'b111;
 		else
 		begin
-			case (M68K_ADDR[2:0])
+			case (M68K_ADDR[3:1])
 				// 3C0000
 				3'b000 :
 				begin
@@ -245,26 +238,6 @@ module lspc_a2(
 				end
 			end
 		end
-	end
-	
-	
-	// -------------------------------- Pixel clock --------------------------------
-	
-	reg [1:0] CLKDIV_D3 = 2'd0;
-	reg [1:0] CLKDIV = 2'd0;
-
-	assign CLK_8M = CLKDIV[0];		// Used internally or just outputs ?
-	assign CLK_4M = CLKDIV[1];
-	
-	always @(negedge CLK_24M)
-	begin
-		if (CLKDIV_D3 == 3)
-		begin
-			CLKDIV_D3 <= 0;
-			CLKDIV <= CLKDIV + 1'b1;
-		end
-		else
-			CLKDIV_D3 <= CLKDIV_D3 + 1'b1;
 	end
 	
 endmodule

@@ -19,7 +19,7 @@ module videosync(
 	// CSYNC stays low for 1399mclk
 	// CSYNC stays high for 112mclk = 28px
 	
-	always @(posedge CLK_24M)
+	always @(negedge CLK_24M)
 	begin
 		if (MAIN_CNT == 12'd55)		// 56 (14px)
 		begin

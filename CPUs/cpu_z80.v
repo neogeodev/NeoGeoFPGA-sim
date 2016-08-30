@@ -1,5 +1,7 @@
 `timescale 1ns/1ns
 
+// Z80 CPU plug into TV80 core
+
 module cpu_z80(
 	input CLK_4M,
 	input nRESET,

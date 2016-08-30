@@ -71,7 +71,8 @@ module fast_cycle(
 			30: SPR_RENDERIDX <= SPR_RENDERIDX + 1;
 		endcase
 	end
-	vram_fast_u VRAMUU(C, F[15:8], nCWE, 1'b0, 1'b0);
-	vram_fast_l VRAMUL(C, F[7:0], nCWE, 1'b0, 1'b0);
+	
+	vram_fast_u VRAMUU(C, F[15:8], 1'b0, 1'b0, nCWE);
+	vram_fast_l VRAMUL(C, F[7:0], 1'b0, 1'b0, nCWE);
 
 endmodule

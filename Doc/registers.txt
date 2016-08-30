@@ -13,7 +13,7 @@ REG_SLOT		Write ok, check range			neo_f0.v
 REG_LEDLATCHES		Write ok, check range			cab_io.v
 REG_LEDDATA		Write ok, check range			cab_io.v
 REG_RTCCTRL		Write ok, check range			neo_f0.v
-	
+
 Counter/lockout	Ok, check range, neo_i0.v
 	
 Reg/Signal        Address                         Value     Mask

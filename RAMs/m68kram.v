@@ -11,7 +11,7 @@ module ram_68k(
 	input nOEU
 );
 
-	ram68k_l RAM68KL(M68K_ADDR, M68K_DATA[7:0], nWEL, nOEL, 1'b0);
-	ram68k_u RAM68KU(M68K_ADDR, M68K_DATA[15:8], nWEU, nOEU, 1'b0);
+	ram68k_l RAM68KL(M68K_ADDR, M68K_DATA[7:0], 1'b0, nOEL, nWEL);
+	ram68k_u RAM68KU(M68K_ADDR, M68K_DATA[15:8], 1'b0, nOEU, nWEU);
 
 endmodule

@@ -1,20 +1,27 @@
 `timescale 1ns/1ns
 // `default_nettype none
 
-// Todo: make WAY better models for RAMs and ROMs
 // Todo: delegate some stuff to CPLD ? Like clock divider for cartridge and SROM, SRAM and WRAM control ?
 
 module testbench_1();
 	reg MCLK;
 	reg nRESET_BTN;
-	reg VCCON;
 	reg [9:0] P1_IN;
 	reg [9:0] P2_IN;
 	reg nTEST_BTN;				// MVS only
 	reg [7:0] DIPSW;
 	
+	wire CLK_8M, CLK_12M, CLK_24M, CLK_68KCLKB;
+	wire nRESET;
+	
+	wire nCRDC, nCRDO, CARD_PIN_nREG, CARD_PIN_nWE, nCD1, nCD2, nWP, nSRAMWEL, nSRAMWEU;
+	wire VIDEO_SYNC;
+	wire nSROMOEL, nROMOEL, nROMOEU, nPORTADRS;
+	
 	wire [15:0] M68K_DATA;
 	wire [19:1] M68K_ADDR;
+	wire M68K_RW, nUDS, nLDS, nAS;
+	wire nSLOTCS;
 	
 	wire [23:0] PBUS;
 	
@@ -30,24 +37,33 @@ module testbench_1();
 	wire [3:0] EL_OUT;
 	wire [8:0] LED_OUT1;
 	wire [8:0] LED_OUT2;
-	
-	wire [15:0] G;				// SFIX address
 
 	wire [7:0] SDRAD;
 	wire [9:8] SDRA_L;
 	wire [23:20] SDRA_U;
 	wire [7:0] SDPAD;
 	wire [11:8] SDPA;
+	wire SDRMPX, SDPMPX, nSDROE, nSDPOE;
+	wire SDRD0, SDRD1, nSDMRD;
+	
+	wire nBITWD0, nDIPRD0;
+	wire nCTRL1_ZONE, nCTRL2_ZONE, nSTATUSB_ZONE;
 
-	wire [15:0] SDA;			// Z80
+	wire [15:0] SDA;				// Z80
 	wire [7:0] SDD;
+	wire nSDROM;
 	
 	wire [3:0] GAD, GBD;
 	wire [31:0] CR;
+	wire EVEN, LOAD, H;
+	wire nVCS, S2H1, CA4;		// nVCS Needed ?
+	wire PCK1B, PCK2B;
 	
 	wire [6:0] VIDEO_R;
 	wire [6:0] VIDEO_G;
 	wire [6:0] VIDEO_B;
+	
+	wire nROMOE, nROMWAIT, nPWAIT0, nPWAIT1, PDTACK;
 
 	neogeo NG(
 		MCLK,															// 2
@@ -59,6 +75,9 @@ module testbench_1();
 		M68K_RW,	nAS,												// 4
 		nLDS, nUDS,
 		nLED_LATCH, nLED_DATA,									// 2
+		
+		CLK_68KCLKB,
+		CLK_8M,
 
 		nROMOE, nSLOTCS,											// 2
 		nROMWAIT, nPWAIT0, nPWAIT1, PDTACK,					// 4
@@ -82,6 +101,7 @@ module testbench_1();
 		nCD1, nCD2, nWP,											// 3		nCD1 | nCD2 in CPLD ? -1
 		
 		nSRAMWEL, nSRAMWEU,
+		nDIPRD0,
 
 		VIDEO_R,
 		VIDEO_G,
@@ -92,7 +112,7 @@ module testbench_1();
 	// MVS cartridge
 	mvs_cart MVSCART(nRESET, CLK_24M, CLK_12M, CLK_8M, CLK_68KCLKB, CLK_4MB, nAS, M68K_RW, M68K_ADDR[19:1], M68K_DATA,
 					nROMOE, nROMOEL, nROMOEU, nPORTADRS, nPORTOEL, nPORTOEU,	nPORTWEL, nPORTWEU, nROMWAIT, nPWAIT0, nPWAIT1,
-					PTDACK, nSLOTCS, PBUS, CA4, S2H1, PCK1B, PCK2B, CR, FIXD_CART, SDRAD, SDRA_L, SDRA_U, SDRMPX, nSDROE,
+					PDTACK, nSLOTCS, PBUS, CA4, S2H1, PCK1B, PCK2B, CR, FIXD_CART, SDRAD, SDRA_L, SDRA_U, SDRMPX, nSDROE,
 					SDPAD, SDPA, SDPMPX, nSDPOE, SDRD0, SDRD1, nSDROM, nSDMRD, SDA, SDD);
 	
 	// AES cartridge
@@ -105,51 +125,35 @@ module testbench_1();
 	assign M68K_DATA = (M68K_RW & ~nCRDC) ? CDD : 16'bzzzzzzzzzzzzzzzz;
 	assign CDD = (~M68K_RW | nCRDC) ? 16'bzzzzzzzzzzzzzzzz : M68K_DATA;
 	
-	// 68K RAM is external, not enough BRAM in XC6SLX16
-	ram_68k M68KRAM(M68K_ADDR[15:1], M68K_DATA, nWWL, nWWU, nWRL, nWRU);
-	// Embedded ROMs (flash)
-	rom_sps2 SP(M68K_ADDR[16:1], {M68K_DATA[7:0], M68K_DATA[15:8]}, nSROMOE);
-	rom_l0 L0(PBUS[15:0], PBUS[23:16], nVCS);
-	rom_sfix SFIX({G[15:3], S2H1, G[2:0]}, FIXD_SFIX, nSYSTEM);
-	
-	// SFIX P bus latch (16-bit 273)
-	latch_sfix LATCH_SFIX(PBUS[15:0], PCK2B, G);
-	// SFIX / Cart FIX switch
-	assign FIXD = nSYSTEM ? FIXD_SFIX : FIXD_CART;
-	
 	// Put the following in the CPLD !
 	neo_zmc2 ZMC2(CLK_12M, EVEN, LOAD, H, CR, GAD, GBD, , ); // DOTA and DOTB not used, done in NG from GAD and GBD
 	
 	// MVS cab I/O
-	cab_io CABIO(nBITWD0, nDIPRD0, nLED_LATCH, nLED_DATA, DIPSW, M68K_ADDR[7:4], M68K_DATA[7:0],
+	cab_io CABIO(nDIPRD0, nLED_LATCH, nLED_DATA, DIPSW, M68K_ADDR[7:4], M68K_DATA[7:0],
 						EL_OUT, LED_OUT1, LED_OUT2);
 	
-	parameter SYSTEM_MODE = 1'b1;		// MVS
-	
 	// Joypad I/O
-	joy_io JOYIO(nCTRL1_ZONE, nCTRL2_ZONE, nSTATUSB_ZONE, M68K_DATA, M68K_ADDR[4],
-						P1_IN, P2_IN, nBITWD0, nWP, nCD2, nCD1, SYSTEM_MODE, P1_OUT, P2_OUT);
+	/*joy_io JOYIO(nCTRL1_ZONE, nCTRL2_ZONE, nSTATUSB_ZONE, M68K_DATA, M68K_ADDR[4],
+						P1_IN, P2_IN, nBITWD0, nWP, nCD2, nCD1, SYSTEM_MODE, P1_OUT, P2_OUT);*/
 	
 	initial
 	begin
 		MCLK = 0;
 		nRESET_BTN = 1;
-		nTEST_BTN = 1;					// MVS only
-		DIPSW = 8'b11111111;
 		P1_IN = 10'b1111111111;
 		P2_IN = 10'b1111111111;
-		VCCON = 0;
+		
+		nTEST_BTN = 1;					// MVS only
+		DIPSW = 8'b11111111;
 	end
 	
 	always
-		#21 MCLK = !MCLK;
+		#21 MCLK = !MCLK;		// 24MHz -> 20.8ns half period
 		
 	initial
 	begin
 		#30
-		VCCON = 1;
-		#70
-		nRESET_BTN = 0;
+		nRESET_BTN = 0;		// Press reset button during 1us
 		#1000
 		nRESET_BTN = 1;
 	end

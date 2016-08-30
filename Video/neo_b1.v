@@ -21,8 +21,8 @@ module neo_b1(
 	input nLDS,					// For watchdog
 	input RW,
 	input nAS,
-	input [21:17] M68K_ADDR_WD,
-	input [12:1] M68K_ADDR_PAL,
+	input [21:17] M68K_ADDR_U,
+	input [12:1] M68K_ADDR_L,
 	output nHALT,				// Todo
 	output nRESET,
 	input nRST
@@ -47,7 +47,7 @@ module neo_b1(
 	assign nPAL_ACCESS = |{A23Z, ~A22Z, nAS};
 	
 	// Todo: Wrong, nRESET is sync'd to frame start
-	watchdog WD(nLDS, RW, A23Z, A22Z, M68K_ADDR_WD, M68K_ADDR_PAL, BNKB, nHALT, nRESET, nRST);
+	watchdog WD(nLDS, RW, A23Z, A22Z, M68K_ADDR_U, M68K_ADDR_L, BNKB, nHALT, nRESET, nRST);
 
 	linebuffer LB1(CK[0], WE[0], PCK1, PBUS[15:8], LBDATA_A_E, TMS0);
 	linebuffer LB2(CK[1], WE[1], PCK1, PBUS[15:8], LBDATA_A_O, TMS0);
@@ -80,7 +80,7 @@ module neo_b1(
 					CHBL ? 12'b000000000000 :
 					FIX_OPAQUE ? {FIX_PAL, FIX_PIXEL} :
 					LBDATA_OUT :
-					M68K_ADDR_PAL;
+					M68K_ADDR_L;
 	
 	// Todo: Check sync of 1H1, 1HB on real hw
 	// Does this work with PCK* signals ?

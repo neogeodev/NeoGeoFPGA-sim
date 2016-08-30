@@ -5,9 +5,9 @@
 module ram68k_l(
 	input [14:0] ADDR,
 	inout [7:0] DATA,
-	input nWE,
+	input nCE,
 	input nOE,
-	input nCE
+	input nWE
 );
 
 	reg [7:0] RAMDATA[0:32767];
@@ -16,10 +16,14 @@ module ram68k_l(
 		//$readmemh("raminit_68kram_l.txt", RAMDATA);
 	end
 
-	assign #120 DATA = (nCE | nOE | ~nWE) ? 8'bzzzzzzzz : RAMDATA[ADDR];
+	assign #120 DATA = (!nCE && !nOE) ? RAMDATA[ADDR] : 8'bzzzzzzzz;
 
 	always @(nCE or nWE)
-	  if (!(nCE & nWE))
-		 #30 RAMDATA[ADDR] <= DATA;
+		if (!nCE && !nWE)
+			#30 RAMDATA[ADDR] <= DATA;
+	
+	always @(nWE or nCE)
+		if (!nWE && !nOE)
+			$display("ERROR: RAM68KL: nOE and nWE are both active !");
 
 endmodule

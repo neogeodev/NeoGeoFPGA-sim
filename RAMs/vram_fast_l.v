@@ -5,9 +5,9 @@
 module vram_fast_l(
 	input [10:0] ADDR,
 	inout [7:0] DATA,
-	input nWE,
+	input nCE,
 	input nOE,
-	input nCE
+	input nWE
 );
 
 	reg [7:0] RAMDATA[0:2047];
@@ -16,10 +16,14 @@ module vram_fast_l(
 		$readmemh("raminit_vram_fastl.txt", RAMDATA);
 	end
 
-	assign #35 DATA = (nCE & nOE & ~nWE) ? 8'bzzzzzzzz : RAMDATA[ADDR];
+	assign #35 DATA = (!nCE && !nOE) ? RAMDATA[ADDR] : 8'bzzzzzzzz;
 
 	always @(nCE or nWE)
-	  if (!(nCE & nWE))
-		 #20 RAMDATA[ADDR] <= DATA;
+		if (!nCE && !nWE)
+			#20 RAMDATA[ADDR] <= DATA;
+	
+	always @(nWE or nCE)
+		if (!nWE && !nOE)
+			$display("ERROR: VRAMUL: nOE and nWE are both active !");
 
 endmodule

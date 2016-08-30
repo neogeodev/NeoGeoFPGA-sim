@@ -48,8 +48,8 @@ module slow_cycle(
 
 	assign nBOE = 1'b0;
 
-	vram_slow_u VRAMLU(B, E[15:8], nBWE, nBOE, 1'b0);
-	vram_slow_l VRAMLL(B, E[7:0], nBWE, nBOE, 1'b0);
+	vram_slow_u VRAMLU(B, E[15:8], 1'b0, nBOE, nBWE);
+	vram_slow_l VRAMLL(B, E[7:0], 1'b0, nBOE, nBWE);
 
 	// Todo: This is all wrong ! (shifting needed, should be way simpler)
 	// Warning: Update this according to cycle order if changed !			

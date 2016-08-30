@@ -8,7 +8,7 @@ module palram(
 	input nPALWE
 );
 
-	palram_l PRAML(ADDR, PC[7:0], nPALWE, 1'b0, 1'b0);
-	palram_u PRAMU(ADDR, PC[15:8], nPALWE, 1'b0, 1'b0);
+	palram_l PRAML(ADDR, PC[7:0], 1'b0, 1'b0, nPALWE);
+	palram_u PRAMU(ADDR, PC[15:8], 1'b0, 1'b0, nPALWE);
 
 endmodule

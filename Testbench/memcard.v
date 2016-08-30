@@ -22,10 +22,14 @@ module memcard(
 	assign nCD2 = nINSERTED;
 	assign nWP = nPROTECT;
 	
-	assign #10 CDD[7:0] = (nCE | nOE | ~nWE) ? 8'bzzzzzzzz : RAMDATA[CDA[10:0]];
+	assign #100 CDD[7:0] = (!nCE && !nOE) ? RAMDATA[CDA[10:0]] : 8'bzzzzzzzz;
 
 	always @(nCE or nWE)
-	  if (!(nCE & nWE))
-		 #5 RAMDATA[CDA[10:0]] = CDD[7:0];
+		if (!nCE && !nWE)
+			#50 RAMDATA[CDA[10:0]] = CDD[7:0];
+	
+	always @(nWE or nCE)
+		if (!nWE && !nOE)
+			$display("ERROR: MEMCARD: nOE and nWE are both active !");
 
 endmodule

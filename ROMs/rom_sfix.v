@@ -14,6 +14,6 @@ module rom_sfix(
 		$readmemh("rom_sfix.txt", ROMDATA);
 	end
 
-	assign #10 OUT = OE ? 8'bzzzzzzzz : ROMDATA[ADDR];
+	assign #100 OUT = OE ? 8'bzzzzzzzz : ROMDATA[ADDR];
 
 endmodule
