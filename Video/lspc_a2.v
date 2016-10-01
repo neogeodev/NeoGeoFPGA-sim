@@ -1,7 +1,7 @@
 `timescale 1ns/1ns
 
 module lspc_a2(
-	// All pins listed ok. REF, DIVI and DIVO only used on AES
+	// All pins listed ok. REF, DIVI and DIVO only used on AES for video PLL hack
 	input CLK_24M,
 	input nRESET,
 	output [15:0] PBUS_OUT,
@@ -27,13 +27,12 @@ module lspc_a2(
 	output nVCS,
 	output CLK_8M,
 	output CLK_4M,
-	//output CLK_4M,					// Which chip gives 4MB ?
-	output [8:0] HCOUNT	// Todo: REMOVE HCOUNT, it's only used for debug in videout and as a hack in B1
+	output [8:0] HCOUNT					// TODO: REMOVE, it's only used for debug in videout and as a hack in B1
 );
 
-	parameter VIDEO_MODE = 0;		// NTSC
+	parameter VIDEO_MODE = 0;			// NTSC
 	
-	assign HCOUNT = MAIN_CNT[10:2];
+	assign HCOUNT = MAIN_CNT[10:2];	// TODO: REMOVE
 
 	// Todo: Merge VRAM cycle counters together if possible ? Even with P bus ?
 	
@@ -44,32 +43,34 @@ module lspc_a2(
 	wire [8:0] VCOUNT;
 	//wire [8:0] HCOUNT;
 	
-	reg [31:0] TIMERLOAD;
-	reg [31:0] TIMER;
 	
-	// VBL, HBL, COLDBOOT
-	reg [2:0] nIRQS;
+	// IRQs
+	reg [2:0] nIRQS;			// VBL, HBL, COLDBOOT
+	
+	// Pixel timer
+	reg [31:0] TIMERLOAD;		// Reload value
+	reg [31:0] TIMER;				// Actual timer
+	reg [2:0] TIMERINT_MODE;	// Timer interrupt mode
+	reg TIMERINT_EN;				// Timer interrupt enable
+	reg TIMERSTOP;					// Timer pause in top and bottom of display in PAL mode (LSPC2)
 	
 	// VRAM CPU I/O
-	reg CPU_PENDING;
-	reg CPU_RW;
-	reg CPU_VRAM_ZONE;						// Top bit of VRAM address (low/high indicator)
+	reg CPU_RW;										// Direction
+	reg CPU_VRAM_ZONE;							// Top bit of VRAM address (low/high indicator)
 	reg [14:0] CPU_VRAM_ADDR;
-	wire [15:0] CPU_VRAM_READ_BUFFER;	// Are these two the same ?
-	reg [15:0] CPU_VRAM_WRITE_BUFFER;
-	
-	// Config, write only. This is 16bit but only 15 are used
+	reg [14:0] CPU_VRAM_ADDRESS_BUFFER;
 	reg [15:0] REG_VRAMMOD;
-	// REG_LSPCMODE:
-	reg [7:0] AASPEED;
-	reg [2:0] TIMERINT_MODE;
-	reg TIMERINT_EN;
-	reg AA_DISABLE;
+	reg [15:0] CPU_VRAM_WRITE_BUFFER;
+	wire [15:0] CPU_VRAM_READ_BUFFER_SCY;	// Are these all the same ?
+	wire [15:0] CPU_VRAM_READ_BUFFER_FCY;
+	wire [15:0] CPU_VRAM_READ_BUFFER;
 	
-	reg TIMERSTOP;
+	// Auto-animation
+	reg [7:0] AASPEED;			// Auto-animation speed
+	reg AA_DISABLE;				// Auto-animation disable
+	wire [2:0] AACOUNT;			// Auto-animation counter
 	
-	wire [19:0] SPR_TILENB_OUT;		// SPR_ATTR_TILENB after AA
-	wire [2:0] AACOUNT;
+	wire [19:0] SPR_TILENB_OUT;		// SPR_ATTR_TILENB after auto-animation applied
 	wire VBLANK;
 	
 	wire [1:0] SPR_ATTR_AA;
@@ -83,9 +84,6 @@ module lspc_a2(
 	wire HSYNC;
 	
 	wire [11:0] MAIN_CNT;
-	
-	irq IRQ(nIRQS, IPL0, IPL1);		// nRESETP ?
-	videosync VS(CLK_24M, nRESETP, VCOUNT, MAIN_CNT, TMS0, VBLANK, nVSYNC, HSYNC, nBNKB);
 	
 	wire [11:0] SPR_ATTR_SHRINK;
 	
@@ -106,17 +104,23 @@ module lspc_a2(
 	wire [15:0] L0_ADDR;
 	
 	resetp RSTP(CLK_24M, nRESET, nRESETP);
+	irq IRQ(nIRQS, IPL0, IPL1);		// Uses nRESETP ?
+	
+	videosync VS(CLK_24M, nRESETP, VCOUNT, MAIN_CNT, TMS0, VBLANK, nVSYNC, HSYNC, nBNKB);
 
 	odd_clk ODDCLK(CLK_24M, nRESETP, CLK_8M, CLK_4M, CLK_4MB);
 	
-	slow_cycle SCY(CLK_24M, HSYNC, HCOUNT[8:0], VCOUNT[7:3], SPR_NB, SPR_TILEIDX,	SPR_TILENB, SPR_TILEPAL,
+	slow_cycle SCY(CLK_24M, nRESETP, HCOUNT[8:0], VCOUNT[7:3], SPR_NB, SPR_TILEIDX,	SPR_TILENB, SPR_TILEPAL,
 					SPR_TILEAA, SPR_TILEFLIP, FIX_TILENB, FIX_TILEPAL,
-					CPU_VRAM_ADDR, CPU_VRAM_READ_BUFFER, CPU_VRAM_WRITE_BUFFER, CPU_PENDING, CPU_VRAM_ZONE, CPU_RW);
+					CPU_VRAM_ADDRESS_BUFFER, CPU_VRAM_ADDR, CPU_VRAM_READ_BUFFER_SCY, CPU_VRAM_WRITE_BUFFER, CPU_VRAM_ZONE, CPU_RW);
 	
 	// Todo: this needs to give SPR_NB, SPR_TILEIDX, SPR_XPOS, L0_ADDR, SPR_ATTR_SHRINK
 	// Todo: this needs L0_DATA (from P bus)
 	fast_cycle FCY(CLK_24M,
-					CPU_VRAM_ADDR[10:0], CPU_VRAM_READ_BUFFER, CPU_VRAM_WRITE_BUFFER, CPU_PENDING, CPU_VRAM_ZONE, CPU_RW);
+					CPU_VRAM_ADDRESS_BUFFER[10:0], CPU_VRAM_READ_BUFFER_FCY, CPU_VRAM_WRITE_BUFFER, CPU_PENDING,
+					CPU_VRAM_ZONE, CPU_RW);
+	
+	assign CPU_VRAM_READ_BUFFER = CPU_VRAM_ZONE ? CPU_VRAM_READ_BUFFER_FCY : CPU_VRAM_READ_BUFFER_SCY;
 
 	// - -------- ---10000 HCOUNT for first fix address latch would be 4 ?
 	// n nnnnnnnn nnnHHvvv
@@ -148,57 +152,78 @@ module lspc_a2(
 	
 	// Read
 	assign M68K_DATA = (nLSPOE | ~nLSPWE) ? 16'bzzzzzzzzzzzzzzzz :
-								(M68K_ADDR[2:1] == 2'b00) ? CPU_VRAM_READ_BUFFER :	// 3C0000
-								(M68K_ADDR[2:1] == 2'b01) ? CPU_VRAM_READ_BUFFER :	// 3C0002
-								(M68K_ADDR[2:1] == 2'b10) ? REG_VRAMMOD :				// 3C0004
-								(M68K_ADDR[2:1] == 2'b11) ? REG_LSPCMODE :			// 3C0006
-								16'bzzzzzzzzzzzzzzzz;
+								(M68K_ADDR[2:1] == 2'b00) ? CPU_VRAM_READ_BUFFER :	// 3C0000/3C0008
+								(M68K_ADDR[2:1] == 2'b01) ? CPU_VRAM_READ_BUFFER :	// 3C0002/3C000A
+								(M68K_ADDR[2:1] == 2'b10) ? REG_VRAMMOD :				// 3C0004/3C000C
+								REG_LSPCMODE;													// 3C0006/3C000E
 	
 	// Write
-	assign RESET = ~nRESET;
-	always @(posedge nLSPWE or posedge RESET)	// ?
+	always @(negedge nLSPWE or negedge nRESET)	// ?
 	begin
-		if (RESET)
-			nIRQS <= 3'b111;
+		if (!nRESET)
+			nIRQS <= 3'b111;	// TODO: Cold boot starts off with IRQ3
 		else
 		begin
 			case (M68K_ADDR[3:1])
 				// 3C0000
 				3'b000 :
 				begin
-					// Read happens as soon as address is set
-					{CPU_VRAM_ZONE, CPU_VRAM_ADDR} <= M68K_DATA;
-					CPU_PENDING <= 1'b1;
-					CPU_RW <= 1'b1;
+					// Read happens as soon as address is set (CPU access slot defaults to "read" all the time ?)
+					$display("VRAM set address to 0x%H", M68K_DATA);	// DEBUG
+					{CPU_VRAM_ZONE, CPU_VRAM_ADDR} <= M68K_DATA;			// Ugly, probably simpler
+					CPU_VRAM_ADDRESS_BUFFER <= M68K_DATA;					// Ugly, probably simpler
+					//CPU_PENDING <= 1'b1;
+					CPU_RW <= 1'b1;		// Reading
 				end
 				// 3C0002
 				3'b001 :
 				begin
+					$display("VRAM write data 0x%H @ 0x%H", M68K_DATA, {CPU_VRAM_ZONE, CPU_VRAM_ADDR});	// DEBUG
 					CPU_VRAM_WRITE_BUFFER <= M68K_DATA;
+					CPU_VRAM_ADDRESS_BUFFER <= CPU_VRAM_ADDR;
 					CPU_VRAM_ADDR <= CPU_VRAM_ADDR + REG_VRAMMOD[14:0];
+					CPU_RW <= 1'b0;		// Writing
 				end
 				// 3C0004
-				3'b010 : REG_VRAMMOD <= M68K_DATA;
+				3'b010 : 
+				begin
+					$display("VRAM set mod to 0x%H", M68K_DATA);		// DEBUG
+					REG_VRAMMOD <= M68K_DATA;
+				end
 				// 3C0006
 				3'b011 :
 				begin
+					$display("LSPC set mode to 0x%H", M68K_DATA);	// DEBUG
 					AASPEED <= M68K_DATA[15:8];
 					TIMERINT_MODE <= M68K_DATA[7:5];
 					TIMERINT_EN <= M68K_DATA[4];
 					AA_DISABLE <= M68K_DATA[3];
 				end
 				// 3C0008
-				3'b100 : TIMERLOAD[31:16] <= M68K_DATA;
+				3'b100 :
+				begin
+					$display("LSPC set timer reload MSB to 0x%H", M68K_DATA);	// DEBUG
+					TIMERLOAD[31:16] <= M68K_DATA;
+				end
 				// 3C000A
 				3'b101 :
 				begin
+					$display("LSPC set timer reload LSB to 0x%H", M68K_DATA);	// DEBUG
 					TIMERLOAD[15:0] <= M68K_DATA;
 					// if (TIMERINT_MODE[0]) TIMER <= TIMERLOAD;
 				end
 				// 3C000C: Interrupt ack
-				3'b110 : nIRQS <= nIRQS | M68K_DATA[2:0];
+				3'b110 :
+				begin
+					$display("LSPC ack interrupt 0x%H", M68K_DATA[2:0]);	// DEBUG
+					nIRQS <= nIRQS | M68K_DATA[2:0];
+				end
 				// 3C000E
-				3'b111 : TIMERSTOP <= M68K_DATA[0];
+				3'b111 :
+				begin
+					$display("LSPC set timer stop (PAL) to %B", M68K_DATA[0]);	// DEBUG
+					TIMERSTOP <= M68K_DATA[0];
+				end
 			endcase
 		end
 	end

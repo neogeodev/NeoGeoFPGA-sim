@@ -14,7 +14,8 @@ module neo_e0(
 	
 	assign nSROMOE = nSROMOEU & nSROMOEL;
 
-	// A = 1 if nVEC == 0 and A == 11000000000000000xxxxxxx
+	// Vector table swap:
+	// A2*Z = 1 if nVEC == 0 and A == 11000000000000000xxxxxxx
 	assign {A23Z, A22Z} = M68K_ADDR[23:22] ^ {2{~|{M68K_ADDR[21:7], ^M68K_ADDR[23:22], nVEC}}};
 
 	// Todo: Check this on real hw

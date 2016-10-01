@@ -24,9 +24,10 @@ int main(int argc, char *argv[]) {
 	sz = ftell(inf);
 	
 	indata = (unsigned char *)malloc(sz);
-	//outdata = (unsigned char *)malloc(sz * 5);		// Words
+	
+	outdata = (unsigned char *)malloc(sz * 5);		// Words
 	//outdata = (unsigned char *)malloc(sz * 3);		// Bytes
-	outdata = (unsigned char *)malloc(sz * 4);		// Bytes COE
+	//outdata = (unsigned char *)malloc(sz * 4);		// Bytes COE
 	//outdatal = (unsigned char *)malloc(sz * 3);		// L/U
 	//outdatau = (unsigned char *)malloc(sz * 3);		// L/U
 
@@ -37,7 +38,7 @@ int main(int argc, char *argv[]) {
     i = 0;
     j = 0;
     // Words
-    /*for (c = 0; c < sz; c += 2) {
+    for (c = 0; c < sz; c += 2) {
 		ch = indata[c];
 		outdata[i++] = hexi(ch >> 4);
     	outdata[i++] = hexi(ch & 15);
@@ -45,15 +46,15 @@ int main(int argc, char *argv[]) {
 		outdata[i++] = hexi(ch >> 4);
     	outdata[i++] = hexi(ch & 15);
     	outdata[i++] = 0x0A;
-	}*/
+	}
 	// Bytes
-    for (c = 0; c < sz; c++) {
+    /*for (c = 0; c < sz; c++) {
 		ch = indata[c];
 		outdata[i++] = hexi(ch >> 4);
     	outdata[i++] = hexi(ch & 15);
     	outdata[i++] = ',';				// COE
     	outdata[i++] = 0x0A;
-	}
+	}*/
 	// L/U
     /*for (c = 0; c < sz; c += 2) {
 		ch = indata[c];
@@ -66,9 +67,9 @@ int main(int argc, char *argv[]) {
     	outdatal[j++] = 0x0A;
 	}*/
 	
-	//fwrite(outdata, 1, sz * 5, outf);		// Words
+	fwrite(outdata, 1, sz * 5, outf);		// Words
 	//fwrite(outdata, 1, sz * 3, outf);		// Bytes
-	fwrite(outdata, 1, sz * 4, outf);		// Bytes COE
+	//fwrite(outdata, 1, sz * 4, outf);		// Bytes COE
 	
 	//fwrite(outdatal, 1, sz * 3, outfl);		// L/U
 	//fwrite(outdatau, 1, sz * 3, outfu);		// L/U

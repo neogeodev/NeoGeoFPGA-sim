@@ -44,7 +44,7 @@ module neo_b1(
 	wire nPAL_ACCESS;
 	
 	// $400000~$7FFFFF why not use nPAL ?
-	assign nPAL_ACCESS = |{A23Z, ~A22Z, nAS};
+	assign nPAL_ACCESS = |{A23Z, ~A22Z};	// |nAS ?
 	
 	// Todo: Wrong, nRESET is sync'd to frame start
 	watchdog WD(nLDS, RW, A23Z, A22Z, M68K_ADDR_U, M68K_ADDR_L, BNKB, nHALT, nRESET, nRST);

@@ -1,7 +1,5 @@
 `timescale 1ns/1ns
 
-// M68K CPU plug into TG68K core
-
 module cpu_68k(
 	input CLK_68KCLK,
 	input nRESET,

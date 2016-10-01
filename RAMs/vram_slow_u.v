@@ -11,12 +11,14 @@ module vram_slow_u(
 );
 
 	reg [7:0] RAMDATA[0:32767];
+	wire [7:0] DATA_OUT;
 	
 	initial begin
 		$readmemh("raminit_vram_slowu.txt", RAMDATA);
 	end
 
-	assign #120 DATA = (!nCE && !nOE) ? RAMDATA[ADDR] : 8'bzzzzzzzz;
+	assign #120 DATA_OUT = RAMDATA[ADDR];
+	assign DATA = (!nCE && !nOE) ? DATA_OUT : 8'bzzzzzzzz;
 
 	always @(nCE or nWE)
 		if (!nCE && !nWE)

@@ -13,8 +13,9 @@ module memcard(
 	output nWP
 );
 
-	parameter nINSERTED = 1'b0;		// :)
-	parameter nPROTECT = 1'b1;
+	parameter nINSERTED = 1'b1;		// Memcard not inserted !
+	//parameter nINSERTED = 1'b0;		// Memcard inserted :)
+	parameter nPROTECT = 1'b1;			// And not protected
 
 	reg [7:0] RAMDATA[0:2047];
 	
@@ -28,8 +29,16 @@ module memcard(
 		if (!nCE && !nWE)
 			#50 RAMDATA[CDA[10:0]] = CDD[7:0];
 	
-	always @(nWE or nCE)
+	// DEBUG begin
+	always @(nWE or nOE)
 		if (!nWE && !nOE)
 			$display("ERROR: MEMCARD: nOE and nWE are both active !");
+	
+	always @(negedge nWE)
+		if (!nCE) $display("MEMCARD: Wrote value 0x%H @ 0x%H", CDD, CDA);
+		
+	always @(negedge nOE)
+		if (!nCE) $display("MEMCARD: Read value 0x%H @ 0x%H", RAMDATA[CDA[10:0]], CDA);
+	// DEBUG end
 
 endmodule

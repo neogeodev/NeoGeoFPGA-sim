@@ -16,18 +16,23 @@ module neogeo(
 	input [9:0] P1_IN,
 	input [9:0] P2_IN,
 	
+	input [7:0] DIPSW,
+	
 	// 68K CPU
 	inout [15:0] M68K_DATA,
-	output [19:1] M68K_ADDR_OUT,
+	output [23:1] M68K_ADDR,	// [19:1] M68K_ADDR_OUT,
 	output M68K_RW, nAS, nLDS, nUDS,
-	output nLED_LATCH, nLED_DATA,
+	output [2:0] LED_LATCH,
+	output [7:0] LED_DATA,
 
 	// Cartridge clocks
-	output CLK_68KCLKB, CLK_8M,
+	output CLK_68KCLKB, CLK_8M, CLK_4MB,
 	
 	// Cartridge 68K ROMs
 	output nROMOE, nSLOTCS,
 	input nROMWAIT, nPWAIT0, nPWAIT1, PDTACK,
+	output nPORTOEL, nPORTOEU,
+	output nPORTWEL, nPORTWEU,
 	
 	// Cartridge PCM ROMs
 	input [7:0] SDRAD,			// ADPCM
@@ -61,7 +66,6 @@ module neogeo(
 	
 	// Decodes
 	output nSRAMWEL, nSRAMWEU,
-	output nDIPRD0,
 	
 	output [6:0] VIDEO_R,
 	output [6:0] VIDEO_G,
@@ -82,9 +86,9 @@ module neogeo(
 	wire [7:0] FIXD;
 	wire [7:0] FIXD_SFIX;
 	
-	wire [23:1] M68K_ADDR;
+	//wire [23:1] M68K_ADDR;
 	
-	assign M68K_ADDR_OUT = M68K_ADDR[19:1];
+	//assign M68K_ADDR_OUT = M68K_ADDR[19:1];
 	
 	wire [11:0] PA;			// Palette RAM address
 	wire [15:0] PC;			// Palette RAM data
@@ -130,8 +134,8 @@ module neogeo(
 	neo_e0 E0(M68K_ADDR[23:7], BNK[2:0], nSROMOEU, nSROMOEL, nSROMOE,
 				nVEC, A23Z, A22Z, CDA_U);
 	
-	neo_f0 F0(nDIPRD1, nBITWD0, M68K_ADDR[7:4], M68K_DATA[7:0], SYSTEMB, nSLOT, SLOTA, SLOTB, SLOTC,
-				nLED_LATCH, nLED_DATA);
+	neo_f0 F0(nRESET, nDIPRD0, nDIPRD1, nBITWD0, DIPSW, M68K_ADDR[7:4], M68K_DATA[7:0], SYSTEMB, nSLOT, SLOTA,
+				SLOTB, SLOTC, LED_LATCH, LED_DATA, RTC_DOUT, RTC_TP, RTC_DIN, RTC_CLK, RTC_STROBE);
 	
 	neo_i0 I0(nRESET, nCOUNTOUT, M68K_ADDR[3:1], M68K_ADDR[7], COUNTER1, COUNTER2, LOCKOUT1, LOCKOUT2);
 	
@@ -169,7 +173,7 @@ module neogeo(
 	ym2i2s YM2I2S(nRESET, CLK_I2S, ANA, SH1, SH2, OP0, PHI_M, I2S_MCLK, I2S_BICK, I2S_SDTI, I2S_LRCK);
 	
 	// MVS only
-	upd4990 RTC(CLK_RTC, RTC_CS, RTC_OE, RTC_CLK, RTC_DATA_IN, TP, RTC_DATA_OUT);
+	upd4990 RTC(CLK_RTC, 1'b1, 1'b1, RTC_CLK, RTC_DIN, RTC_STROBE, RTC_TP, RTC_DOUT);
 
 	// Todo: REMOVE HCOUNT, it's only used for simulation file output here:
 	videout VOUT(CLK_6MB, nBNKB, SHADOW, PC, VIDEO_R, VIDEO_G, VIDEO_B, HCOUNT);
@@ -195,7 +199,7 @@ module neogeo(
 	assign CARD_PIN_nREG = nREGEN | nCRDO;
 
 	// Palette data bidir buffer from/to 68k
-	assign M68K_DATA = (M68K_RW & ~nPAL) ? PC : 16'bzzzzzzzzzzzzzzzz;
-	assign PC = nPALWE ? 16'bzzzzzzzzzzzzzzzz : M68K_DATA;
+	assign M68K_DATA = (nPAL | ~M68K_RW) ? 16'bzzzzzzzzzzzzzzzz : PC;
+	assign PC = (nPAL | M68K_RW) ? 16'bzzzzzzzzzzzzzzzz : M68K_DATA;
 
 endmodule

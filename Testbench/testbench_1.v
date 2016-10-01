@@ -11,17 +11,12 @@ module testbench_1();
 	reg nTEST_BTN;				// MVS only
 	reg [7:0] DIPSW;
 	
-	wire CLK_8M, CLK_12M, CLK_24M, CLK_68KCLKB;
-	wire nRESET;
-	
-	wire nCRDC, nCRDO, CARD_PIN_nREG, CARD_PIN_nWE, nCD1, nCD2, nWP, nSRAMWEL, nSRAMWEU;
-	wire VIDEO_SYNC;
-	wire nSROMOEL, nROMOEL, nROMOEU, nPORTADRS;
-	
 	wire [15:0] M68K_DATA;
-	wire [19:1] M68K_ADDR;
-	wire M68K_RW, nUDS, nLDS, nAS;
-	wire nSLOTCS;
+	//wire [19:1] M68K_ADDR;
+	wire [23:1] M68K_ADDR;
+	
+	wire [2:0] LED_LATCH;
+	wire [7:0] LED_DATA;
 	
 	wire [23:0] PBUS;
 	
@@ -43,27 +38,16 @@ module testbench_1();
 	wire [23:20] SDRA_U;
 	wire [7:0] SDPAD;
 	wire [11:8] SDPA;
-	wire SDRMPX, SDPMPX, nSDROE, nSDPOE;
-	wire SDRD0, SDRD1, nSDMRD;
-	
-	wire nBITWD0, nDIPRD0;
-	wire nCTRL1_ZONE, nCTRL2_ZONE, nSTATUSB_ZONE;
 
 	wire [15:0] SDA;				// Z80
 	wire [7:0] SDD;
-	wire nSDROM;
 	
 	wire [3:0] GAD, GBD;
 	wire [31:0] CR;
-	wire EVEN, LOAD, H;
-	wire nVCS, S2H1, CA4;		// nVCS Needed ?
-	wire PCK1B, PCK2B;
 	
 	wire [6:0] VIDEO_R;
 	wire [6:0] VIDEO_G;
 	wire [6:0] VIDEO_B;
-	
-	wire nROMOE, nROMWAIT, nPWAIT0, nPWAIT1, PDTACK;
 
 	neogeo NG(
 		MCLK,															// 2
@@ -71,16 +55,20 @@ module testbench_1();
 		
 		P1_IN, P2_IN,
 		
-		M68K_DATA, M68K_ADDR[19:1],							// 16 + 20
-		M68K_RW,	nAS,												// 4
-		nLDS, nUDS,
-		nLED_LATCH, nLED_DATA,									// 2
+		DIPSW,
+		
+		M68K_DATA, M68K_ADDR,
+		M68K_RW,	nAS, nLDS, nUDS,								// 4
+		LED_LATCH, LED_DATA,										// 2
 		
 		CLK_68KCLKB,
 		CLK_8M,
+		CLK_4MB,
 
 		nROMOE, nSLOTCS,											// 2
 		nROMWAIT, nPWAIT0, nPWAIT1, PDTACK,					// 4
+		nPORTOEL, nPORTOEU, nPORTWEL, nPORTWEU,
+		
 		SDRAD, SDRA_L, SDRA_U, SDRMPX, nSDROE,				// 7 + 2 + 4 + 2
 		SDPAD, SDPA, SDPMPX, nSDPOE,							// 7 + 4 + 2
 		nSDROM,														// 1
@@ -101,7 +89,6 @@ module testbench_1();
 		nCD1, nCD2, nWP,											// 3		nCD1 | nCD2 in CPLD ? -1
 		
 		nSRAMWEL, nSRAMWEU,
-		nDIPRD0,
 
 		VIDEO_R,
 		VIDEO_G,
@@ -129,8 +116,8 @@ module testbench_1();
 	neo_zmc2 ZMC2(CLK_12M, EVEN, LOAD, H, CR, GAD, GBD, , ); // DOTA and DOTB not used, done in NG from GAD and GBD
 	
 	// MVS cab I/O
-	cab_io CABIO(nDIPRD0, nLED_LATCH, nLED_DATA, DIPSW, M68K_ADDR[7:4], M68K_DATA[7:0],
-						EL_OUT, LED_OUT1, LED_OUT2);
+	/*cab_io CABIO(nLED_LATCH, nLED_DATA, M68K_ADDR[7:4], M68K_DATA[7:0],
+						EL_OUT, LED_OUT1, LED_OUT2);*/
 	
 	// Joypad I/O
 	/*joy_io JOYIO(nCTRL1_ZONE, nCTRL2_ZONE, nSTATUSB_ZONE, M68K_DATA, M68K_ADDR[4],
@@ -145,17 +132,59 @@ module testbench_1();
 		
 		nTEST_BTN = 1;					// MVS only
 		DIPSW = 8'b11111111;
-	end
-	
-	always
-		#21 MCLK = !MCLK;		// 24MHz -> 20.8ns half period
 		
-	initial
-	begin
+		// Apply reset
 		#30
 		nRESET_BTN = 0;		// Press reset button during 1us
 		#1000
 		nRESET_BTN = 1;
+	end
+	
+	always
+		#21 MCLK = !MCLK;		// 24MHz -> 20.8ns half period
+	
+	always @(posedge MCLK)
+	begin
+		// These addresses are only valid for the patched SP-S2.SP1 !
+		if ({M68K_ADDR, 1'b0} == 24'hC16ADA)
+		begin
+			$display("SELF-TEST ERROR: See M68K reg D6:");
+			$display("0 WORK RAM ERROR !");
+			$display("1 BACKUP RAM ERROR !");
+			$display("2 COLOR RAM BANK0 ERROR !");
+			$display("3 COLOR RAM BANK1 ERROR !");
+			$display("4 VIDEO RAM ERROR !");
+			$display("5 CALENDAR ERROR ! (A)");
+			$display("6 SYSTEM ROM ERROR !");
+			$display("7 MEMORY CARD ERROR !");
+			$display("8 Z80 ERROR !");
+			$stop;
+		end
+		
+		if ({M68K_ADDR, 1'b0} == 24'hC11D46)
+		begin
+			$display("SYSTEM ROM ERROR !");
+			$stop;
+		end
+		
+		if ({M68K_ADDR, 1'b0} == 24'hC11D8C)
+		begin
+			$display("CALENDAR ERROR ! (B)");
+			$stop;
+		end
+		
+		
+		if ({M68K_ADDR, 1'b0} == 24'hC17E26)
+		begin
+			$display("VICTOLY ! Going to eyecatcher...");
+			$stop;
+		end
+		
+		/*if ({M68K_ADDR, 1'b0} == 24'h000122)
+		begin
+			$display("VICTOLY ! Jump to game entry point.");
+			$stop;
+		end*/
 	end
 	
 endmodule

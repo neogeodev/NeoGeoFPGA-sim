@@ -2,8 +2,8 @@
 
 module slow_cycle(
 	input CLK_24M,
+	input nRESETP,
 	
-	input HSYNC,
 	input [8:0] HCOUNT,					// Todo: Should be [8:3] only, [2:0] for dirty sync hack
 	input [7:3] VCOUNT,
 	input [8:0] SPR_NB,					// Sprite number being rendered
@@ -15,10 +15,10 @@ module slow_cycle(
 	output [11:0] FIX_ATTR_TILENB,
 	output reg [3:0] FIX_ATTR_PAL,
 	
-	input [14:0] CPU_ADDR,
+	input [14:0] CPU_ADDR_WR,
+	input [14:0] CPU_ADDR_RD,
 	output reg [15:0] CPU_RDDATA,
 	input [15:0] CPU_WRDATA,
-	input CPU_PENDING,
 	input CPU_ZONE,
 	input CPU_RW
 );
@@ -27,14 +27,15 @@ module slow_cycle(
 	// Slow VRAM is 120ns, so at least 3mclk needed between address set and data valid
 	// Certainly 4x 4mclk slots: Fix, Sprite even, Sprite odd, CPU (in whatever order)
 
-	// Todo: CPU access if pending=1, zone=0
-	// Are reads done just when changing address ?
+	// Todo: CPU access if zone=0
 
 	// 4 cycles of CLK_6M corresponds to 16 cycles of CLK_24M, so...
 	reg [3:0] CYCLE_SLOW;
 	
 	reg [3:0] SPR_TILENB_U;
 	reg [15:0] SPR_TILENB_L;
+	
+	reg CPU_RW_LATCHED;
 
 	wire [14:0] B;		// Low VRAM address
 	wire [15:0] E;		// Low VRAM data
@@ -42,30 +43,38 @@ module slow_cycle(
 	wire [14:0] FIXVRAM_ADDR;
 	wire [13:0] SPRVRAM_ADDR;	// LSB added later for even/odd word selection
 	
+	wire nBWE;
 	wire nBOE;
 	
-	// Todo: An OE signal is used for slow VRAM, but not for fast VRAM. What's up with that ? Shared E bus ?
-
-	assign nBOE = 1'b0;
+	assign nBWE = (CPU_RW_LATCHED | CPU_ZONE | ~&{CYCLE_SLOW[3:2]});		// TODO: Verify on hw
+	// TODO: An OE signal is used for slow VRAM, but not for fast VRAM. What's up with that ? Shared E bus ?
+	assign nBOE = ~(CPU_RW_LATCHED | CPU_ZONE | ~&{CYCLE_SLOW[3:2]});	// TODO: Verify on hw
+	
+	/*
+	CPU WRITE
+	0 00 -> 1
+	0 01 -> 0
+	0 10 -> 0
+	0 11 -> 0
+	
+	CPU READ
+	1 00 -> 0
+	1 01 -> 0
+	1 10 -> 0
+	1 11 -> 0
+	*/
 
 	vram_slow_u VRAMLU(B, E[15:8], 1'b0, nBOE, nBWE);
 	vram_slow_l VRAMLL(B, E[7:0], 1'b0, nBOE, nBWE);
 
-	// Todo: This is all wrong ! (shifting needed, should be way simpler)
-	// Warning: Update this according to cycle order if changed !			
-	assign B = (CYCLE_SLOW == 14) ? FIXVRAM_ADDR :
-					(CYCLE_SLOW == 15) ? FIXVRAM_ADDR :
-					(CYCLE_SLOW == 0) ? FIXVRAM_ADDR :
-					(CYCLE_SLOW == 1) ? FIXVRAM_ADDR :
-					(CYCLE_SLOW == 2) ? CPU_ADDR :
-					(CYCLE_SLOW == 3) ? CPU_ADDR :
-					(CYCLE_SLOW == 4) ? CPU_ADDR :
-					(CYCLE_SLOW == 5) ? CPU_ADDR :
-					(CYCLE_SLOW == 6) ? {SPRVRAM_ADDR, 1'b0} :
-					(CYCLE_SLOW == 7) ? {SPRVRAM_ADDR, 1'b0} :
-					(CYCLE_SLOW == 8) ? {SPRVRAM_ADDR, 1'b0} :
-					(CYCLE_SLOW == 9) ? {SPRVRAM_ADDR, 1'b0} :
-					{SPRVRAM_ADDR, 1'b1};
+	// Not sure if all of this is right...
+	// Warning: Update this according to cycle order if changed !
+	assign B = (CYCLE_SLOW[3:2] == 2'b00) ? FIXVRAM_ADDR :	// 0000~0011 (4)
+					(CYCLE_SLOW[3:2] == 2'b11) ?						// 1100~1111 (4)
+						(CPU_RW_LATCHED) ? CPU_ADDR_RD : CPU_ADDR_WR :
+					{SPRVRAM_ADDR, CYCLE_SLOW[3]};					// 0100~1011 (8)	Is LSB right ?
+	
+	assign E = ((CYCLE_SLOW[3:2] == 2'b11) && ~(CPU_RW_LATCHED | CPU_ZONE)) ? CPU_WRDATA : 16'bzzzzzzzzzzzzzzzz;
 	
 	assign SPR_ATTR_TILENB = {SPR_TILENB_U, SPR_TILENB_L};
 
@@ -95,7 +104,7 @@ module slow_cycle(
 	
 	always @(posedge CLK_24M)
 	begin
-		if (HSYNC)
+		if (!nRESETP)
 		begin
 			CYCLE_SLOW <= 0;
 		end
@@ -103,31 +112,46 @@ module slow_cycle(
 		begin
 			// Todo: Wrong.
 			// Should switch case always when bits1:0 == 3 (3rd mclk, lets VRAM reply in time after address set)
-			CYCLE_SLOW <= CYCLE_SLOW + 1;
+			
 			case (CYCLE_SLOW)
-				4'd0 :
+				4'd2 :
 				begin
+					// End of FIX map cycle (should be 3 ?)
 					// Should match PCK2 ?
 					FIX_ATTR_PAL <= E[15:12];
 				end
-				4'd4 :
+				4'd6 :
 				begin
-					// CPU access here ?
-				end
-				4'd8 :
-				begin
-					// Todo
+					// End of SPR map cycle A (should be 7 ?)
 					SPR_TILENB_L <= E;
 				end
-				4'd12 :
+				4'd10 :
 				begin
-					// Todo
+					// End of SPR map cycle B (should be 11 ?)
 					SPR_ATTR_PAL <= E[15:8];
 					SPR_TILENB_U <= E[7:4];
 					SPR_ATTR_AA <= E[3:2];
 					SPR_ATTR_FLIP <= E[1:0];
 				end
+				4'd11 :
+				begin
+					if (!CPU_RW_LATCHED)
+						CPU_RW_LATCHED <= 1'b1;		// Do writes only once
+					else
+						CPU_RW_LATCHED <= CPU_RW;	// Avoids CPU_RW changing during VRAM CPU access cycle (not verified on hw)
+				end
+				4'd14 :
+				begin
+					// End of CPU cycle (should be 15 ?)
+					//if (~CPU_ZONE)
+					//begin
+						if (CPU_RW_LATCHED)
+							CPU_RDDATA <= E;	// Read: latch data
+					//end
+				end
 			endcase
+			
+			CYCLE_SLOW <= CYCLE_SLOW + 1'b1;
 		end
 	end
 
