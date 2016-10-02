@@ -64,9 +64,6 @@ module neogeo(
 	output nCRDC, nCRDO, CARD_PIN_nWE, CARD_PIN_nREG,
 	input nCD1, nCD2, nWP,
 	
-	// Decodes
-	output nSRAMWEL, nSRAMWEU,
-	
 	output [6:0] VIDEO_R,
 	output [6:0] VIDEO_G,
 	output [6:0] VIDEO_B,

@@ -43,10 +43,6 @@ module lspc_a2(
 	wire [8:0] VCOUNT;
 	//wire [8:0] HCOUNT;
 	
-	
-	// IRQs
-	reg [2:0] nIRQS;			// VBL, HBL, COLDBOOT
-	
 	// Pixel timer
 	reg [31:0] TIMERLOAD;		// Reload value
 	reg [31:0] TIMER;				// Actual timer
@@ -103,21 +99,28 @@ module lspc_a2(
 	wire [7:0] SPR_XPOS;
 	wire [15:0] L0_ADDR;
 	
+	reg IRQ_S1, IRQ_R1, IRQ_S2, IRQ_R2, IRQ_R3;
+	wire IRQ_S3;
+	
 	resetp RSTP(CLK_24M, nRESET, nRESETP);
-	irq IRQ(nIRQS, IPL0, IPL1);		// Uses nRESETP ?
+	
+	assign IRQ_S3 = VBLANK;	// TODO: Verify
+	irq IRQ(IRQ_S1, IRQ_R1, IRQ_S2, IRQ_R2, IRQ_S3, IRQ_R3, IPL0, IPL1);		// Probably uses nRESETP
 	
 	videosync VS(CLK_24M, nRESETP, VCOUNT, MAIN_CNT, TMS0, VBLANK, nVSYNC, HSYNC, nBNKB);
 
 	odd_clk ODDCLK(CLK_24M, nRESETP, CLK_8M, CLK_4M, CLK_4MB);
 	
-	slow_cycle SCY(CLK_24M, nRESETP, HCOUNT[8:0], VCOUNT[7:3], SPR_NB, SPR_TILEIDX,	SPR_TILENB, SPR_TILEPAL,
+	slow_cycle SCY(CLK_24M, nRESETP,
+					HCOUNT[8:0], VCOUNT[7:3], SPR_NB, SPR_TILEIDX,	SPR_TILENB, SPR_TILEPAL,
 					SPR_TILEAA, SPR_TILEFLIP, FIX_TILENB, FIX_TILEPAL,
-					CPU_VRAM_ADDRESS_BUFFER, CPU_VRAM_ADDR, CPU_VRAM_READ_BUFFER_SCY, CPU_VRAM_WRITE_BUFFER, CPU_VRAM_ZONE, CPU_RW);
+					CPU_VRAM_ADDRESS_BUFFER, CPU_VRAM_ADDR, CPU_VRAM_READ_BUFFER_SCY, CPU_VRAM_WRITE_BUFFER,
+					CPU_VRAM_ZONE, CPU_RW);
 	
 	// Todo: this needs to give SPR_NB, SPR_TILEIDX, SPR_XPOS, L0_ADDR, SPR_ATTR_SHRINK
 	// Todo: this needs L0_DATA (from P bus)
-	fast_cycle FCY(CLK_24M,
-					CPU_VRAM_ADDRESS_BUFFER[10:0], CPU_VRAM_READ_BUFFER_FCY, CPU_VRAM_WRITE_BUFFER, CPU_PENDING,
+	fast_cycle FCY(CLK_24M, nRESETP,
+					CPU_VRAM_ADDRESS_BUFFER[10:0], CPU_VRAM_ADDR[10:0], CPU_VRAM_READ_BUFFER_FCY, CPU_VRAM_WRITE_BUFFER,
 					CPU_VRAM_ZONE, CPU_RW);
 	
 	assign CPU_VRAM_READ_BUFFER = CPU_VRAM_ZONE ? CPU_VRAM_READ_BUFFER_FCY : CPU_VRAM_READ_BUFFER_SCY;
@@ -158,10 +161,26 @@ module lspc_a2(
 								REG_LSPCMODE;													// 3C0006/3C000E
 	
 	// Write
+	always @(nLSPWE or nRESET)
+		if (!nRESET)
+		begin
+			{IRQ_R3, IRQ_R2, IRQ_R1} <= 3'b111;		// TODO: Cold boot starts off with IRQ3
+			{IRQ_S2, IRQ_S1} <= 2'b00;
+		end
+		else
+		begin
+			if ((!nLSPWE) && (M68K_ADDR[3:1] == 3'b110))
+				{IRQ_R3, IRQ_R2, IRQ_R1} <= M68K_DATA[2:0];
+			else
+				{IRQ_R3, IRQ_R2, IRQ_R1} <= 3'b000;
+		end
+		
 	always @(negedge nLSPWE or negedge nRESET)	// ?
 	begin
 		if (!nRESET)
-			nIRQS <= 3'b111;	// TODO: Cold boot starts off with IRQ3
+		begin
+			// Something ?
+		end
 		else
 		begin
 			case (M68K_ADDR[3:1])
@@ -169,7 +188,7 @@ module lspc_a2(
 				3'b000 :
 				begin
 					// Read happens as soon as address is set (CPU access slot defaults to "read" all the time ?)
-					$display("VRAM set address to 0x%H", M68K_DATA);	// DEBUG
+					//$display("VRAM set address to 0x%H", M68K_DATA);	// DEBUG
 					{CPU_VRAM_ZONE, CPU_VRAM_ADDR} <= M68K_DATA;			// Ugly, probably simpler
 					CPU_VRAM_ADDRESS_BUFFER <= M68K_DATA;					// Ugly, probably simpler
 					//CPU_PENDING <= 1'b1;
@@ -178,7 +197,7 @@ module lspc_a2(
 				// 3C0002
 				3'b001 :
 				begin
-					$display("VRAM write data 0x%H @ 0x%H", M68K_DATA, {CPU_VRAM_ZONE, CPU_VRAM_ADDR});	// DEBUG
+					//$display("VRAM write data 0x%H @ 0x%H", M68K_DATA, {CPU_VRAM_ZONE, CPU_VRAM_ADDR});	// DEBUG
 					CPU_VRAM_WRITE_BUFFER <= M68K_DATA;
 					CPU_VRAM_ADDRESS_BUFFER <= CPU_VRAM_ADDR;
 					CPU_VRAM_ADDR <= CPU_VRAM_ADDR + REG_VRAMMOD[14:0];
@@ -216,7 +235,7 @@ module lspc_a2(
 				3'b110 :
 				begin
 					$display("LSPC ack interrupt 0x%H", M68K_DATA[2:0]);	// DEBUG
-					nIRQS <= nIRQS | M68K_DATA[2:0];
+					// Done in combi. logic above
 				end
 				// 3C000E
 				3'b111 :

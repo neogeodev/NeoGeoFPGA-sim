@@ -6,8 +6,8 @@ module slow_cycle(
 	
 	input [8:0] HCOUNT,					// Todo: Should be [8:3] only, [2:0] for dirty sync hack
 	input [7:3] VCOUNT,
-	input [8:0] SPR_NB,					// Sprite number being rendered
-	input [4:0] SPR_TILEIDX,			// Sprite tile index
+	input [8:0] SPR_NB,					// Sprite number being rendered (0~381 ?)
+	input [4:0] SPR_TILEIDX,			// Sprite tile index (0~31)
 	output [19:0] SPR_ATTR_TILENB,
 	output reg [7:0] SPR_ATTR_PAL,	// Todo: Probaby just wires
 	output reg [1:0] SPR_ATTR_AA,
@@ -25,7 +25,6 @@ module slow_cycle(
 
 	// Guesswork:
 	// Slow VRAM is 120ns, so at least 3mclk needed between address set and data valid
-	// Certainly 4x 4mclk slots: Fix, Sprite even, Sprite odd, CPU (in whatever order)
 
 	// Todo: CPU access if zone=0
 
@@ -47,28 +46,14 @@ module slow_cycle(
 	wire nBOE;
 	
 	assign nBWE = (CPU_RW_LATCHED | CPU_ZONE | ~&{CYCLE_SLOW[3:2]});		// TODO: Verify on hw
-	// TODO: An OE signal is used for slow VRAM, but not for fast VRAM. What's up with that ? Shared E bus ?
+	// TODO: An OE signal is used for slow VRAM, but not for fast VRAM. What's up with that ? Shared internal bus ?
 	assign nBOE = ~(CPU_RW_LATCHED | CPU_ZONE | ~&{CYCLE_SLOW[3:2]});	// TODO: Verify on hw
-	
-	/*
-	CPU WRITE
-	0 00 -> 1
-	0 01 -> 0
-	0 10 -> 0
-	0 11 -> 0
-	
-	CPU READ
-	1 00 -> 0
-	1 01 -> 0
-	1 10 -> 0
-	1 11 -> 0
-	*/
 
 	vram_slow_u VRAMLU(B, E[15:8], 1'b0, nBOE, nBWE);
 	vram_slow_l VRAMLL(B, E[7:0], 1'b0, nBOE, nBWE);
 
 	// Not sure if all of this is right...
-	// Warning: Update this according to cycle order if changed !
+	// Cycle order is good at least: FIX, SPR, SPR, CPU
 	assign B = (CYCLE_SLOW[3:2] == 2'b00) ? FIXVRAM_ADDR :	// 0000~0011 (4)
 					(CYCLE_SLOW[3:2] == 2'b11) ?						// 1100~1111 (4)
 						(CPU_RW_LATCHED) ? CPU_ADDR_RD : CPU_ADDR_WR :
@@ -77,8 +62,6 @@ module slow_cycle(
 	assign E = ((CYCLE_SLOW[3:2] == 2'b11) && ~(CPU_RW_LATCHED | CPU_ZONE)) ? CPU_WRDATA : 16'bzzzzzzzzzzzzzzzz;
 	
 	assign SPR_ATTR_TILENB = {SPR_TILENB_U, SPR_TILENB_L};
-
-	// Todo: Check cycles order, 3 reads needed, 1 access slot for CPU ?
 	
 	// Fix map x,y = VRAM address:
 	// 0,0 = 7000
@@ -106,19 +89,16 @@ module slow_cycle(
 	begin
 		if (!nRESETP)
 		begin
-			CYCLE_SLOW <= 0;
+			CYCLE_SLOW <= 0;	// Resync cycle just on reset pulse (cycle continues during reset, right ?)
 		end
 		else
 		begin
-			// Todo: Wrong.
-			// Should switch case always when bits1:0 == 3 (3rd mclk, lets VRAM reply in time after address set)
-			
 			case (CYCLE_SLOW)
 				4'd2 :
 				begin
 					// End of FIX map cycle (should be 3 ?)
 					// Should match PCK2 ?
-					FIX_ATTR_PAL <= E[15:12];
+					FIX_ATTR_PAL <= E[15:12];	// Maybe no latch required here, as with FIX_ATTR_TILENB ?
 				end
 				4'd6 :
 				begin
@@ -136,18 +116,15 @@ module slow_cycle(
 				4'd11 :
 				begin
 					if (!CPU_RW_LATCHED)
-						CPU_RW_LATCHED <= 1'b1;		// Do writes only once
+						CPU_RW_LATCHED <= 1'b1;		// Do writes only once. Ugly, probably simpler.
 					else
 						CPU_RW_LATCHED <= CPU_RW;	// Avoids CPU_RW changing during VRAM CPU access cycle (not verified on hw)
 				end
 				4'd14 :
 				begin
 					// End of CPU cycle (should be 15 ?)
-					//if (~CPU_ZONE)
-					//begin
-						if (CPU_RW_LATCHED)
-							CPU_RDDATA <= E;	// Read: latch data
-					//end
+					if (CPU_RW_LATCHED)
+						CPU_RDDATA <= E;	// Read: latch data
 				end
 			endcase
 			

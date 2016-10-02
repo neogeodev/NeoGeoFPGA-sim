@@ -7,15 +7,20 @@ module upd4990(
 	input DATA_IN,
 	input STROBE,
 	output reg TP,
-	output DATA_OUT	// Open drain !
+	output DATA_OUT	// Open drain (is this important ?)
 );
 
 	// Todo, low priority for now
 	
 	wire CLKG, STROBEG;	// Gated by CS
 
+	assign DATA_OUT = 1'b0;	// TODO
+	
 	assign CLKG = CS & CLK;
 	assign STROBEG = CS & STROBE;
+
+	initial
+		TP = 1'b0;
 
 	// DEBUG begin
 	always

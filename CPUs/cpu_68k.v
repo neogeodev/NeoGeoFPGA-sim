@@ -29,7 +29,7 @@ tg68 TG68K(
 		.reset(nRESET),
 		.clkena_in(1'b1),
 		.data_in(TG68K_DATAIN),
-		.IPL(3'b111),
+		.IPL({1'b1, IPL1, IPL0}),
 		.dtack(nDTACK),
 		.addr(TG68K_ADDR),
 		.data_out(TG68K_DATAOUT),

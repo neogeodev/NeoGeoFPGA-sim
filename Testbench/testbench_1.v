@@ -87,8 +87,6 @@ module testbench_1();
 		nCRDC, nCRDO,												// 2
 		CARD_PIN_nWE, CARD_PIN_nREG,							// 2
 		nCD1, nCD2, nWP,											// 3		nCD1 | nCD2 in CPLD ? -1
-		
-		nSRAMWEL, nSRAMWEU,
 
 		VIDEO_R,
 		VIDEO_G,
@@ -180,11 +178,11 @@ module testbench_1();
 			$stop;
 		end
 		
-		/*if ({M68K_ADDR, 1'b0} == 24'h000122)
+		if ({M68K_ADDR, 1'b0} == 24'h000122)
 		begin
 			$display("VICTOLY ! Jump to game entry point.");
 			$stop;
-		end*/
+		end
 	end
 	
 endmodule

@@ -18,12 +18,21 @@ module memcard(
 	parameter nPROTECT = 1'b1;			// And not protected
 
 	reg [7:0] RAMDATA[0:2047];
+	wire [7:0] DATA_OUT;
+	
+	integer k;
+	initial begin
+		for (k = 0; k < 2047; k = k + 1)
+			 RAMDATA[k] = 0;
+		//$readmemh("raminit_sram_l.txt", RAMDATA);
+	end
 	
 	assign nCD1 = nINSERTED;
 	assign nCD2 = nINSERTED;
 	assign nWP = nPROTECT;
 	
-	assign #100 CDD[7:0] = (!nCE && !nOE) ? RAMDATA[CDA[10:0]] : 8'bzzzzzzzz;
+	assign #100 DATA_OUT = RAMDATA[CDA[10:0]];
+	assign CDD[7:0] = (!nCE && !nOE) ? DATA_OUT : 8'bzzzzzzzz;
 
 	always @(nCE or nWE)
 		if (!nCE && !nWE)

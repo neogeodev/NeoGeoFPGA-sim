@@ -12,7 +12,10 @@ module ram68k_l(
 
 	reg [7:0] RAMDATA[0:32767];
 	
+	integer k;
 	initial begin
+		for (k = 0; k < 32767; k = k + 1)
+			 RAMDATA[k] = 0;
 		//$readmemh("raminit_68kram_l.txt", RAMDATA);
 	end
 

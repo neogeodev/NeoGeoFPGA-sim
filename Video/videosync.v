@@ -52,7 +52,7 @@ module videosync(
 				begin
 					if (VCOUNT == 9'h0FF)		// VBEND		100:VSync/VBlank end
 						VBLANK <= 0;
-					if (VCOUNT == 9'h1F0)		// VBSTART	1F0:VBlank start
+					if (VCOUNT == 9'h1F1)		// VBSTART	1F0:VBlank start
 						VBLANK <= 1;
 				
 					VCOUNT <= VCOUNT + 1'b1;
