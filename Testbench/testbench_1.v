@@ -113,13 +113,7 @@ module testbench_1();
 	// Put the following in the CPLD !
 	neo_zmc2 ZMC2(CLK_12M, EVEN, LOAD, H, CR, GAD, GBD, , ); // DOTA and DOTB not used, done in NG from GAD and GBD
 	
-	// MVS cab I/O
-	/*cab_io CABIO(nLED_LATCH, nLED_DATA, M68K_ADDR[7:4], M68K_DATA[7:0],
-						EL_OUT, LED_OUT1, LED_OUT2);*/
 	
-	// Joypad I/O
-	/*joy_io JOYIO(nCTRL1_ZONE, nCTRL2_ZONE, nSTATUSB_ZONE, M68K_DATA, M68K_ADDR[4],
-						P1_IN, P2_IN, nBITWD0, nWP, nCD2, nCD1, SYSTEM_MODE, P1_OUT, P2_OUT);*/
 	
 	initial
 	begin

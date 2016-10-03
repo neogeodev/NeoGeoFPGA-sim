@@ -12,7 +12,6 @@ module ym_ssg(
 	input [3:0] SSG_ENV
 );
 
-	reg [11:0] CNT_A, CNT_B, CNT_C;
 	reg [4:0] CNT_NOISE;
 	reg [17:0] LFSR;
 	reg [15:0] CNT_ENV;
@@ -20,7 +19,6 @@ module ym_ssg(
 	reg ENV_RUN;
 	reg [3:0] ENV_STEP;
 	reg [3:0] ENV_ATTACK;
-	reg OSC_A, OSC_B, OSC_C;
 	reg NOISE;
 	
 	wire [3:0] OUT_A, OUT_B, OUT_C;
@@ -32,39 +30,20 @@ module ym_ssg(
 	assign LEVEL_A = SSG_VOL_A[4] ? ENV_VOL : SSG_VOL_A[3:0];
 	assign LEVEL_B = SSG_VOL_B[4] ? ENV_VOL : SSG_VOL_B[3:0];
 	assign LEVEL_C = SSG_VOL_C[4] ? ENV_VOL : SSG_VOL_C[3:0];
+	
 	// Gate: (OSC | nOSCEN) & (NOISE | nNOISEEN)
 	assign OUT_A = ((OSC_A | SSG_EN[0]) & (NOISE | SSG_EN[3])) ? LEVEL_A : 4'b0000;
 	assign OUT_B = ((OSC_B | SSG_EN[1]) & (NOISE | SSG_EN[4])) ? LEVEL_B : 4'b0000;
 	assign OUT_C = ((OSC_C | SSG_EN[2]) & (NOISE | SSG_EN[5])) ? LEVEL_C : 4'b0000;
 	
 	assign ANA = OUT_A + OUT_B + OUT_C;
+	
+	ssg_ch SSG_A(PHI_S, SSG_FREQ_A, OSC_A);
+	ssg_ch SSG_B(PHI_S, SSG_FREQ_B, OSC_B);
+	ssg_ch SSG_C(PHI_S, SSG_FREQ_C, OSC_C);
 
 	always @(posedge PHI_S)		// ?
 	begin
-		if (CNT_A)
-			CNT_A <= CNT_A - 1'b1;
-		else
-		begin
-			CNT_A <= SSG_FREQ_A;
-			OSC_A <= ~OSC_A;
-		end
-		
-		if (CNT_B)
-			CNT_B <= CNT_B - 1'b1;
-		else
-		begin
-			CNT_B <= SSG_FREQ_B;
-			OSC_B <= ~OSC_B;
-		end
-		
-		if (CNT_C)
-			CNT_C <= CNT_C - 1'b1;
-		else
-		begin
-			CNT_C <= SSG_FREQ_C;
-			OSC_C <= ~OSC_C;
-		end
-		
 		if (CNT_NOISE)
 			CNT_NOISE <= CNT_NOISE - 1'b1;
 		else

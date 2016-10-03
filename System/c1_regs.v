@@ -3,16 +3,41 @@
 module c1_regs(
 	input nICOMZONE,
 	input RW,
-	inout [15:8] M68K_DATA
+	inout [15:8] M68K_DATA,
+	inout [7:0] SDD,
+	input nSDZ80R, nSDZ80W, nSDZ80CLR,
+	output reg nSDW
 );
 
-	reg [7:0] SDD_LATCH;			// Z80 data latch
+	reg [7:0] SDD_LATCH_CMD;
+	reg [7:0] SDD_LATCH_REP;
 	
-	// REG_SOUND - Is Z80 data latch really 2 different latches ?
-	assign M68K_DATA = (RW & ~nICOMZONE) ? SDD_LATCH : 8'bzzzzzzzz;
-	always @(RW, nICOMZONE, M68K_DATA)
+	// Z80 command read
+	assign SDD = nSDZ80R ? 8'bzzzzzzzz : SDD_LATCH_CMD;
+	
+	// Z80 reply write
+	always @(negedge nSDZ80W)
+		SDD_LATCH_REP <= SDD;
+	
+	// REG_SOUND read
+	assign M68K_DATA = (RW & ~nICOMZONE) ? SDD_LATCH_REP : 8'bzzzzzzzz;
+	
+	// REG_SOUND write
+	always @(negedge nICOMZONE or negedge nSDZ80CLR)		// Which one has priority ?
 	begin
-		if (!(RW | nICOMZONE)) SDD_LATCH <= M68K_DATA;
+		if (!nSDZ80CLR)
+		begin
+			SDD_LATCH_CMD <= 8'b00000000;
+			nSDW <= 1'b1;
+		end
+		else
+		begin
+			if (!RW)
+			begin
+				SDD_LATCH_CMD <= M68K_DATA;
+				nSDW <= 1'b0;	// Tells Z80 that 68k sent a command
+			end
+		end
 	end
 	
 endmodule

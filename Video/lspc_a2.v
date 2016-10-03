@@ -162,6 +162,7 @@ module lspc_a2(
 	
 	// Write
 	always @(nLSPWE or nRESET)
+	begin
 		if (!nRESET)
 		begin
 			{IRQ_R3, IRQ_R2, IRQ_R1} <= 3'b111;		// TODO: Cold boot starts off with IRQ3
@@ -169,12 +170,14 @@ module lspc_a2(
 		end
 		else
 		begin
+			// 3C000C: Interrupt ack
 			if ((!nLSPWE) && (M68K_ADDR[3:1] == 3'b110))
 				{IRQ_R3, IRQ_R2, IRQ_R1} <= M68K_DATA[2:0];
 			else
 				{IRQ_R3, IRQ_R2, IRQ_R1} <= 3'b000;
 		end
-		
+	end
+	
 	always @(negedge nLSPWE or negedge nRESET)	// ?
 	begin
 		if (!nRESET)

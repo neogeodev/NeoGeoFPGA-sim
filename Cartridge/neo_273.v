@@ -10,12 +10,12 @@ module neo_273(
 	
 	always @(posedge PCK1B)
 	begin
-		C_LATCH = {PBUS[15:0], PBUS[19:16]};
+		C_LATCH <= {PBUS[15:0], PBUS[19:16]};
 	end
 	
 	always @(posedge PCK2B)
 	begin
-		S_LATCH = {PBUS[11:0], PBUS[15:12]};
+		S_LATCH <= {PBUS[11:0], PBUS[15:12]};
 	end
 
 endmodule

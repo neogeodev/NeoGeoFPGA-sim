@@ -10,10 +10,6 @@ module irq(
 	reg Q1, Q2, Q3;
 
 	/*
-	wire IRQ_S1_PRIO, Q1, Q1N;
-	wire IRQ_S2_PRIO, Q2, Q2N;
-	wire IRQ_S3_PRIO, Q3, Q3N;
-	
 	// SR latch 1
 	assign IRQ_S1_PRIO = IRQ_S1 & ~IRQ_R1;	// Reset has priority over set ?
 	assign Q1N = ~|{IRQ_S1_PRIO, Q1};
@@ -64,5 +60,3 @@ module irq(
 	assign IPL1 = ~(Q1 | Q2);
 
 endmodule
-
-

@@ -1,7 +1,5 @@
 `timescale 1ns/1ns
 
-// Missing: IN3, VPA, IN00~07, IN10~17, IN20~27, SDZ80R, SDZ80W, SDZ80CLR, 
-
 module neo_c1(
 	input [21:17] M68K_ADDR,
 	output [15:8] M68K_DATA,
@@ -24,7 +22,8 @@ module neo_c1(
 	input [9:0] P2_IN,
 	input nCD1, nCD2, nWP,
 	input nROMWAIT, nPWAIT0, nPWAIT1, PDTACK,
-	input [7:0] SDD,
+	inout [7:0] SDD,
+	input nSDZ80R, nSDZ80W, nSDZ80CLR,
 	input CLK_68KCLK,
 	output nDTACK,
 	output nBITW0, nBITW1, nDIPRD0, nDIPRD1,
@@ -49,7 +48,7 @@ module neo_c1(
 	
 	//assign nVALID = nAS | (nLDS & nUDS);
 	
-	c1_regs C1REGS(nICOM_ZONE, RW, M68K_DATA);
+	c1_regs C1REGS(nICOM_ZONE, RW, M68K_DATA, SDD, nSDZ80R, nSDZ80W, nSDZ80CLR, nSDW);
 	
 	c1_wait C1WAIT(CLK_68KCLK, nAS, nROM_ZONE, nPORT_ZONE, nCARD_ZONE, nROMWAIT, nPWAIT0,
 					nPWAIT1, PDTACK, nDTACK);

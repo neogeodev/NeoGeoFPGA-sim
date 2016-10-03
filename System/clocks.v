@@ -18,9 +18,7 @@ module clocks(
 	assign CLK_12M = CLKDIV_A[0];
 	assign CLK_68KCLKB = CLKDIV_A[0];	// What's the difference ?
 	assign CLK_68KCLK = ~CLK_68KCLKB;
-	
 	assign CLK_6MB = ~CLKDIV_A[1];
-	
 	assign CLK_1MB = CLKDIV_B[2];
 	
 	always @(negedge CLK_24M or negedge nRESETP)

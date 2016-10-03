@@ -20,19 +20,27 @@ module neo_d0(
 	output SDRD0, SDRD1,
 	output n2610CS, n2610RD, n2610WR,
 	output nZRAMCS,
-	output reg [2:0] BNK
+	output reg [2:0] BNK,
+	output reg [2:0] P1_OUT,
+	output reg [2:0] P2_OUT
 );
 
 	// Clock divider part
 	clocks CLK(CLK_24M, nRESETP, CLK_12M, CLK_68KCLK, CLK_68KCLKB, CLK_6MB, CLK_1MB);
 	
 	// Z80 controller part
-	z80ctrl Z80CTRL(SDA_L, SDA_H, nSDRD, nSDWR, nMREQ, nIORQ, nSDW, nRESET, nRESETP, nZ80NMI,
-					nSDZ80R, nSDZ80W, nSDZ80CLR, nSDROM, nSDMRD, nSDMWR, SDRD0, SDRD1, n2610CS, n2610RD, n2610WR, nZRAMCS);
+	z80ctrl Z80CTRL(SDA_L, SDA_H, nSDRD, nSDWR, nMREQ, nIORQ, nSDW, nRESET, nZ80NMI, nSDZ80R, nSDZ80W,
+				nSDZ80CLR, nSDROM, nSDMRD, nSDMWR, SDRD0, SDRD1, n2610CS, n2610RD, n2610WR, nZRAMCS);
 	
 	always @(negedge nBITWD0)
 	begin
-		if (M68K_ADDR_A4) BNK <= M68K_DATA[2:0];	// REG_CRDBANK
+		if (M68K_ADDR_A4)
+			BNK <= M68K_DATA[2:0];		// REG_CRDBANK
+		else
+		begin
+			P1_OUT <= M68K_DATA[2:0];	// REG_POUTPUT
+			P2_OUT <= M68K_DATA[5:3];
+		end
 	end
 	
 endmodule
