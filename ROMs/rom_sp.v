@@ -15,7 +15,7 @@ module rom_sps2(
 		$readmemh("rom_sps2.txt", ROMDATA);
 	end
 
-	assign #120 DATA = ROMDATA[ADDR][15:0];					// 120ns from address valid to data valid
+	assign #120 DATA = ROMDATA[ADDR][15:0];
 	assign #50 OUT = nOE ? 16'bzzzzzzzzzzzzzzzz : DATA;	// 50ns from OE to data valid
 
 endmodule

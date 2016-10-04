@@ -8,8 +8,8 @@ module z80ctrl(
 	input nSDW,						// Ok, signal from NEO-C1
 	input nRESET,
 	output nZ80NMI,				// Ok
-	input nSDZ80R, nSDZ80W,		// Ok
-	input nSDZ80CLR,				// Ok, signal to NEO-C1
+	output nSDZ80R, nSDZ80W,	// Ok
+	output nSDZ80CLR,				// Ok, signal to NEO-C1
 	output nSDROM,					// Ok
 	output nSDMRD, nSDMWR,		// Ok
 	output SDRD0, SDRD1,			// What is SDRD1 ?
@@ -53,7 +53,7 @@ module z80ctrl(
 	// Port $x8, $x9, $xA, $xB write
 	always @(negedge nRESET or negedge nSDWR)
 	begin
-		if (nRESET)
+		if (!nRESET)
 		begin
 			nNMI_EN <= 1'b1;	// ?
 		end

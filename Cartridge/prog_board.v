@@ -14,7 +14,7 @@ module prog_board(
 	
 	input nAS, M68K_RW,
 	inout [15:0] M68K_DATA,
-	input [18:0] M68K_ADDR,
+	input [19:1] M68K_ADDR,
 	input CLK_68KCLKB,
 	output nROMWAIT, nPWAIT0, nPWAIT1, PDTACK,
 	input nROMOE,
@@ -39,7 +39,7 @@ module prog_board(
 	// Joy Joy Kid doesn't use PCM
 	//pcm PCM(RAD, RA_L, RA_U, RMPX, PAD, PA, PMPX, V1_ADDR, V2_ADDR);
 	
-	rom_p1 P1(M68K_ADDR[16:0], M68K_DATA, nROMOE);
+	rom_p1 P1(M68K_ADDR[16:0], M68K_DATA, M68K_ADDR[19], nROMOE);
 	
 	// Joy Joy Kid doesn't have a P2
 	//rom_p2 P2(M68K_ADDR[16:0], M68K_DATA, nPORTOE);

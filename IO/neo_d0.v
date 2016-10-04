@@ -15,6 +15,7 @@ module neo_d0(
 	input [4:2] SDA_L,
 	input nSDRD, nSDWR, nMREQ, nIORQ,
 	output nZ80NMI,
+	input nSDW,
 	input nSDZ80R, nSDZ80W, nSDZ80CLR,
 	output nSDROM, nSDMRD, nSDMWR,
 	output SDRD0, SDRD1,

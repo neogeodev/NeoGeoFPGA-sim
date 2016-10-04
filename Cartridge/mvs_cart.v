@@ -5,7 +5,7 @@ module mvs_cart(
 	input CLK_24M, CLK_12M, CLK_8M, CLK_68KCLKB, CLK_4MB,
 	
 	input nAS, M68K_RW,
-	input [18:0] M68K_ADDR,
+	input [19:1] M68K_ADDR,
 	inout [15:0] M68K_DATA,
 	input nROMOE, nROMOEL, nROMOEU,
 	input nPORTADRS, nPORTOEL, nPORTOEU, nPORTWEL, nPORTWEU, 

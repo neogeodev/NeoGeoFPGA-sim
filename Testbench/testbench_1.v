@@ -71,7 +71,7 @@ module testbench_1();
 		
 		SDRAD, SDRA_L, SDRA_U, SDRMPX, nSDROE,				// 7 + 2 + 4 + 2
 		SDPAD, SDPA, SDPMPX, nSDPOE,							// 7 + 4 + 2
-		nSDROM,														// 1
+		nSDROM, nSDMRD,											// 1
 		SDA, SDD,													// 16 + 8
 		
 		PBUS,															// 24

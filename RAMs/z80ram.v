@@ -11,6 +11,7 @@ module z80ram(
 );
 
 	reg [7:0] RAMDATA[0:2047];
+	wire [7:0] DATAOUT;
 	
 	integer k;
 	initial begin
@@ -19,7 +20,8 @@ module z80ram(
 		//$readmemh("raminit_z80.txt", RAMDATA);
 	end
 
-	assign #100 DATA = (!nCE && !nOE) ? RAMDATA[ADDR] : 8'bzzzzzzzz;
+	assign #100 DATAOUT = RAMDATA[ADDR];
+	assign DATA = (!nCE && !nOE) ? DATAOUT : 8'bzzzzzzzz;
 
 	always @(nCE or nWE)
 		if (!nCE && !nWE)
