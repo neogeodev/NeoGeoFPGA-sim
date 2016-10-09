@@ -12,7 +12,7 @@ module rom_c1(
 	initial begin
 		$readmemh("rom_c1.txt", ROMDATA);
 	end
-
+	
 	assign #25 OUT = ROMDATA[ADDR];
 
 endmodule

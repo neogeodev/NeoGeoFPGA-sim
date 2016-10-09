@@ -16,7 +16,7 @@ module rom_p1(
 		$readmemh("rom_p1.txt", ROMDATA);
 	end
 
-	assign #12 DATAOUT = ROMDATA[ADDR];
+	assign #12 DATAOUT = ROMDATA[ADDR];		// TODO: Should be 120
 	assign OUT = (nCE | nOE) ? 16'bzzzzzzzzzzzzzzzz : DATAOUT;
 
 endmodule

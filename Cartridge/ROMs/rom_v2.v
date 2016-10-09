@@ -9,11 +9,13 @@ module rom_v2(
 );
 
 	reg [7:0] ROMDATA[0:524287];
+	wire [7:0] DATAOUT;
 
 	initial begin
 		$readmemh("rom_v2.txt", ROMDATA);
 	end
 
-	assign #10 OUT = nROMOE ? 8'bzzzzzzzz : ROMDATA[ADDR];
+	assign #100 DATAOUT = ROMDATA[ADDR];
+	assign OUT = nROMOE ? 8'bzzzzzzzz : DATAOUT;
 
 endmodule

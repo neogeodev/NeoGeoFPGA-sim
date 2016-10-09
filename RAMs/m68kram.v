@@ -3,7 +3,7 @@
 // 64K 68000 work RAM (2x 120ns 32768*8bit RAM)
 
 module ram_68k(
-	input [14:0] M68K_ADDR,
+	input [15:1] M68K_ADDR,
 	inout [15:0] M68K_DATA,
 	input nWEL,
 	input nWEU,

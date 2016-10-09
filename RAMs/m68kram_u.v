@@ -20,14 +20,14 @@ module ram68k_u(
 		//$readmemh("raminit_68kram_u.txt", RAMDATA);
 	end
 
-	assign #120 DATA_OUT = RAMDATA[ADDR];
-	assign DATA = (nCE | nOE) ? DATA_OUT : 8'bzzzzzzzz;
+	assign #120 DATAOUT = RAMDATA[ADDR];
+	assign DATA = (!nCE && !nOE) ? DATAOUT : 8'bzzzzzzzz;
 
 	always @(nCE or nWE)
 		if (!nCE && !nWE)
 			#30 RAMDATA[ADDR] <= DATA;
 	
-	always @(nWE or nCE)
+	always @(nWE or nOE)
 		if (!nWE && !nOE)
 			$display("ERROR: RAM68KU: nOE and nWE are both active !");
 

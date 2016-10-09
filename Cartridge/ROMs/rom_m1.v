@@ -1,6 +1,6 @@
-`timescale 10ns/10ns
+`timescale 1ns/1ns
 
-// 100ns 128k*8bit ROM
+// 100ns 64k*8bit ROM
 
 module rom_m1(
 	input [15:0] ADDR,

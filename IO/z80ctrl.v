@@ -7,7 +7,7 @@ module z80ctrl(
 	input nMREQ, nIORQ,			// Ok
 	input nSDW,						// Ok, signal from NEO-C1
 	input nRESET,
-	output nZ80NMI,				// Ok
+	output reg nZ80NMI,			// Ok
 	output nSDZ80R, nSDZ80W,	// Ok
 	output nSDZ80CLR,				// Ok, signal to NEO-C1
 	output nSDROM,					// Ok
@@ -31,10 +31,25 @@ module z80ctrl(
 	assign n2610RD = nIORQ | nSDRD;
 	assign n2610WR = nIORQ | nSDWR;
 
-	assign nZ80NMI = nNMI_EN | nSDW;
+	assign nTRIGNMI = nNMI_EN | nSDW;
 	
 	// Port $x0, $x1, $x2, $x3 read
 	assign nSDZ80R = (~nSDWR | nIORQ | SDA_L[3] | SDA_L[2]);
+	// Set/ack NMI
+	always @(negedge nRESET or negedge nSDZ80R or negedge nTRIGNMI)
+	begin
+		if (!nRESET)
+		begin
+			nZ80NMI <= 1'b1;	// ?
+		end
+		else
+		begin
+			if (!nSDZ80R)
+				nZ80NMI <= 1'b1;
+			else
+				nZ80NMI <= 1'b0;
+		end
+	end
 	
 	// Port $x0, $x1, $x2, $x3 write
 	assign nSDZ80CLR = (nSDWR | nIORQ | SDA_L[3] | SDA_L[2]);
