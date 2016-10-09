@@ -55,8 +55,9 @@ module z80ctrl(
 	assign nSDZ80CLR = (nSDWR | nIORQ | SDA_L[3] | SDA_L[2]);
 	
 	// Port $x4, $x5, $x6, $x7 any access
-	assign n2610CS = (nIORQ | SDA_L[3] | ~SDA_L[2]);
-	// n2610RD and n2610WR are gated by something ?
+	// TODO: Check this on real hw, why is a /CS needed for the YM2610 ? Avoids reset or power off glitches ?
+	assign n2610CS = 1'b0;
+	//assign n2610CS = (nIORQ | SDA_L[3] | ~SDA_L[2]);
 	
 	// Port $xC, $xD, $xE, $xF write
 	assign nSDZ80W = (nSDWR | nIORQ | ~(SDA_L[3] & SDA_L[2]));

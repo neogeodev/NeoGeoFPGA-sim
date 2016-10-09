@@ -18,10 +18,7 @@ module c1_regs(
 	// Z80 reply write
 	always @(posedge nSDZ80W)	// No edge at all ?
 	begin
-		// DEBUG begin
-		$display("Z80 replied to 68K command !");
-		$stop;
-		// DEBUG end
+		$display("Z80 -> 68K: %H", SDD);		// DEBUG
 		SDD_LATCH_REP <= SDD;
 	end
 	
@@ -29,14 +26,11 @@ module c1_regs(
 	assign M68K_DATA = (RW & ~nICOMZONE) ? SDD_LATCH_REP : 8'bzzzzzzzz;
 	
 	// REG_SOUND write
-	assign nSDW = (RW | nICOMZONE);
+	assign nSDW = (RW | nICOMZONE);		// Tells Z80 that 68k sent a command
 	
 	// DEBUG begin
 	always @(negedge nSDW)
-	begin
-		$display("68K sent Z80 command %H !", M68K_DATA);
-		if (M68K_DATA == 8'h03) $stop;
-	end
+		$display("68K -> Z80: %H", M68K_DATA);
 	// DEBUG end
 	
 	// REG_SOUND write
@@ -45,15 +39,11 @@ module c1_regs(
 		if (!nSDZ80CLR)
 		begin
 			SDD_LATCH_CMD <= 8'b00000000;
-			//nSDW <= 1'b1;
 		end
 		else
 		begin
 			if (!RW)
-			begin
 				SDD_LATCH_CMD <= M68K_DATA;
-				//nSDW <= 1'b0;	// Tells Z80 that 68k sent a command
-			end
 		end
 	end
 	

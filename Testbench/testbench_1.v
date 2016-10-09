@@ -168,7 +168,7 @@ module testbench_1();
 		
 		if ({M68K_ADDR, 1'b0} == 24'hC17E26)
 		begin
-			$display("VICTOLY ! Going to eyecatcher...");
+			$display("VICTOLY ! Going to eyecatcher.");
 			$stop;
 		end
 		

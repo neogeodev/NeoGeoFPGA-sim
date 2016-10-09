@@ -1,9 +1,9 @@
 `timescale 1ns/1ns
 
-// 120ns 256k*16bit ROM
+// 120ns 512k*16bit (256kB) ROM
 
 module rom_p1(
-	input [16:0] ADDR,
+	input [17:0] ADDR,
 	output [15:0] OUT,
 	input nCE,
 	input nOE

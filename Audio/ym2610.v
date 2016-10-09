@@ -2,6 +2,7 @@
 
 module ym2610(
 	input PHI_S,
+	input nRESET,
 	
 	inout [7:0] SDD,
 	input [1:0] SDA,
@@ -83,10 +84,34 @@ module ym2610(
 	
 	assign PCMA_CH = REG2_ADDR[2:0];
 	
+	// DEBUG begin
+	always @(posedge nWR)
+	begin
+		if (!(nCS | ~nRD))
+		begin
+			if (!SDA[0])
+			begin
+				if (!SDA[1])
+					$display("YM2610 part A address register %H", SDD);
+				else
+					$display("YM2610 part B address register %H", SDD);
+			end
+			else
+			begin
+				if (!SDA[1])
+					$display("YM2610 part A set register %H to %H", REG1_ADDR, SDD);
+				else
+					$display("YM2610 part B set register %H to %H", REG2_ADDR, SDD);
+			end
+		end
+	end
+	// DEBUG end
+	
 	always @(nWR, nCS, SDD)
 	begin
 		if (!(nWR | nCS | ~nRD))
 		begin
+			// CPU write
 			if (!SDA[0])			// Set register address
 			begin
 				if (!(SDA[1]))		// Common address register for both zones ?
@@ -130,6 +155,8 @@ module ym2610(
 						8'h25: YMTIMER_TA_LOAD[9:8] <= SDD[1:0];
 						8'h26: YMTIMER_TB_LOAD <= SDD;
 						8'h27: YMTIMER_CONFIG <= SDD;
+						
+						// FM: Todo
 						
 						// Default needed
 					endcase

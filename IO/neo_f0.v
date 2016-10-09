@@ -34,12 +34,6 @@ module neo_f0(
 	//assign nLED_LATCH = (M68K_ADDR[6:4] == 3'b011) ? nBITWD0 : 1'b1;
 	//assign nLED_DATA = (M68K_ADDR[6:4] == 3'b100) ? nBITWD0 : 1'b1;
 	
-	always @(posedge nBITWD0)	// ?
-	begin
-		if (M68K_ADDR[6:4] == 3'b011) LED_LATCH <= M68K_DATA[5:3];		// REG_LEDLATCHES $380031
-		if (M68K_ADDR[6:4] == 3'b100) LED_DATA <= M68K_DATA[7:0];		// REG_LEDDATA $380041
-	end
-	
 	// REG_DIPSW $300001~?, odd bytes
 	// REG_SYSTYPE $300081~?, odd bytes TODO (Test switch and stuff... Neutral for now)
 	assign M68K_DATA = (nDIPRD0) ? 8'bzzzzzzzz :
@@ -51,20 +45,32 @@ module neo_f0(
 	assign M68K_DATA = (nDIPRD1) ? 8'bzzzzzzzz :
 									{RTC_DOUT, RTC_TP, 1'b1, 5'b11111};
 	
-	always @(posedge nBITWD0)	// posedge ?
+	always @(nRESET, nBITWD0)
 	begin
-		if (M68K_ADDR[6:4] == 3'b010)
+		if (!nRESET)
 		begin
-			$display("Selected slot #%d", M68K_DATA[2:0]);		// DEBUG
-			SLOTS <= M68K_DATA[2:0];			// REG_SLOT
+			SLOTS <= 3'b000;
+			REG_RTCCTRL <= 3'b000;
 		end
-		if (M68K_ADDR[6:4] == 3'b101) REG_RTCCTRL <= M68K_DATA[2:0];	// REG_RTCCTRL
+		else if (!nBITWD0)
+		begin
+			case (M68K_ADDR[6:4])
+				3'b010:
+					SLOTS <= M68K_DATA[2:0];			// REG_SLOT $380021
+				3'b011:
+					LED_LATCH <= M68K_DATA[5:3];		// REG_LEDLATCHES $380031
+				3'b100:
+					LED_DATA <= M68K_DATA[7:0];		// REG_LEDDATA $380041
+				3'b101:
+					REG_RTCCTRL <= M68K_DATA[2:0];	// REG_RTCCTRL $380051
+			endcase
+		end
 	end
 	
-	assign {SLOTC, SLOTB, SLOTA} = (SYSTEMB | nRESET) ? SLOTS : 3'b000;	// Maybe not
+	assign {SLOTC, SLOTB, SLOTA} = SYSTEMB ? SLOTS : 3'b000;	// Maybe not
 	
 	// TODO: check this
-	assign nSLOT = (SYSTEMB | nRESET) ? 
+	assign nSLOT = SYSTEMB ? 
 						(SLOTS == 3'b000) ? 6'b111110 :
 						(SLOTS == 3'b001) ? 6'b111101 :
 						(SLOTS == 3'b010) ? 6'b111011 :
