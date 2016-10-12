@@ -1,38 +1,45 @@
 `timescale 1ns/1ns
 
+// Everything here was verified on a MV4 board
+// Todo: Check phase relations between 12M, 68KCLK and 68KCLKB
+// Todo: Check cycle right after nRESETP goes high, real hw might have an important delay added
+
 module clocks(
 	input CLK_24M,
 	input nRESETP,
 	output CLK_12M,
-	output CLK_68KCLK,
+	output reg CLK_68KCLK,
 	output CLK_68KCLKB,
 	output CLK_6MB,
-	output CLK_1MB
+	output reg CLK_1MB
 );
-
-	// Everything here happens on negedge 24M
-
-	reg [2:0] CLKDIV_A;
-	reg [2:0] CLKDIV_B;
-	
-	assign CLK_12M = CLKDIV_A[0];
-	assign CLK_68KCLKB = CLKDIV_A[0];	// What's the difference ?
-	assign CLK_68KCLK = ~CLK_68KCLKB;
-	assign CLK_6MB = ~CLKDIV_A[1];
-	assign CLK_1MB = CLKDIV_B[2];
 	
 	always @(negedge CLK_24M or negedge nRESETP)
 	begin
 		if (!nRESETP)
-		begin
-			CLKDIV_A <= 0;
-			CLKDIV_B <= 3'd7;
-		end
+			CLK_68KCLK <= 1'b1;	// Real hw doesn't clearly init DFF, this needs to be checked
 		else
-		begin
-			CLKDIV_A <= CLKDIV_A + 1;
-			CLKDIV_B <= CLKDIV_B + 1;
-		end
+			CLK_68KCLK <= ~CLK_68KCLK;
 	end
+	
+	assign CLK_68KCLKB = ~CLK_68KCLK;
+	
+	
+	reg [2:0] CLKDIV_B;			// Bit 3 of counter isn't used
+	
+	always @(negedge CLK_24M or negedge nRESETP)
+	begin
+		if (!nRESETP)
+			CLKDIV_B <= 3'b100;	// Load
+		else
+			CLKDIV_B <= CLKDIV_B + 1;
+	end
+	
+	assign CLK_12M = CLKDIV_B[0];
+	assign CLK_6MB = ~CLKDIV_B[1];
+	assign CLK_3M = CLKDIV_B[2];
+	
+	always @(posedge CLK_12M)	// DFF
+		CLK_1MB <= ~CLK_3M;
 	
 endmodule
