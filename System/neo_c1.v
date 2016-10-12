@@ -1,5 +1,7 @@
 `timescale 1ns/1ns
 
+// Missing pin: VPA
+
 module neo_c1(
 	input [21:17] M68K_ADDR,
 	output [15:8] M68K_DATA,

@@ -1,82 +1,77 @@
 `timescale 1ns/1ns
 
+// Everything here was verified on a MV4 board
+
 module z80ctrl(
-	input [4:2] SDA_L,			// Ok, used for port decode
-	input [15:11] SDA_U,			// Ok, used for memory zone decode
-	input nSDRD, nSDWR,			// Ok
-	input nMREQ, nIORQ,			// Ok
-	input nSDW,						// Ok, signal from NEO-C1
+	input [4:2] SDA_L,
+	input [15:11] SDA_U,
+	input nSDRD, nSDWR,
+	input nMREQ, nIORQ,
+	input nSDW,						// From NEO-C1
 	input nRESET,
-	output reg nZ80NMI,			// Ok
-	output nSDZ80R, nSDZ80W,	// Ok
-	output nSDZ80CLR,				// Ok, signal to NEO-C1
-	output nSDROM,					// Ok
-	output nSDMRD, nSDMWR,		// Ok
-	output SDRD0, SDRD1,			// What is SDRD1 ?
-	output n2610CS,				// Ok
-	output n2610RD, n2610WR,	// Ok
-	output nZRAMCS					// Ok
+	output reg nZ80NMI,
+	output nSDZ80R, nSDZ80W,	// To NEO-C1
+	output nSDZ80CLR,				// To NEO-C1
+	output nSDROM,
+	output nSDMRD, nSDMWR,
+	output SDRD0, SDRD1,
+	output n2610CS,
+	output n2610RD, n2610WR,
+	output nZRAMCS
 );
 
 	reg nNMI_EN;
 	
-	// $0000~$F7FF: ROM 00000000 00000000 ~ 11110111 11111111
-	// $F800~$FFFF: RAM 11111000 00000000 ~ 11111111 11111111
-	assign nSDROM = &{SDA_U};	// Called "SROM" on schematics
-	assign nZRAMCS = ~nSDROM;	// Called "SROMB" on schematics, so guessing this is right
+	// $0000~$F7FF: ROM
+	// $F800~$FFFF: RAM
+	assign nSDROM = &{SDA_U};
+	assign nZRAMCS = ~nSDROM;
 
-	assign nSDMRD = nMREQ | nSDRD;
-	assign nSDMWR = nMREQ | nSDWR;
+	assign nSDMRD = nMREQ | nSDRD;	// RAM read
+	assign nSDMWR = nMREQ | nSDWR;	// RAM write
 	
-	assign n2610RD = nIORQ | nSDRD;
-	assign n2610WR = nIORQ | nSDWR;
+	assign nIORD = nIORQ | nSDRD;		// Port read
+	assign nIOWR = nIORQ | nSDWR;		// Port write
 
-	assign nTRIGNMI = nNMI_EN | nSDW;
-	
 	// Port $x0, $x1, $x2, $x3 read
-	assign nSDZ80R = (~nSDWR | nIORQ | SDA_L[3] | SDA_L[2]);
-	// Set/ack NMI
-	always @(negedge nRESET or negedge nSDZ80R or negedge nTRIGNMI)
-	begin
-		if (!nRESET)
-		begin
-			nZ80NMI <= 1'b1;	// ?
-		end
-		else
-		begin
-			if (!nSDZ80R)
-				nZ80NMI <= 1'b1;
-			else
-				nZ80NMI <= 1'b0;
-		end
-	end
-	
+	assign nSDZ80R = (nIORD | SDA_L[3] | SDA_L[2]);
 	// Port $x0, $x1, $x2, $x3 write
-	assign nSDZ80CLR = (nSDWR | nIORQ | SDA_L[3] | SDA_L[2]);
+	assign nSDZ80CLR = (nIOWR | SDA_L[3] | SDA_L[2]);
 	
-	// Port $x4, $x5, $x6, $x7 any access
-	// TODO: Check this on real hw, why is a /CS needed for the YM2610 ? Avoids reset or power off glitches ?
-	assign n2610CS = 1'b0;
-	//assign n2610CS = (nIORQ | SDA_L[3] | ~SDA_L[2]);
-	
-	// Port $xC, $xD, $xE, $xF write
-	assign nSDZ80W = (nSDWR | nIORQ | ~(SDA_L[3] & SDA_L[2]));
+	// Port $x4, $x5, $x6, $x7 read
+	assign n2610RD = (nIORD | SDA_L[3] | ~SDA_L[2]);
+	// Port $x4, $x5, $x6, $x7 write
+	assign n2610WR = (nIOWR | SDA_L[3] | ~SDA_L[2]);
+	assign n2610CS = n2610RD & n2610WR;
 	
 	// Port $x8, $x9, $xA, $xB read
-	assign nSDRD0 = (~nSDWR | nIORQ | ~SDA_L[3] | SDA_L[2]);
-	// What is nSDRD1 ? Ports $xC, $xD, $xE, $xF read ?
-	
+	assign nSDRD0 = (nIORD | ~SDA_L[3] | SDA_L[2]);
 	// Port $x8, $x9, $xA, $xB write
-	always @(negedge nRESET or negedge nSDWR)
+	assign nNMI_SET = (nIORD | ~SDA_L[3] | SDA_L[2]);
+	
+	// Port $xC, $xD, $xE, $xF read
+	assign nSDRD1 = (nIORD | ~SDA_L[3] | ~SDA_L[2]);
+	// Port $xC, $xD, $xE, $xF write
+	assign nSDZ80W = (nIOWR | ~SDA_L[3] | ~SDA_L[2]);
+
+	assign nNMI_RESET = nSDZ80R & nRESET;
+	
+	// NMI enable DFF
+	always @(posedge nNMI_SET or negedge nRESET)
 	begin
 		if (!nRESET)
-		begin
-			nNMI_EN <= 1'b1;	// ?
-		end
+			nNMI_EN <= 1'b1;
 		else
-		begin
-			if ((!nIORQ) && (SDA_L[3:2] == 2'b10)) nNMI_EN <= SDA_L[4];	// NMI enable/disable
-		end
+			nNMI_EN <= SDA_L[4];
 	end
 	
+	// NMI trig DFF
+	always @(posedge nSDW or negedge nNMI_RESET)
+	begin
+		if (!nNMI_RESET)
+			nZ80NMI <= 1'b1;
+		else
+			nZ80NMI <= nNMI_EN;
+	end
+
 endmodule

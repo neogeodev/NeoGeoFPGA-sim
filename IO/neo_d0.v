@@ -1,7 +1,9 @@
 `timescale 1ns/1ns
 
+// All pins ok except TRES, but apparently never used (something to do with crystal oscillator ?)
+
 module neo_d0(
-	input CLK_24M,
+	input CLK_24M,				// Output on real chip
 	input nRESET, nRESETP,
 	output CLK_12M,
 	output CLK_68KCLK,
@@ -16,7 +18,7 @@ module neo_d0(
 	input nSDRD, nSDWR, nMREQ, nIORQ,
 	output nZ80NMI,
 	input nSDW,
-	input nSDZ80R, nSDZ80W, nSDZ80CLR,
+	output nSDZ80R, nSDZ80W, nSDZ80CLR,
 	output nSDROM, nSDMRD, nSDMWR,
 	output SDRD0, SDRD1,
 	output n2610CS, n2610RD, n2610WR,
@@ -33,15 +35,13 @@ module neo_d0(
 	z80ctrl Z80CTRL(SDA_L, SDA_H, nSDRD, nSDWR, nMREQ, nIORQ, nSDW, nRESET, nZ80NMI, nSDZ80R, nSDZ80W,
 				nSDZ80CLR, nSDROM, nSDMRD, nSDMWR, SDRD0, SDRD1, n2610CS, n2610RD, n2610WR, nZRAMCS);
 	
+	// Todo: Maybe nRESET is used here ?
 	always @(negedge nBITWD0)
 	begin
 		if (M68K_ADDR_A4)
-			BNK <= M68K_DATA[2:0];		// REG_CRDBANK
+			BNK <= M68K_DATA[2:0];					// REG_CRDBANK
 		else
-		begin
-			P1_OUT <= M68K_DATA[2:0];	// REG_POUTPUT
-			P2_OUT <= M68K_DATA[5:3];
-		end
+			{P2_OUT, P1_OUT} <= M68K_DATA[5:0];	// REG_POUTPUT
 	end
 	
 endmodule
