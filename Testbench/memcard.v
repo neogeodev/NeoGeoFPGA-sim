@@ -23,7 +23,7 @@ module memcard(
 	integer k;
 	initial begin
 		for (k = 0; k < 2047; k = k + 1)
-			 RAMDATA[k] = 0;
+			RAMDATA[k] = k & 255;
 		//$readmemh("raminit_sram_l.txt", RAMDATA);
 	end
 	
@@ -32,6 +32,7 @@ module memcard(
 	assign nWP = nPROTECT;
 	
 	assign #100 DATA_OUT = RAMDATA[CDA[10:0]];
+	assign CDD[15:8] = 8'b11111111;		// 8bit memcard
 	assign CDD[7:0] = (!nCE && !nOE) ? DATA_OUT : 8'bzzzzzzzz;
 
 	always @(nCE or nWE)

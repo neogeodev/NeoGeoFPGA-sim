@@ -27,9 +27,9 @@ module c1_wait(
 			if (!nROM_ZONE)
 				WAIT_CNT <= ~nROMWAIT;				// 0~1 or 1~2 wait cycles ?
 			else if (!nPORT_ZONE)
-				WAIT_CNT <= ~{nPWAIT0,nPWAIT1};	// Needs checking
+				WAIT_CNT <= ~{nPWAIT0, nPWAIT1};	// Needs checking
 			else if (!nCARD_ZONE)
-				WAIT_CNT <= 2;
+				WAIT_CNT <= 2;							// MAME and mvstech says so, to check
 			else
 				WAIT_CNT <= 0;
 		end

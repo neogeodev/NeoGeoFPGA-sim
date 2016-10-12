@@ -153,7 +153,7 @@ module lspc_a2(
 	// Read only
 	assign REG_LSPCMODE = {VCOUNT, 3'b000, VIDEO_MODE, AACOUNT};
 	
-	// Read
+	// Read - Todo: See if M68K_ADDR[3] is used or not (MAME says yes and should be = 0, no mirroring)
 	assign M68K_DATA = (nLSPOE | ~nLSPWE) ? 16'bzzzzzzzzzzzzzzzz :
 								(M68K_ADDR[2:1] == 2'b00) ? CPU_VRAM_READ_BUFFER :	// 3C0000/3C0008
 								(M68K_ADDR[2:1] == 2'b01) ? CPU_VRAM_READ_BUFFER :	// 3C0002/3C000A

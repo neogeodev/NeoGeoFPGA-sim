@@ -70,17 +70,18 @@ module neo_c1(
 	// 300000~3FFFFF read/write
 	assign nIO_ZONE = |{A23Z, A22Z, ~M68K_ADDR[21], ~M68K_ADDR[20]};
 	
-		// 300000~3FFFFF even bytes read/write
+		// 300000~3FFFFE even bytes read/write
 		assign nC1REGS_ZONE = nUDS | nIO_ZONE;
 		
-			// 300000~31FFFF even bytes read only
+			// 300000~31FFFE even bytes read only
 			assign nCTRL1_ZONE = nC1REGS_ZONE | ~RW | |{M68K_ADDR[19], M68K_ADDR[18], M68K_ADDR[17]};
 			
-			// 32FFFF~33FFFF even bytes read/write
+			// 320000~33FFFE even bytes read/write
 			assign nICOM_ZONE = nC1REGS_ZONE | |{M68K_ADDR[19], M68K_ADDR[18], ~M68K_ADDR[17]};
 	
-			// 34FFFF~37FFFF even bytes read only - not sure if M68K_ADDR[17] is used (up to 35FFFF only ?)
-			assign nCTRL2_ZONE = nC1REGS_ZONE | ~RW | |{M68K_ADDR[19], ~M68K_ADDR[18]};
+			// 340000~35FFFE even bytes read only - Todo: MAME says A17 is used, see right below
+			assign nCTRL2_ZONE = nC1REGS_ZONE | ~RW | |{M68K_ADDR[19], ~M68K_ADDR[18], M68K_ADDR[17]};
+			// 360000~37FFFF is not mapped ?
 
 	// 30xxxx 31xxxx ?, odd bytes read only
 	assign nDIPRD0 = nLDS | ~RW | |{nIO_ZONE, M68K_ADDR[19], M68K_ADDR[18], M68K_ADDR[17]};
@@ -91,28 +92,29 @@ module neo_c1(
 	// 38xxxx 39xxxx odd bytes write only
 	assign nBITW0 = nLDS | RW | |{nIO_ZONE, ~M68K_ADDR[19], M68K_ADDR[18], M68K_ADDR[17]};
 	
-	// 3Axxxx 3Bxxxx odd bytes write only
-	assign nBITW1 = nLDS | RW | |{nIO_ZONE, ~M68K_ADDR[19], M68K_ADDR[18], ~M68K_ADDR[17]};
-	
-	// 38xxxx 39xxxx even bytes read only
+	// 380000~39FFFE even bytes read only
 	assign nSTATUSB_ZONE = nC1REGS_ZONE | ~RW | |{~M68K_ADDR[19], M68K_ADDR[18], M68K_ADDR[17]};
 	
-	// 3C0000~3DFFFF 
+	// 3A0001~3BFFFF odd bytes write only
+	assign nBITW1 = nLDS | RW | |{nIO_ZONE, ~M68K_ADDR[19], M68K_ADDR[18], ~M68K_ADDR[17]};
+	// 3A0001~3BFFFF odd bytes read is not mapped ? To check
+	
+	// 3C0000~3DFFFF
 	assign nLSPC_ZONE = |{nIO_ZONE, ~M68K_ADDR[19], ~M68K_ADDR[18], M68K_ADDR[17]};
 	
-	// 4xxxxx 7xxxxx
+	// 3E0000~3FFFFF is not mapped ? To check
+	
+	// 400000~7FFFFF
 	assign nPAL = |{A23Z, ~A22Z};
 	
-	// 8xxxxx Bxxxxx
-	assign nCARD_ZONE = |{~A23Z, A22Z};
+	// 800000~BFFFFF odd bytes ? To check, is A19~A17 used ? MAME limits to 800FFF, impossible ?
+	assign nCARD_ZONE = nLDS | |{~A23Z, A22Z};
 	
-	// Cxxxxx Cxxxxx
+	// C00000~CFFFFF ? To check, is A19~A17 used ? MAME says no
 	assign nSROM_ZONE = |{~A23Z, ~A22Z, M68K_ADDR[21], M68K_ADDR[20]};
 	
-	// Dxxxxx Dxxxxx ?
+	// D00000~DFFFFF ? To check, is A19~A17 used ? MAME says no
 	assign nSRAM_ZONE = |{~A23Z, ~A22Z, M68K_ADDR[21], ~M68K_ADDR[20]};
-
-	assign nWORDACCESS = nLDS | nUDS;
 
 	// Outputs:
 	assign nROMOEL = ~RW | nLDS | nROM_ZONE | nAS;
@@ -132,11 +134,12 @@ module neo_c1(
 	assign nSRAMWEL = RW | nLDS | nSRAM_ZONE | nAS;
 	assign nSRAMWEU = RW | nUDS | nSRAM_ZONE | nAS;
 
-	// Not sure about word access ?
-	assign nLSPOE = ~RW | nWORDACCESS | nLSPC_ZONE | nAS;
-	assign nLSPWE = RW | nWORDACCESS | nLSPC_ZONE | nAS;
-	assign nCRDO = ~RW | nWORDACCESS | nCARD_ZONE | nAS;
-	assign nCRDW = RW | nWORDACCESS | nCARD_ZONE | nAS;
+	// Todo: Check if TG68k duplicates byte on data bus on byte writes
+	assign nLSPWE = RW | nUDS | nLSPC_ZONE | nAS;		// MAME says LSB write isn't mapped
+	assign nLSPOE = ~RW | nUDS | nLSPC_ZONE | nAS;		// MAME says LSB write isn't mapped
+	
+	assign nCRDO = ~RW | nCARD_ZONE | nAS;
+	assign nCRDW = RW | nCARD_ZONE | nAS;
 	assign nCRDC = nCRDO & nCRDW;
 
 endmodule

@@ -16,7 +16,7 @@ module z80ram(
 	integer k;
 	initial begin
 		for (k = 0; k < 2047; k = k + 1)
-			 RAMDATA[k] = 0;
+			RAMDATA[k] = k & 255;
 		//$readmemh("raminit_z80.txt", RAMDATA);
 	end
 
