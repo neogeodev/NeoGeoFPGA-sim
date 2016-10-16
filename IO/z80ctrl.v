@@ -47,7 +47,7 @@ module z80ctrl(
 	// Port $x8, $x9, $xA, $xB read
 	assign nSDRD0 = (nIORD | ~SDA_L[3] | SDA_L[2]);
 	// Port $x8, $x9, $xA, $xB write
-	assign nNMI_SET = (nIORD | ~SDA_L[3] | SDA_L[2]);
+	assign nNMI_SET = (nIOWR | ~SDA_L[3] | SDA_L[2]);
 	
 	// Port $xC, $xD, $xE, $xF read
 	assign nSDRD1 = (nIORD | ~SDA_L[3] | ~SDA_L[2]);

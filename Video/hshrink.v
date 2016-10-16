@@ -6,8 +6,8 @@ module hshrink(
 	output USE
 );
 
-	// Thanks MAME and Logic Friday :)
-	// Is this really a LUT in LSPC ?
+	// Thanks to MAME and Logic Friday :)
+	// Todo: Is this really a LUT in LSPC ?
 	
 	assign USE = 	(SHRINK == 15) ? &{N[2:0]} | N[3] :
 						(SHRINK == 14) ? &{N[3:1]} | &{N[3:2], N[0]} :

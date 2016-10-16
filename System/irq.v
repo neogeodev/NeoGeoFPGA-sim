@@ -9,22 +9,7 @@ module irq(
 
 	reg Q1, Q2, Q3;
 
-	/*
-	// SR latch 1
-	assign IRQ_S1_PRIO = IRQ_S1 & ~IRQ_R1;	// Reset has priority over set ?
-	assign Q1N = ~|{IRQ_S1_PRIO, Q1};
-	assign Q1 = ~|{IRQ_R1, Q1N};
-	
-	// SR latch 2
-	assign IRQ_S2_PRIO = IRQ_S2 & ~IRQ_R2;	// Reset has priority over set ?
-	assign Q2N = ~|{IRQ_S2_PRIO, Q2};
-	assign Q2 = ~|{IRQ_R2, Q2N};
-	
-	// SR latch 3
-	assign IRQ_S3_PRIO = IRQ_S3 & ~IRQ_R3;	// Reset has priority over set ?
-	assign Q3N = ~|{IRQ_S3_PRIO, Q3};
-	assign Q3 = ~|{IRQ_R3, Q3N};
-	*/
+	// To check: priorities (set / reset)
 	
 	always @(posedge IRQ_S1 or posedge IRQ_R1)
 	begin

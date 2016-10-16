@@ -21,8 +21,10 @@ module watchdog(
 	assign nRESET = WDCNT[3];
 	assign nHALT = 1'b1;			// Todo
 	
-	// 300001 (LDS)
+	// To check:
+	// $300001 (LDS)
 	// 0011000xxxx0000000000001
+	// MAME says 00110001xxxxxxxxxxxxxxx1 but NEO-B1 doesn't have A16
 	assign WDKICK = &{~|{nLDS, RW}, ~|{A23Z, A22Z}, M68K_ADDR_U[21:20], ~|{M68K_ADDR_U[19:17], M68K_ADDR_L[12:1]}};
 
 	// posedge WDCLK: 
