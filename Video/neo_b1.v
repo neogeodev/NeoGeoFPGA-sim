@@ -1,8 +1,15 @@
 `timescale 1ns/1ns
 
+// All pins listed OK
+
+// Signal to latch fix palette ? posedge 1MB + PCK2 ?
+// Signal to latch sprite palette ? posedge 1MB + PCK1 ?
+// Signal to latch fix data ? 8 pixel delay = 4 bytes = 6M/8 ?
+// Signal to latch x position ? S1H1 + ?
+
 module neo_b1(
-	input CLK_6MB,
-	input CLK_1MB,				// Even/odd pixel selection ?
+	input CLK_6MB,				// 1px
+	input CLK_1MB,				// 2px Even/odd pixel selection ?
 	input [23:0] PBUS,
 	input [7:0] FIXD,
 	input PCK1,					// What for ?
@@ -29,6 +36,17 @@ module neo_b1(
 );
 
 	/*
+		Slow cycle:
+		0000~6FFF: Sprites map
+		7000~7FFF: Fix map
+		
+		A14 A13 A12 A0
+		  x   x   x  0   Sprite tile
+		  x   x   x  1   Sprite attr
+	     1   1   1  x   Fix
+	*/
+
+	/*
 	reg [7:0] SPR_PAL;			// Needs to be registered, as palette shows up on P bus only every 4 pixels
 	reg [3:0] FIX_PAL;
 	reg [7:0] FIX_DATA;
@@ -48,14 +66,13 @@ module neo_b1(
 	
 	// -------------------------------- Alpha68k logic --------------------------------
 	
-	wire [3:0] P10_A;
-	wire [3:0] N10_A;
-	wire [3:0] P11_A ;
-	wire [3:0] N11_A;
+	reg [3:0] P10N10_A;
+	reg [3:0] P11N11_A;
 	wire [3:0] P10_OUT;
 	wire [3:0] N10_OUT;
 	wire [3:0] P11_OUT;
 	wire [3:0] N11_OUT;
+	wire PLUS_ONE;		// Comes from G5 pin 8
 	
 	wire [7:0] LB_EVEN_A_ADDR;
 	wire [7:0] LB_EVEN_B_ADDR;
@@ -69,15 +86,6 @@ module neo_b1(
 	wire [11:0] LB_ODD_A_DATA;
 	wire [11:0] LB_ODD_B_DATA;
 	
-	wire [5:0] P18_OUT;
-	wire [5:0] P20_OUT;
-	wire [5:0] P19_OUT;
-	wire [5:0] P21_OUT;
-	wire [5:0] M18_OUT;
-	wire [5:0] N18_OUT;
-	wire [5:0] M19_OUT;
-	wire [5:0] N19_OUT;
-	
 	reg [7:0] FIXD_REG_A;
 	reg [7:0] FIXD_REG_B;
 	
@@ -90,45 +98,48 @@ module neo_b1(
 	
 	wire [7:0] PAL;
 	
-	wire G5_8;	// TODO
+	wire G5_8;			// TODO
 	wire BUFF_FLIP;	// TODO
 	wire CLK_RENDER;	// TODO
 	wire CLK_SPR_PAL;	// TODO
 	wire nAB;			// TODO
 	wire MUX_AB;		// TODO
 	
+	// G3 (374) TODO
+	always @(posedge 1'bz)
+	begin
+		// nOE seems used !
+		//{P11N11_A, P10N10_A} <= X_POS;	// Should come from PBUS
+	end
 	
-	// 1 pixel offset generator:
-	assign P10_A = 4'bzzzz;	// TODO
-	assign N10_A = P10_A;
+	//assign PLUS_ONE = ~?;
 	
-	assign P10_C0 = G5_8;	// TODO
-	assign N10_C0 = G5_8;	// TODO
+	assign {P10_C4, P10_OUT} = P10N10_A + PLUS_ONE;
+	assign P11_OUT = P11N11_A + P10_C4;		// P11_C4 apparently not used
 	
-	assign {P10_C4, P10_OUT} = P10_A + P10_C0;
-	assign {N10_C4, N10_OUT} = N10_A + N10_C0;
+	assign {N10_C4, N10_OUT} = P10N10_A + PLUS_ONE;
+	assign N11_OUT = P11N11_A + N10_C4;		// N11_C4 apparently not used
 	
+	// P10 carries to P11
+	// PRELOAD_PLUS_A = {P11_OUT, P10_OUT};
+	// N10 carries to N11
+	// PRELOAD_PLUS_B = {N11_OUT, N10_OUT};
 	
-	assign P11_A = 4'bzzzz;	// TODO
-	assign N11_A = P11_A;
+	// K2 TODO
+	//assign K2_4 = K2_1 ? 1'b1 : K2_2;
+	//assign K2_7 = K2_1 ? K2_6 : 1'b1;
+	//assign K2_9 = K2_1 ? K2_10 : 1'b1;
+	//assign K2_12 = K2_1 ? 1'b1 : K2_14;
 	
-	assign P11_C0 = P10_C4;
-	assign N11_C0 = N10_C4;
-	
-	assign {P11_C4, P11_OUT} = P11_A + P11_C0;		// P11_C4 apparently not used
-	assign {N11_C4, N11_OUT} = N11_A + N11_C0;		// N11_C4 apparently not used
+	// K5:C
+	//assign nLOAD_EVEN_A = K2_7 & K2_12;
 	
 	// Counters:
-	hc669 P13(CLK_EVEN_A, 1'b0, nLOAD_EVEN_A, UP_EVEN_A, P10_OUT, LB_EVEN_B_ADDR[3:0], P13_CARRY);
-	hc669 P12(CLK_EVEN_A, P13_CARRY, nLOAD_EVEN_A, UP_EVEN_A, P11_OUT, LB_EVEN_B_ADDR[7:4], );	// Carry apparently unused
-	hc669 N13(CLK_EVEN_B, 1'b0, nLOAD_EVEN_B, UP_EVEN_B, N10_OUT, LB_EVEN_A_ADDR[3:0], N13_CARRY);
-	hc669 N12(CLK_EVEN_B, N13_CARRY, nLOAD_EVEN_B, UP_EVEN_B, N11_OUT, LB_EVEN_A_ADDR[7:4], );	// Carry apparently unused
+	hc669_dual P13P12(CLK_EVEN_A, nLOAD_EVEN_A, UP_EVEN_A, {P11_OUT, P10_OUT}, LB_EVEN_B_ADDR[7:0]);
+	hc669_dual N13N12(CLK_EVEN_B, nLOAD_EVEN_B, UP_EVEN_B, {N11_OUT, N10_OUT}, LB_EVEN_A_ADDR[7:0]);
+	hc669_dual K12L13(CLK_EVEN_A, nLOAD_EVEN_A, UP_EVEN_A, {P11N11_A, P10N10_A} , LB_ODD_B_ADDR[7:0]);	// ?
+	hc669_dual L12M13(CLK_EVEN_B, nLOAD_EVEN_B, UP_EVEN_B, {P11N11_A, P10N10_A} , LB_ODD_A_ADDR[7:0]);	// ?
 
-	hc669 K12(CLK_EVEN_A, 1'b0, nLOAD_EVEN_A, UP_EVEN_A, P10_A, LB_ODD_B_ADDR[3:0], K12_CARRY);
-	hc669 L13(CLK_EVEN_A, K12_CARRY, nLOAD_EVEN_A, UP_EVEN_A, P11_A, LB_ODD_B_ADDR[7:4], );	// Carry apparently unused
-	hc669 L12(CLK_EVEN_B, 1'b0, nLOAD_EVEN_B, UP_EVEN_B, P10_A, LB_ODD_A_ADDR[3:0], L12_CARRY);
-	hc669 M13(CLK_EVEN_B, L12_CARRY, nLOAD_EVEN_B, UP_EVEN_B, P11_A, LB_ODD_A_ADDR[7:4], );	// Carry apparently unused
-	
 	// M12:
 	assign RBA = BUFF_FLIP ? CLK_CLEAR : 1'b0;
 	assign RBB = BUFF_FLIP ? 1'b0 : CLK_CLEAR;
@@ -142,21 +153,16 @@ module neo_b1(
 		SPR_PAL_REG <= PBUS[23:16];	// SPR_PAL should be part of P_BUS
 	end
 	
-	// TODO: Z state in read mode
-	assign LB_EVEN_A_DATA = {P18_OUT, P20_OUT};
-	assign LB_EVEN_B_DATA = {P19_OUT, P21_OUT};
-	assign LB_ODD_A_DATA = {M18_OUT, N18_OUT};
-	assign LB_ODD_B_DATA = {M19_OUT, N19_OUT};
-	// HC367s - 6'b111111 are caused by pullups (see PCB), allows for clearing
-	assign P18_OUT = nOE_P18P20 ? 6'b111111 : SPR_PAL_REG[7:2];
-	assign P20_OUT = nOE_P18P20 ? 6'b111111 : {SPR_PAL_REG[1:0], GAD[1], GAD[0], GAD[3], GAD[2]};
-	assign P19_OUT = nOE_P19P21 ? 6'b111111 : SPR_PAL_REG[7:2];
-	assign P21_OUT = nOE_P19P21 ? 6'b111111 : {SPR_PAL_REG[1:0], GAD[1], GAD[0], GAD[3], GAD[2]};
+	// J6 (174) TODO
+	always @(posedge 1'bz)
+		FIX_PAL_REG <= PBUS[19:16];	// FIX_PAL should be part of P_BUS
 	
-	assign M18_OUT = nOE_M18N18 ? 6'b111111 : SPR_PAL_REG[7:2];
-	assign N18_OUT = nOE_M18N18 ? 6'b111111 : {SPR_PAL_REG[1:0], GBD[1], GBD[0], GBD[3], GBD[2]};
-	assign M19_OUT = nOE_M19N19 ? 6'b111111 : SPR_PAL_REG[7:2];
-	assign N19_OUT = nOE_M19N19 ? 6'b111111 : {SPR_PAL_REG[1:0], GBD[1], GBD[0], GBD[3], GBD[2]};
+	// TODO: Z state in read mode
+	// HC367s - 12'b111111111111 are caused by pullups (see PCB), allows for clearing
+	assign LB_EVEN_A_DATA = nOE_P18P20 ? 12'b111111111111 : {SPR_PAL_REG, GAD[1], GAD[0], GAD[3], GAD[2]};
+	assign LB_EVEN_B_DATA = nOE_P19P21 ? 12'b111111111111 : {SPR_PAL_REG, GAD[1], GAD[0], GAD[3], GAD[2]};
+	assign LB_ODD_A_DATA = nOE_M18N18 ? 12'b111111111111 : {SPR_PAL_REG, GBD[1], GBD[0], GBD[3], GBD[2]};
+	assign LB_ODD_B_DATA = nOE_M19N19 ? 12'b111111111111 : {SPR_PAL_REG, GBD[1], GBD[0], GBD[3], GBD[2]};
 	
 	// ORs
 	assign nOE_P18P20 = RBA | nWE_EVEN_A;
@@ -164,15 +170,15 @@ module neo_b1(
 	assign nOE_M18N18 = RBA | nWE_ODD_A;
 	assign nOE_M19N19 = RBB | nWE_ODD_B;
 	
+	// P6, goes in LSPC
+	//assign nODD_WE = ~(DOTB & N5_2);
+	//assign nEVEN_WE = ~(DOTA & N5_2);
+	
 	// N6 quad mux
 	assign nWE_ODD_A = BUFF_FLIP ? nODD_WE : nCLEAR_WE;
 	assign nWE_ODD_B = BUFF_FLIP ? nCLEAR_WE : nODD_WE;
 	assign nWE_EVEN_A = BUFF_FLIP ? nEVEN_WE : nCLEAR_WE;
 	assign nWE_EVEN_B = BUFF_FLIP ? nCLEAR_WE : nEVEN_WE;
-	
-	// NANDs TODO
-	assign nODD_WE = 1'bz;
-	assign nEVEN_WE = 1'bz;
 	
 	// J5 TODO
 	assign nCLEAR_WE = 1'bz;
@@ -182,21 +188,17 @@ module neo_b1(
 	
 	// L5 TODO
 	always @(posedge 1'bz)
-	begin
-		// Is nMR used ?
 		FIXD_REG_A <= FIXD;
-	end
 	
 	// M5 TODO
 	always @(posedge 1'bz)
-	begin
-		// Is nMR used ?
 		FIXD_REG_B <= FIXD_REG_A;
-	end
 	
 	// M4 Odd/even tile pixel demux
 	assign FIX_COLOR = nAB ? {FIXD_REG_B[7], FIXD_REG_B[5], FIXD_REG_B[3], FIXD_REG_B[1]} :
 										{FIXD_REG_B[6], FIXD_REG_B[4], FIXD_REG_B[2], FIXD_REG_B[0]};
+	// N4 & M6
+	assign nSPR_FIX_SW = |{FIX_COLOR};
 									
 	// K15 & L15 Sprite color bits mux
 	assign SPR_COLOR = (MUX_AB == 2'b00) ? LB_EVEN_B_DATA[3:0] :
@@ -213,13 +215,6 @@ module neo_b1(
 							(MUX_AB == 2'b10) ? LB_EVEN_A_DATA[11:4] :
 							LB_ODD_A_DATA[11:4];
 	
-	// J6 (174) TODO
-	always @(posedge 1'bz)
-	begin
-		// Is nMR used ?
-		FIX_PAL_REG <= PBUS[19:16];	// FIX_PAL should be part of P_BUS
-	end
-	
 	// H12 & H9 Sprite/fix palette bits mux
 	assign PAL = nSPR_FIX_SW ? {4'b0000, FIX_PAL_REG} : SPR_PAL;
 	
@@ -229,9 +224,6 @@ module neo_b1(
 		// Is nMR used ?
 		PA <= {PAL, COLOR};
 	end
-	
-	// Certainly comes from 2, muxed 4-input OR with M4 nAB TODO
-	assign nSPR_FIX_SW = 1'bz;
 
 	
 	// --------------------------------------------------------------------------------
