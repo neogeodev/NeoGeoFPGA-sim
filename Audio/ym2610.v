@@ -8,8 +8,8 @@ module ym2610(
 	input [1:0] SDA,
 	output nIRQ,
 	input nCS,
-	input nWR,
-	input nRD,
+	input nWR_RAW,
+	input nRD_RAW,
 	
 	inout [7:0] SDRAD,
 	output [9:8] SDRA_L,
@@ -25,165 +25,142 @@ module ym2610(
 	output SH1, SH2, OP0, PHI_M	// YM3016 stuff
 );
 
-	// Timer
-	reg [9:0] YMTIMER_TA_LOAD;
-	reg [7:0] YMTIMER_TB_LOAD;
-	reg [7:0] YMTIMER_CONFIG;
-
-	// SSG
-	reg [11:0] SSG_FREQ_A;
-	reg [11:0] SSG_FREQ_B;
-	reg [11:0] SSG_FREQ_C;
-	reg [4:0] SSG_NOISE;
-	reg [5:0] SSG_EN;
-	reg [4:0] SSG_VOL_A;
-	reg [4:0] SSG_VOL_B;
-	reg [4:0] SSG_VOL_C;
-	reg [15:0] SSG_ENV_FREQ;
-	reg [3:0] SSG_ENV;
-	
-	// FM
-	reg [3:0] FM_LFO;
-	reg [7:0] FM_KEYON;
-	reg [6:0] FM_DTMUL[3:0];
-	reg [6:0] FM_TL[3:0];
-	reg [7:0] FM_KSAR[3:0];
-	reg [7:0] FM_AMDR[3:0];
-	reg [4:0] FM_SR[3:0];
-	reg [7:0] FM_SLRR[3:0];
-	reg [3:0] FM_SSGEG[3:0];
-	reg [13:0] FM_FNUM13;
-	reg [13:0] FM_FNUM24;
-	reg [13:0] FM_2FNUM13;
-	reg [13:0] FM_2FNUM24;
-	reg [5:0] FM_FBALGO13;
-	reg [5:0] FM_FBALGO24;
-	reg [7:0] FM_PAN13;
-	reg [7:0] FM_PAN24;
-	
-	// ADPCM-A
-	reg [7:0] PCMA_KEYON;
-	reg [5:0] PCMA_MVOL;
-	reg [7:0] PCMA_VOLPAN[5:0];
-	reg [15:0] PCMA_START[5:0];
-	reg [15:0] PCMA_STOP[5:0];
-	
-	// ADPCM-B
-	reg [7:0] PCMB_TRIG;
-	reg [7:6] PCMB_PAN;
-	reg [15:0] PCMB_START;
-	reg [15:0] PCMB_STOP;
-	reg [15:0] PCMB_DELTA;
-	reg [7:0] PCMB_VOL;
-	reg [7:0] PCM_FLAGS;
+	// nCS gating - Not sure if it's that simple
+	assign nWR = nCS | nWR_RAW;
+	assign nRD = nCS | nRD_RAW;
 	
 	// Internal
-	reg [7:0] REG1_ADDR;
-	reg [7:0] REG2_ADDR;
-	wire [2:0] PCMA_CH;
+	reg P1;						// Internal clock
+	reg BUSY;
+	reg [1:0] BUSY_MMR_SR;	// For edge detection
+	reg nWR_COPY;
+	reg [1:0] ADDR_COPY;
+	reg [7:0] DATA_COPY;
+	reg nWRITE_S;
+	reg [1:0] ADDR_S;
+	reg [7:0] DATA_S;
 	
-	assign PCMA_CH = REG2_ADDR[2:0];
+	// Timer
+	wire [9:0] YMTIMER_TA_LOAD;
+	wire [7:0] YMTIMER_TB_LOAD;
+	wire [7:0] YMTIMER_CONFIG;
+
+	// SSG
+	wire [11:0] SSG_FREQ_A;
+	wire [11:0] SSG_FREQ_B;
+	wire [11:0] SSG_FREQ_C;
+	wire [4:0] SSG_NOISE;
+	wire [5:0] SSG_EN;
+	wire [4:0] SSG_VOL_A;
+	wire [4:0] SSG_VOL_B;
+	wire [4:0] SSG_VOL_C;
+	wire [15:0] SSG_ENV_FREQ;
+	wire [3:0] SSG_ENV;
 	
-	// DEBUG begin
-	always @(posedge nWR)
+	// FM
+	wire [3:0] FM_LFO;
+	wire [7:0] FM_KEYON;
+	wire [6:0] FM_DTMUL[3:0];
+	wire [6:0] FM_TL[3:0];
+	wire [7:0] FM_KSAR[3:0];
+	wire [7:0] FM_AMDR[3:0];
+	wire [4:0] FM_SR[3:0];
+	wire [7:0] FM_SLRR[3:0];
+	wire [3:0] FM_SSGEG[3:0];
+	wire [13:0] FM_FNUM13;
+	wire [13:0] FM_FNUM24;
+	wire [13:0] FM_2FNUM13;
+	wire [13:0] FM_2FNUM24;
+	wire [5:0] FM_FBALGO13;
+	wire [5:0] FM_FBALGO24;
+	wire [7:0] FM_PAN13;
+	wire [7:0] FM_PAN24;
+	
+	// ADPCM-A
+	wire [7:0] PCMA_KEYON;
+	wire [5:0] PCMA_MVOL;
+	wire [7:0] PCMA_VOLPAN_A;
+	wire [7:0] PCMA_VOLPAN_B;
+	wire [7:0] PCMA_VOLPAN_C;
+	wire [7:0] PCMA_VOLPAN_D;
+	wire [7:0] PCMA_VOLPAN_E;
+	wire [7:0] PCMA_VOLPAN_F;
+	wire [15:0] PCMA_START_A;
+	wire [15:0] PCMA_START_B;
+	wire [15:0] PCMA_START_C;
+	wire [15:0] PCMA_START_D;
+	wire [15:0] PCMA_START_E;
+	wire [15:0] PCMA_START_F;
+	wire [15:0] PCMA_STOP_A;
+	wire [15:0] PCMA_STOP_B;
+	wire [15:0] PCMA_STOP_C;
+	wire [15:0] PCMA_STOP_D;
+	wire [15:0] PCMA_STOP_E;
+	wire [15:0] PCMA_STOP_F;
+	
+	// ADPCM-B
+	wire [7:0] PCMB_TRIG;
+	wire [7:6] PCMB_PAN;
+	wire [15:0] PCMB_START;
+	wire [15:0] PCMB_STOP;
+	wire [15:0] PCMB_DELTA;
+	wire [7:0] PCMB_VOL;
+	wire [7:0] PCM_FLAGS;
+	
+	// Internal clock generation
+	// assign RESET = !nRESET;
+	always @(posedge PHI_S or negedge nRESET)
 	begin
-		if (!(nCS | ~nRD))
+		if (!nRESET)
+			P1 <= 1'b0;
+		else
+			P1 <= ~P1;
+	end
+	
+	// CPU interface
+	always @(posedge PHI_S)
+	begin
+		if (!nRESET)
 		begin
-			if (!SDA[0])
+			BUSY <= 1'b0;
+		end
+		else
+		begin
+			BUSY_MMR_SR <= {BUSY_MMR_SR[0], BUSY_MMR};
+			if (!nWR && !BUSY)
 			begin
-				if (!SDA[1])
-					$display("YM2610 part A address register %H", SDD);
-				else
-					$display("YM2610 part B address register %H", SDD);
+				// Do write
+				BUSY <= 1'b1;
+				nWR_COPY <= 1'b0;
+				ADDR_COPY <= SDA;
+				DATA_COPY <= SDD;
 			end
 			else
 			begin
-				if (!SDA[1])
-					$display("YM2610 part A set register %H to %H", REG1_ADDR, SDD);
-				else
-					$display("YM2610 part B set register %H to %H", REG2_ADDR, SDD);
-			end
-		end
-	end
-	// DEBUG end
-	
-	always @(nWR, nCS, SDD)
-	begin
-		if (!(nWR | nCS | ~nRD))
-		begin
-			// CPU write
-			if (!SDA[0])			// Set register address
-			begin
-				if (!(SDA[1]))		// Common address register for both zones ?
-					REG1_ADDR <= SDD;
-				else
-					REG2_ADDR <= SDD;
-			end
-			else						// Set register data
-			begin
-				if (!(SDA[1]))
-				begin
-					case (REG1_ADDR)
-						8'h00: SSG_FREQ_A[7:0] <= SDD;
-						8'h01: SSG_FREQ_A[11:8] <= SDD[3:0];
-						8'h02: SSG_FREQ_B[7:0] <= SDD;
-						8'h03: SSG_FREQ_B[11:8] <= SDD[3:0];
-						8'h04: SSG_FREQ_C[7:0] <= SDD;
-						8'h05: SSG_FREQ_C[11:8] <= SDD[3:0];
-						8'h06: SSG_NOISE <= SDD[4:0];
-						8'h07: SSG_EN <= SDD[5:0];
-						8'h08: SSG_VOL_A <= SDD[4:0];
-						8'h09: SSG_VOL_B <= SDD[4:0];
-						8'h0A: SSG_VOL_C <= SDD[4:0];
-						8'h0B: SSG_ENV_FREQ[7:0] <= SDD;
-						8'h0C: SSG_ENV_FREQ[15:8] <= SDD;
-						8'h0D: SSG_ENV <= SDD[4:0];
-	
-						8'h10: PCMB_TRIG <= SDD;
-						8'h11: PCMB_PAN <= SDD[7:6];
-						8'h12: PCMB_START[7:0] <= SDD;
-						8'h13: PCMB_START[15:8] <= SDD;
-						8'h14: PCMB_STOP[7:0] <= SDD;
-						8'h15: PCMB_STOP[15:8] <= SDD;
-						8'h19: PCMB_DELTA[7:0] <= SDD;
-						8'h1A: PCMB_DELTA[15:8] <= SDD;
-						8'h1B: PCMB_VOL <= SDD;
-						8'h1C: PCM_FLAGS <= SDD;
-						
-						8'h22: FM_LFO <= SDD[3:0];
-						8'h24: YMTIMER_TA_LOAD[7:0] <= SDD;
-						8'h25: YMTIMER_TA_LOAD[9:8] <= SDD[1:0];
-						8'h26: YMTIMER_TB_LOAD <= SDD;
-						8'h27: YMTIMER_CONFIG <= SDD;
-						
-						// FM: Todo
-						
-						// Default needed
-					endcase
-				end
-				else
-				begin
-					casez (REG2_ADDR)
-						8'h00: PCMA_KEYON <= SDD;
-						8'h01: PCMA_MVOL <= SDD[5:0];
-						8'b00001zzz: PCMA_VOLPAN[PCMA_CH] <= SDD;
-						8'b00010zzz: PCMA_START[PCMA_CH][7:0] <= SDD;
-						8'b00011zzz: PCMA_START[PCMA_CH][15:8] <= SDD;
-						8'b00100zzz: PCMA_STOP[PCMA_CH][7:0] <= SDD;
-						8'b00101zzz: PCMA_STOP[PCMA_CH][15:8] <= SDD;
-						
-						// Default needed
-					endcase
-				end
+				if (BUSY_MMR) nWR_COPY <= 1'b1;
+				if (BUSY && BUSY_MMR_SR == 2'b10) nWR_COPY <= 1'b1;
 			end
 		end
 	end
 	
+	always @(posedge P1)
+		{nWRITE_S, ADDR_S, DATA_S} <= {nWR_COPY, ADDR_COPY, DATA_COPY};
+
+   ym_regs 	YMREGS(PHI_S, nRESET, nWRITE_S, ADDR_S, DATA_S, BUSY_MMR,
+						SSG_FREQ_A, SSG_FREQ_B, SSG_FREQ_C, SSG_NOISE, SSG_EN, SSG_VOL_A, SSG_VOL_B, SSG_VOL_C,
+						SSG_ENV_FREQ, SSG_ENV,
+						YMTIMER_TA_LOAD, YMTIMER_TB_LOAD, YMTIMER_CONFIG,
+						PCMA_KEYON, PCMA_MVOL,
+						PCMA_VOLPAN_A, PCMA_VOLPAN_B, PCMA_VOLPAN_C, PCMA_VOLPAN_D, PCMA_VOLPAN_E, PCMA_VOLPAN_F,
+						PCMA_START_A, PCMA_START_B, PCMA_START_C, PCMA_START_D, PCMA_START_E, PCMA_START_F,
+						PCMA_STOP_A, PCMA_STOP_B, PCMA_STOP_C, PCMA_STOP_D, PCMA_STOP_E, PCMA_STOP_F,
+						PCMB_TRIG, PCMB_PAN, PCMB_START, PCMB_STOP, PCMB_DELTA, PCMB_VOL, PCM_FLAGS
+						);
 	ym_timer YMTIMER(PHI_S, YMTIMER_TA_LOAD, YMTIMER_TB_LOAD, YMTIMER_CONFIG, nIRQ);
-	ym_ssg YMSSG(PHI_S, ANA, SSG_FREQ_A, SSG_FREQ_B, SSG_FREQ_C, SSG_NOISE, SSG_EN, SSG_VOL_A, SSG_VOL_B, SSG_VOL_C,
+	ym_ssg 	YMSSG(PHI_S, ANA, SSG_FREQ_A, SSG_FREQ_B, SSG_FREQ_C, SSG_NOISE, SSG_EN, SSG_VOL_A, SSG_VOL_B, SSG_VOL_C,
 						SSG_ENV_FREQ, SSG_ENV);
-	//ym_fm YMFM(PHI_S);
-	ym_pcma YMPCMA(PHI_S, SDRAD, SDRA_L, SDRA_U, SDRMPX, nSDROE);
-	ym_pcmb YMPCMB(PHI_S, SDPAD, SDPA, SDPMPX, nSDPOE);
+	ym_fm 	YMFM(PHI_S);
+	ym_pcma 	YMPCMA(PHI_S, SDRAD, SDRA_L, SDRA_U, SDRMPX, nSDROE);
+	ym_pcmb 	YMPCMB(PHI_S, SDPAD, SDPA, SDPMPX, nSDPOE);
 
 endmodule

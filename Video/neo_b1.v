@@ -171,6 +171,7 @@ module neo_b1(
 	assign nOE_M19N19 = RBB | nWE_ODD_B;
 	
 	// P6, goes in LSPC
+	wire nODD_WE, nEVEN_WE;
 	//assign nODD_WE = ~(DOTB & N5_2);
 	//assign nEVEN_WE = ~(DOTA & N5_2);
 	
