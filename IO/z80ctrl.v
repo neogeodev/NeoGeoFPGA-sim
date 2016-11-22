@@ -14,13 +14,15 @@ module z80ctrl(
 	output nSDZ80CLR,				// To NEO-C1
 	output nSDROM,
 	output nSDMRD, nSDMWR,
-	output SDRD0, SDRD1,
+	output nSDRD0, nSDRD1,
 	output n2610CS,
 	output n2610RD, n2610WR,
 	output nZRAMCS
 );
 
 	reg nNMI_EN;
+	wire nIORD, nIOWR;
+	wire nNMI_SET, nNMI_RESET;
 	
 	// $0000~$F7FF: ROM
 	// $F800~$FFFF: RAM

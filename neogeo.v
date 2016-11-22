@@ -5,8 +5,7 @@
 // furrtek, Charles MacDonald, Kyuusaku, freem and neogeodev contributors ~ 2016
 // https://github.com/neogeodev/NeoGeoFPGA-sim
 
-// Todo: Z80 controller (NEO-D0)
-// Todo: connect P1_OUT and P2_OUT
+// Todo: Palette RAM CPU access (see alpha68k PCB)
 // Todo: VPA for interrupt ACK (NEO-C1)
 // Todo: Check watchdog timing
 
@@ -166,10 +165,10 @@ module neogeo(
 	// SFIX / Cart FIX switch
 	assign FIXD = nSYSTEM ? FIXD_SFIX : FIXD_CART;
 	
-	ym2610 YM(CLK_8M, nRESET, SDD, SDA[1:0], nZ80INT, n2610CS, n2610WR, n2610RD, SDRAD, SDRA_L, SDRA_U, SDRMPX, nSDROE,
-					SDPAD, SDPA, SDPMPX, nSDPOE, ANA, SH1, SH2, OP0, PHI_M);
+	ym2610 YM(CLK_8M, nRESET, SDD, SDA[1:0], nZ80INT, n2610CS, n2610WR, n2610RD, SDRAD, {SDRA_U, SDRA_L}, SDRMPX,
+				nSDROE, SDPAD, SDPA, SDPMPX, nSDPOE, ANA, SH1, SH2, OP0, PHI_S);
 	
-	ym2i2s YM2I2S(nRESET, CLK_I2S, ANA, SH1, SH2, OP0, PHI_M, I2S_MCLK, I2S_BICK, I2S_SDTI, I2S_LRCK);
+	ym2i2s YM2I2S(nRESET, CLK_I2S, ANA, SH1, SH2, OP0, PHI_S, I2S_MCLK, I2S_BICK, I2S_SDTI, I2S_LRCK);
 	
 	// MVS only
 	upd4990 RTC(CLK_RTC, 1'b1, 1'b1, RTC_CLK, RTC_DIN, RTC_STROBE, RTC_TP, RTC_DOUT);

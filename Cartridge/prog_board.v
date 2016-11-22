@@ -31,13 +31,13 @@ module prog_board(
 	
 	//assign nPORTOE = nPORTOEL & nPORTOEU;
 	
-	assign nROMWAIT = 1'b1;
+	assign nROMWAIT = 1'b1;		// Waitstate configuration
 	assign nPWAIT0 = 1'b1;
 	assign nPWAIT1 = 1'b1;
-	assign PDTACK = 1'b1;	// ?
+	assign PDTACK = 1'b1;
 	
 	// Joy Joy Kid doesn't use PCM
-	//pcm PCM(RAD, RA_L, RA_U, RMPX, PAD, PA, PMPX, V1_ADDR, V2_ADDR);
+	//pcm PCM(CLK_68KCLKB, nSDROE, RMPX, nSDPOE, PMPX, RAD, RA_L, RA_U, PAD, PA, V_DATA, V_ADDR);
 	
 	rom_p1 P1(M68K_ADDR[18:1], M68K_DATA, M68K_ADDR[19], nROMOE);
 	
@@ -47,24 +47,18 @@ module prog_board(
 	rom_v1 V1(V1_ADDR[18:0], RAD, nROE);
 	rom_v2 V2(V2_ADDR[18:0], PAD, nPOE);
 	
-	// V ROMs address latches
-	assign nRMPX = ~RMPX;
-	assign nPMPX = ~PMPX;
 	
-	always @(posedge RMPX or posedge nRMPX)
-	begin
-		if (RMPX)
-			V1_ADDR[9:0] <= {RA_L[9:8], RAD[7:0]};
-		else
-			V1_ADDR[23:10] <= {RA_U[23:20], RA_L[9:8], RAD[7:0]};
-	end
-	
-	always @(posedge PMPX or posedge nPMPX)
-	begin
-		if (PMPX)
-			V2_ADDR[11:0] <= {PA[11:8], PAD[7:0]};
-		else
-			V2_ADDR[23:12] <= {PA[11:8], PAD[7:0]};
-	end
+	// V ROMs address latches (discrete)
+	always @(posedge RMPX)
+		V1_ADDR[9:0] <= {RA_L[9:8], RAD};
+
+	always @(negedge RMPX)
+		V1_ADDR[23:10] <= {RA_U[23:20], RA_L[9:8], RAD};
+
+	always @(posedge PMPX)
+		V2_ADDR[11:0] <= {PA[11:8], PAD};
+		
+	always @(negedge PMPX)
+		V2_ADDR[23:12] <= {PA[11:8], PAD};
 	
 endmodule

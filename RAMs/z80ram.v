@@ -21,13 +21,13 @@ module z80ram(
 	end
 
 	assign #100 DATAOUT = RAMDATA[ADDR];
-	assign DATA = (!nCE && !nOE) ? DATAOUT : 8'bzzzzzzzz;
+	assign DATA = (!nCE && !nOE && nWE) ? DATAOUT : 8'bzzzzzzzz;
 
-	always @(nCE or nWE)
+	always @(*)
 		if (!nCE && !nWE)
 			#20 RAMDATA[ADDR] <= DATA;
 	
-	always @(nWE or nCE)
+	always @(*)
 		if (!nWE && !nOE)
 			$display("ERROR: Z80RAM: nOE and nWE are both active !");
 

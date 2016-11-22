@@ -1,29 +1,37 @@
 `timescale 1ns/1ns
 
 module hshrink(
-	input [3:0] SHRINK,
-	input [3:0] N,
+	input [3:0] SHRINK,	// Shrink value
+	input [3:0] N,			// Pixel number
 	output USE
 );
 
-	// Thanks to MAME and Logic Friday :)
-	// Todo: Is this really a LUT in LSPC ?
+	// Thanks MAME :)
 	
-	assign USE = 	(SHRINK == 15) ? &{N[2:0]} | N[3] :
-						(SHRINK == 14) ? &{N[3:1]} | &{N[3:2], N[0]} :
-						(SHRINK == 13) ? &{N[1:0]} | |{N[3:2]} :
-						(SHRINK == 12) ? N[3] & |{N[2:0]} :
-						(SHRINK == 11) ? |{N[3:0]} :
-						(SHRINK == 10) ? &{N[3:0]} :
-						(SHRINK == 9) ? (N[2] & |{N[1:0]}) | N[3] :
-						(SHRINK == 8) ? N[3] & (&{N[1:0]} | N[2]) :
-						(SHRINK == 7) ? 1'b1 :
-						(SHRINK == 6) ? N[3] :
-						(SHRINK == 5) ? &{N[2:1]} | N[3] :
-						(SHRINK == 4) ? &{N[3:1]} :
-						(SHRINK == 3) ? |{N[3:1]} :
-						(SHRINK == 2) ? &{N[3:2]} :
-						(SHRINK == 1) ? |{N[3:2]} :
-						N[3] & |{N[2:1]};
+	reg [15:0] BITMAP;
+	
+	always@(*)
+	begin
+		case (SHRINK)
+			4'h0: BITMAP <= 16'b0000000010000000;
+			4'h1: BITMAP <= 16'b0000100010000000;
+			4'h2: BITMAP <= 16'b0000100010001000;
+			4'h3: BITMAP <= 16'b0010100010001000;
+			4'h4: BITMAP <= 16'b0010100010001010;
+			4'h5: BITMAP <= 16'b0010101010001010;
+			4'h6: BITMAP <= 16'b0010101010101010;
+			4'h7: BITMAP <= 16'b1010101010101010;
+			4'h8: BITMAP <= 16'b1010101011101010;
+			4'h9: BITMAP <= 16'b1011101011101010;
+			4'hA: BITMAP <= 16'b1011101011101011;
+			4'hB: BITMAP <= 16'b1011101111101011;
+			4'hC: BITMAP <= 16'b1011101111101111;
+			4'hD: BITMAP <= 16'b1111101111101111;
+			4'hE: BITMAP <= 16'b1111101111111111;
+			4'hF: BITMAP <= 16'b1111111111111111;
+		endcase
+	end
+	
+	assign USE = BITMAP[N];
 
 endmodule

@@ -1,7 +1,7 @@
 `timescale 1ns/1ns
 
 module ym2610(
-	input PHI_S,
+	input PHI_M,
 	input nRESET,
 	
 	inout [7:0] SDD,
@@ -12,18 +12,21 @@ module ym2610(
 	input nRD_RAW,
 	
 	inout [7:0] SDRAD,
-	output [9:8] SDRA_L,
-	output [23:20] SDRA_U,
+	output [5:0] SDRA,
 	output SDRMPX, nSDROE,
 	
 	inout [7:0] SDPAD,
-	output [11:8] SDPA,
+	output [3:0] SDPA,
 	output SDPMPX, nSDPOE,
 	
 	output [5:0] ANA,					// How many levels ?
 	
-	output SH1, SH2, OP0, PHI_M	// YM3016 stuff
+	output SH1, SH2, OP0, PHI_S	// YM3016 output
 );
+
+	wire nRD, nWR;
+	wire BUSY_MMR;
+	wire clr_run_A, set_run_A, clr_run_B, set_run_B;
 
 	// nCS gating - Not sure if it's that simple
 	assign nWR = nCS | nWR_RAW;
@@ -39,11 +42,16 @@ module ym2610(
 	reg nWRITE_S;
 	reg [1:0] ADDR_S;
 	reg [7:0] DATA_S;
+	wire [15:0] ADPCM_OUT;
+	wire FLAG_A, FLAG_B;
+	reg [7:0] CLK_144_DIV;
+	wire TICK_144;
 	
 	// Timer
 	wire [9:0] YMTIMER_TA_LOAD;
 	wire [7:0] YMTIMER_TB_LOAD;
-	wire [7:0] YMTIMER_CONFIG;
+	wire [5:0] YMTIMER_CONFIG;
+	reg FLAG_A_S, FLAG_B_S;
 
 	// SSG
 	wire [11:0] SSG_FREQ_A;
@@ -78,43 +86,47 @@ module ym2610(
 	
 	// ADPCM-A
 	wire [7:0] PCMA_KEYON;
+	wire [7:0] PCMA_KEYOFF;
 	wire [5:0] PCMA_MVOL;
-	wire [7:0] PCMA_VOLPAN_A;
-	wire [7:0] PCMA_VOLPAN_B;
-	wire [7:0] PCMA_VOLPAN_C;
-	wire [7:0] PCMA_VOLPAN_D;
-	wire [7:0] PCMA_VOLPAN_E;
-	wire [7:0] PCMA_VOLPAN_F;
-	wire [15:0] PCMA_START_A;
-	wire [15:0] PCMA_START_B;
-	wire [15:0] PCMA_START_C;
-	wire [15:0] PCMA_START_D;
-	wire [15:0] PCMA_START_E;
-	wire [15:0] PCMA_START_F;
-	wire [15:0] PCMA_STOP_A;
-	wire [15:0] PCMA_STOP_B;
-	wire [15:0] PCMA_STOP_C;
-	wire [15:0] PCMA_STOP_D;
-	wire [15:0] PCMA_STOP_E;
-	wire [15:0] PCMA_STOP_F;
+	wire [7:0] PCMA_VOLPAN_A, PCMA_VOLPAN_B, PCMA_VOLPAN_C, PCMA_VOLPAN_D, PCMA_VOLPAN_E, PCMA_VOLPAN_F;
+	wire [15:0] PCMA_START_A, PCMA_START_B, PCMA_START_C, PCMA_START_D, PCMA_START_E, PCMA_START_F;
+	wire [15:0] PCMA_STOP_A, PCMA_STOP_B, PCMA_STOP_C, PCMA_STOP_D, PCMA_STOP_E, PCMA_STOP_F;
 	
 	// ADPCM-B
-	wire [7:0] PCMB_TRIG;
-	wire [7:6] PCMB_PAN;
-	wire [15:0] PCMB_START;
-	wire [15:0] PCMB_STOP;
+	wire [1:0] PCMB_PAN;
+	wire [15:0] PCMB_START_ADDR;
+	wire [15:0] PCMB_STOP_ADDR;
 	wire [15:0] PCMB_DELTA;
-	wire [7:0] PCMB_VOL;
-	wire [7:0] PCM_FLAGS;
+	wire [7:0] PCMB_TL;
+	wire PCMB_RESET, PCMB_REPEAT, PCMB_START;
+	
+	wire [7:0] ADPCM_FLAGS;
+	wire [5:0] PCMA_FLAGMASK;
+	wire PCMA_FLAGMASK_PCMB;
 	
 	// Internal clock generation
-	// assign RESET = !nRESET;
-	always @(posedge PHI_S or negedge nRESET)
+	always @(posedge PHI_M or negedge nRESET)
 	begin
 		if (!nRESET)
 			P1 <= 1'b0;
 		else
 			P1 <= ~P1;
+	end
+	
+	assign TICK_144 = (CLK_144_DIV == 143) ? 1'b1 : 1'b0;		// 143, not 0. Otherwise timers are goofy
+	
+	// TICK_144 gen (CLK/144)
+	always @(posedge PHI_M)
+	begin
+		if (!nRESET)
+			CLK_144_DIV <= 0;
+		else
+		begin
+			if (CLK_144_DIV < 143)	// / 12 / 12 = / 144
+				CLK_144_DIV <= CLK_144_DIV + 1'b1;
+			else
+				CLK_144_DIV <= 0;
+		end
 	end
 	
 	// CPU interface
@@ -138,29 +150,57 @@ module ym2610(
 			else
 			begin
 				if (BUSY_MMR) nWR_COPY <= 1'b1;
-				if (BUSY && BUSY_MMR_SR == 2'b10) nWR_COPY <= 1'b1;
+				if (BUSY && BUSY_MMR_SR == 2'b10) BUSY <= 1'b0;
 			end
 		end
 	end
 	
+
+	// Read registers
+	assign SDD = nRD ? 8'bzzzzzzzz : (SDA == 0) ? { BUSY, 5'h0, FLAG_B_S, FLAG_A_S } :	// 4: Timer status
+												(SDA == 1) ? 8'h0 :				// 5: SSG register data
+												(SDA == 2) ? ADPCM_FLAGS :		// 6: ADPCM flags
+												8'h0;		// 7: Nothing
+	
+	always @(posedge PHI_M) 
+		{ FLAG_B_S, FLAG_A_S } <= { FLAG_B, FLAG_A };
+	
 	always @(posedge P1)
 		{nWRITE_S, ADDR_S, DATA_S} <= {nWR_COPY, ADDR_COPY, DATA_COPY};
 
-   ym_regs 	YMREGS(PHI_S, nRESET, nWRITE_S, ADDR_S, DATA_S, BUSY_MMR,
+	ym_regs 		YMREGS(PHI_M, nRESET, nWRITE_S, ADDR_S, DATA_S, BUSY_MMR,
 						SSG_FREQ_A, SSG_FREQ_B, SSG_FREQ_C, SSG_NOISE, SSG_EN, SSG_VOL_A, SSG_VOL_B, SSG_VOL_C,
 						SSG_ENV_FREQ, SSG_ENV,
 						YMTIMER_TA_LOAD, YMTIMER_TB_LOAD, YMTIMER_CONFIG,
-						PCMA_KEYON, PCMA_MVOL,
+						clr_run_A, set_run_A, clr_run_B, set_run_B,
+						PCMA_KEYON, PCMA_KEYOFF, PCMA_MVOL,
 						PCMA_VOLPAN_A, PCMA_VOLPAN_B, PCMA_VOLPAN_C, PCMA_VOLPAN_D, PCMA_VOLPAN_E, PCMA_VOLPAN_F,
 						PCMA_START_A, PCMA_START_B, PCMA_START_C, PCMA_START_D, PCMA_START_E, PCMA_START_F,
 						PCMA_STOP_A, PCMA_STOP_B, PCMA_STOP_C, PCMA_STOP_D, PCMA_STOP_E, PCMA_STOP_F,
-						PCMB_TRIG, PCMB_PAN, PCMB_START, PCMB_STOP, PCMB_DELTA, PCMB_VOL, PCM_FLAGS
+						PCMA_FLAGMASK, PCMA_FLAGMASK_PCMB,
+						PCMB_RESET, PCMB_REPEAT, PCMB_START,
+						PCMB_PAN, PCMB_START_ADDR, PCMB_STOP_ADDR, PCMB_DELTA, PCMB_TL
 						);
-	ym_timer YMTIMER(PHI_S, YMTIMER_TA_LOAD, YMTIMER_TB_LOAD, YMTIMER_CONFIG, nIRQ);
-	ym_ssg 	YMSSG(PHI_S, ANA, SSG_FREQ_A, SSG_FREQ_B, SSG_FREQ_C, SSG_NOISE, SSG_EN, SSG_VOL_A, SSG_VOL_B, SSG_VOL_C,
+
+	ym_timers 	YMTIMER(PHI_M, TICK_144, nRESET, YMTIMER_TA_LOAD, YMTIMER_TB_LOAD, YMTIMER_CONFIG,
+						clr_run_A, set_run_A, clr_run_B, set_run_B, FLAG_A, FLAG_B, nIRQ);
+	
+	ym_ssg 		YMSSG(PHI_M, ANA, SSG_FREQ_A, SSG_FREQ_B, SSG_FREQ_C, SSG_NOISE, SSG_EN, SSG_VOL_A, SSG_VOL_B, SSG_VOL_C,
 						SSG_ENV_FREQ, SSG_ENV);
-	ym_fm 	YMFM(PHI_S);
-	ym_pcma 	YMPCMA(PHI_S, SDRAD, SDRA_L, SDRA_U, SDRMPX, nSDROE);
-	ym_pcmb 	YMPCMB(PHI_S, SDPAD, SDPA, SDPMPX, nSDPOE);
+	ym_fm 		YMFM(PHI_M);
+
+	ym_pcm 		YMPCM(PHI_M, TICK_144, nRESET,
+						PCMA_FLAGMASK, PCMA_FLAGMASK_PCMB,
+						ADPCM_FLAGS,
+						PCMA_KEYON, PCMA_KEYOFF,
+						PCMA_MVOL,
+						PCMA_VOLPAN_A, PCMA_VOLPAN_B, PCMA_VOLPAN_C, PCMA_VOLPAN_D, PCMA_VOLPAN_E, PCMA_VOLPAN_F,
+						PCMA_START_A, PCMA_STOP_A, PCMA_START_B, PCMA_STOP_B, PCMA_START_C, PCMA_STOP_C,
+						PCMA_START_D, PCMA_STOP_D, PCMA_START_E, PCMA_STOP_E, PCMA_START_F, PCMA_STOP_F,
+						SDRAD, SDRA, SDRMPX, nSDROE,
+						SDPAD, SDPA, SDPMPX, nSDPOE,
+						ADPCM_OUT,
+						PCMB_RESET, PCMB_REPEAT, PCMB_START,
+						PCMB_PAN, PCMB_START_ADDR, PCMB_STOP_ADDR, PCMB_DELTA, PCMB_TL);
 
 endmodule
