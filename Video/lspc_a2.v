@@ -20,7 +20,7 @@ module lspc_a2(
 	output PCK1, PCK2,
 	output [3:0] WE,
 	output [3:0] CK,
-	input SS1, SS2,
+	input SS1, SS2,					// Outputs ?
 	output nRESETP,
 	output SYNC,
 	output CHBL,
@@ -31,83 +31,103 @@ module lspc_a2(
 	output [8:0] HCOUNT				// TODO: REMOVE, only used for debug in videout and as a hack in B1
 );
 
-	parameter VIDEO_MODE = 0;			// NTSC
-	
 	assign HCOUNT = MAIN_CNT[10:2];	// TODO: REMOVE
+	
+
+	parameter VIDEO_MODE = 0;			// NTSC
+
+	/*
+		Slow cycle:
+		0000~6FFF: Sprites map
+		7000~7FFF: Fix map
+		
+		A14 A13 A12 A0
+		  x   x   x  0   Sprite tile
+		  x   x   x  1   Sprite attr
+	     1   1   1  x   Fix
+	*/
 
 	// Todo: Merge VRAM cycle counters together if possible ? Even with P bus ?
 	
-	wire [15:0] REG_LSPCMODE;
+	// Alpha68k stuff:
+	// M12:
+	assign RBA = nBFLIP ? 1'b0 : CLK_CLEAR;
+	assign RBB = nBFLIP ? CLK_CLEAR : 1'b0;
+	assign CLK_EVEN_B = nBFLIP ? nCLK_12M : CLK_CLEAR;
+	assign CLK_EVEN_A = nBFLIP ? CLK_CLEAR : nCLK_12M;
+	// J5
+	// SELJ5 comes from K5:A
+	assign CLK_CLEAR = SELJ5 ? nCLK_12M : TODO;
+	assign nCLEAR_WE = SELJ5 ? nCLK_12M : 1'b1;
+	always @(posedge SNKCLK_26)
+		BFLIP <= 1'bz;	// TODO
+	
+	// P6
+	assign nODD_WE = ~(DOTB & CLK_12M);
+	assign nEVEN_WE = ~(DOTA & CLK_12M);
+	// WSE signals to B1
+	assign nWE_ODD_A = nBFLIP ? nODD_WE : nCLEAR_WE;
+	assign nWE_ODD_B = nBFLIP ? nCLEAR_WE : nODD_WE;
+	assign nWE_EVEN_A = nBFLIP ? nEVEN_WE : nCLEAR_WE;
+	assign nWE_EVEN_B = nBFLIP ? nCLEAR_WE : nEVEN_WE;
 	
 	wire [8:0] VCOUNT;
-	//wire [8:0] HCOUNT;
-	
-	// Pixel timer
-	reg [31:0] TIMERLOAD;		// Reload value
-	reg [31:0] TIMER;				// Actual timer
-	reg [2:0] TIMERINT_MODE;	// Timer interrupt mode
-	reg TIMERINT_EN;				// Timer interrupt enable
-	reg TIMERSTOP;					// Timer pause in top and bottom of display in PAL mode (LSPC2)
 	
 	// VRAM CPU I/O
 	reg CPU_RW;										// Direction
 	reg CPU_VRAM_ZONE;							// Top bit of VRAM address (low/high indicator)
 	reg [14:0] CPU_VRAM_ADDR;
 	reg [14:0] CPU_VRAM_ADDRESS_BUFFER;
-	reg [15:0] REG_VRAMMOD;
 	reg [15:0] CPU_VRAM_WRITE_BUFFER;
 	wire [15:0] CPU_VRAM_READ_BUFFER_SCY;	// Are these all the same ?
 	wire [15:0] CPU_VRAM_READ_BUFFER_FCY;
 	wire [15:0] CPU_VRAM_READ_BUFFER;
 	
-	// Auto-animation
-	reg [7:0] AA_SPEED;			// Auto-animation speed
-	reg AA_DISABLE;				// Auto-animation disable
-	wire [2:0] AA_COUNT;			// Auto-animation counter
-	
+	wire [2:0] AA_COUNT;				// Auto-animation tile #
 	wire [2:0] SPR_TILE_NB_AA;		// SPR_ATTR_TILE_NB after auto-animation applied
-	wire VBLANK;
+	wire [1:0] SPR_ATTR_AA;			// Auto-animation config bits
+	wire [11:0] SPR_ATTR_SHRINK;
 	
-	wire [1:0] SPR_ATTR_AA;
+	wire VBLANK;
+	wire nVSYNC;
+	wire HSYNC;
 	
 	reg [3:0] SPR_PIXELCNT;				// Sprite render pixel counter for H-shrink
 	wire WR_PIXEL;
 	
 	wire [7:0] L0_DATA;
 	
-	wire nVSYNC;
-	wire HSYNC;
-	
 	wire [11:0] MAIN_CNT;
-	
-	wire [11:0] SPR_ATTR_SHRINK;
 	
 	wire [8:0] SPR_NB;
 	wire [4:0] SPR_TILEIDX;
-	wire [7:0] SPR_TILEPAL;
-	wire [1:0] SPR_TILE_AA;
 	wire [1:0] SPR_TILEFLIP;
+	
 	wire [19:0] SPR_TILE_NB;
+	wire [7:0] SPR_TILE_PAL;
 	
 	wire [11:0] FIX_TILE_NB;
-	wire [3:0] FIX_TILEPAL;
+	wire [3:0] FIX_TILE_PAL;
+
+	wire [16:0] FIX_ROM_ADDR;
+	wire [24:0] SPR_ROM_ADDR;
 	
-	wire [16:0] FIX_ADDR;
-	wire [24:0] SPR_ADDR;
+	wire [4:0] SPR_ROM_LINE;
 	
 	wire [7:0] SPR_XPOS;
-	wire [15:0] L0_ADDR;
+	wire [15:0] L0_ROM_ADDR;
 	
-	reg IRQ_S1, IRQ_R1, IRQ_S2, IRQ_R2, IRQ_R3;
 	wire IRQ_S3;
 	
 	
-	assign IRQ_S3 = VBLANK;		// To check
+	assign IRQ_S3 = VBLANK;			// To check
 	assign CLK_24MB = ~CLK_24M;
 	assign SYNC = nVSYNC ^ HSYNC;
 	
 	// Todo: Probably wrong:
 	assign CPU_VRAM_READ_BUFFER = CPU_VRAM_ZONE ? CPU_VRAM_READ_BUFFER_FCY : CPU_VRAM_READ_BUFFER_SCY;
+	
+	
 	
 	resetp RSTP(CLK_24M, nRESET, nRESETP);
 	
@@ -130,10 +150,11 @@ module lspc_a2(
 					CPU_VRAM_ZONE, CPU_RW);
 	
 	// This needs SPR_XPOS, L0_ADDR
-	p_cycle PCY(nRESET, CLK_24M, HSYNC, FIX_ADDR, FIX_TILEPAL, SPR_ADDR, SPR_TILEPAL, SPR_XPOS, L0_ADDR,
-					PCK1, PCK2, LOAD, S1H1, S2H1, nVCS, L0_DATA, {PBUS_IO, PBUS_OUT});
+	p_cycle PCY(nRESET, CLK_24M, HSYNC, FIX_ROM_ADDR, FIX_TILEPAL, SPR_ROM_ADDR, SPR_TILEPAL, SPR_XPOS, L0_ADDR,
+					PCK1, PCK2, LOAD, S1H1, nVCS, L0_DATA, {PBUS_IO, PBUS_OUT});
 	
 	autoanim AA(nRESET, VBLANK, AA_SPEED, SPR_TILE_NB[2:0], AA_DISABLE, SPR_ATTR_AA, SPR_TILE_NB_AA, AA_COUNT);
+	
 	hshrink HSHRINK(SPR_ATTR_SHRINK[11:8], SPR_PIXELCNT, WR_PIXEL);
 	
 	// - -------- ---10000 HCOUNT for first fix address latch would be 4 ?
@@ -144,152 +165,13 @@ module lspc_a2(
 	// 6: S2H1 changes, has 2 pixels
 	// 7: Nothing
 	
-	// Todo: Hack. Should just be HCOUNT[2:1]
-	assign FIX_ADDR = {FIX_TILE_NB, (HCOUNT[2:1] - 1'b1), VCOUNT[2:0]};
+	// Same as Alpha68k:
+	assign FIX_ROM_ADDR = {FIX_TILE_NB, HCOUNT[2:1], VCOUNT[2:0]};
+	assign S2H1 = FIX_ROM_ADDR[3];
 		
-	assign SPR_ADDR = {{SPR_TILE_NB[19:3],SPR_TILE_NB_AA}, 5'b00000};
-	// Todo: assign CA4 = SPR_ADDR[4]; ?
-	
-	// -------------------------------- Register access --------------------------------
-	
-	// Read
-	// Todo: See if 3'b000 is right (3'b111 ?)
-	assign REG_LSPCMODE = {VCOUNT, 3'b000, VIDEO_MODE, AA_COUNT};
-	
-	// Read
-	// Todo: See if M68K_ADDR[3] is used or not (msvtech.txt says no, MAME says yes)
-	// Todo: See if ~nLSPWE is used
-	assign M68K_DATA = (nLSPOE | ~nLSPWE) ? 16'bzzzzzzzzzzzzzzzz :
-								(M68K_ADDR[2] == 1'b0) ? CPU_VRAM_READ_BUFFER :		// $3C0000,$3C0002,$3C0008,$3C000A
-								(M68K_ADDR[1] == 1'b0) ? REG_VRAMMOD :					// 3C0004/3C000C
-								REG_LSPCMODE;													// 3C0006/3C000E
-	
-	// Write to $3C000C
-	always @(nLSPWE or nRESET)
-	begin
-		if (!nRESET)
-		begin
-			{IRQ_R3, IRQ_R2, IRQ_R1} <= 3'b111;		// Todo: Cold boot starts off with IRQ3
-			{IRQ_S2, IRQ_S1} <= 2'b00;
-		end
-		else
-		begin
-			// $3C000C: Interrupt ack
-			if ((!nLSPWE) && (M68K_ADDR[3:1] == 3'b110))
-				{IRQ_R3, IRQ_R2, IRQ_R1} <= M68K_DATA[2:0];
-			else
-				{IRQ_R3, IRQ_R2, IRQ_R1} <= 3'b000;
-		end
-	end
-	
-	
-	always @(negedge nLSPWE or negedge nRESET)	// ?
-	begin
-		if (!nRESET)
-		begin
-			// Something ?
-		end
-		else
-		begin
-			case (M68K_ADDR[3:1])
-				// $3C0000: Set address
-				3'b000 :
-				begin
-					// Read happens as soon as address is set (CPU access slot defaults to "read" all the time ?)
-					//$display("VRAM set address to 0x%H", M68K_DATA);	// DEBUG
-					{CPU_VRAM_ZONE, CPU_VRAM_ADDR} <= M68K_DATA;			// Ugly, probably simpler
-					CPU_VRAM_ADDRESS_BUFFER <= M68K_DATA;					// Ugly, probably simpler
-					CPU_RW <= 1'b1;		// To check: Default operation after address set is read ?
-				end
-				// $3C0002: Write data
-				3'b001 :
-				begin
-					//$display("VRAM write data 0x%H @ 0x%H", M68K_DATA, {CPU_VRAM_ZONE, CPU_VRAM_ADDR});	// DEBUG
-					CPU_VRAM_WRITE_BUFFER <= M68K_DATA;
-					CPU_VRAM_ADDRESS_BUFFER <= CPU_VRAM_ADDR;
-					CPU_VRAM_ADDR <= CPU_VRAM_ADDR + REG_VRAMMOD[14:0];	// Todo: Wrong, sign is used and addr MSB is kept
-					CPU_RW <= 1'b0;		// Operation: write
-				end
-				// $3C0004: Set modulo
-				3'b010 : 
-				begin
-					$display("VRAM set modulo to 0x%H", M68K_DATA);		// DEBUG
-					REG_VRAMMOD <= M68K_DATA;
-				end
-				// $3C0006: Set mode
-				3'b011 :
-				begin
-					$display("LSPC set mode to 0x%H", M68K_DATA);	// DEBUG
-					AA_SPEED <= M68K_DATA[15:8];
-					TIMERINT_MODE <= M68K_DATA[7:5];
-					TIMERINT_EN <= M68K_DATA[4];
-					AA_DISABLE <= M68K_DATA[3];
-					// Todo: is [2:0] registered or NC ?
-				end
-				// $3C0008: Set timer reload MSB
-				3'b100 :
-				begin
-					$display("LSPC set timer reload MSB to 0x%H", M68K_DATA);	// DEBUG
-					TIMERLOAD[31:16] <= M68K_DATA;
-				end
-				// $3C000A: Set timer reload LSB
-				3'b101 :
-				begin
-					$display("LSPC set timer reload LSB to 0x%H", M68K_DATA);	// DEBUG
-					TIMERLOAD[15:0] <= M68K_DATA;
-					// if (TIMERINT_MODE[0]) TIMER <= TIMERLOAD;
-				end
-				// $3C000C: Interrupt ack
-				3'b110 :
-				begin
-					$display("LSPC ack interrupt 0x%H", M68K_DATA[2:0]);	// DEBUG
-					// Done in combi. logic above
-				end
-				// $3C000E: Timer fix for PAL mode
-				3'b111 :
-				begin
-					$display("LSPC set timer stop (PAL) to %B", M68K_DATA[0]);	// DEBUG
-					TIMERSTOP <= M68K_DATA[0];
-				end
-			endcase
-		end
-	end
-
-	// -------------------------------- Timer counter --------------------------------
-	
-	//					PAL	PALSTOP	NTSC
-	// F8 ~ FF		0		0			0			011111000	011111111
-	// 100 ~ 10F	1		0			1			100000000	100001111
-	// 110 ~ 1EF	1		1			1			100010000	111101111
-	// 1F0 ~ 1FF	1		0			1			111110000	111111111
-	assign VPALSTOP = VIDEO_MODE & TIMERSTOP;
-	assign BORDER_TOP = ~(VCOUNT[7] + VCOUNT[6] + VCOUNT[5] + VCOUNT[4]);
-	assign BORDER_BOT = VCOUNT[7] & VCOUNT[6] & VCOUNT[5] & VCOUNT[4];
-	assign BORDERS = BORDER_TOP + BORDER_BOT;
-	assign nTIMERRUN = (VPALSTOP & BORDERS) | ~VCOUNT[8];
-	
-	// TIMERINT_MODE[1] is used in vblank !
-
-	// Pixel timer
-	always @(negedge MAIN_CNT[2] or negedge nRESET)		// posedge ? pixel clock
-	begin
-		if (!nRESET)
-		begin
-			TIMER <= 0;
-		end
-		else
-		begin
-			if (!nTIMERRUN)
-			begin
-				if (TIMER)
-					TIMER <= TIMER - 1'b1;
-				else
-				begin
-					//if (TIMERINT_EN) nIRQS[1] <= 1'b0;	// IRQ2 plz
-					if (TIMERINT_MODE[2]) TIMER <= TIMERLOAD;
-				end
-			end
-		end
-	end
+	// One address = 32bit of data = 8 pixels
+	// 16,0 17,1 18,2 19,3 ... 31,15
+	assign SPR_ROM_ADDR = {{SPR_TILE_NB[19:3], SPR_TILE_NB_AA}, SPR_ROM_LINE};
+	assign CA4 = SPR_ROM_ADDR[4];
 	
 endmodule

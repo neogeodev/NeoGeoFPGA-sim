@@ -3,54 +3,76 @@
 module p_cycle(
 	input nRESET,
 	input CLK_24M,
-	input HSYNC,
-	input [16:0] FIX_ADDR,
+	
+	input [16:0] FIX_ROM_ADDR,
 	input [3:0] FIX_PAL,
-	input [24:0] SPR_ADDR,
+	input [24:0] SPR_ROM_ADDR,
 	input [7:0] SPR_PAL,
+	
 	input [7:0] SPR_XPOS,
-	input [15:0] L0_ADDR,
+	input [15:0] L0_ROM_ADDR,
 	
 	output PCK1, PCK2,
 	output LOAD,
 	output S1H1, S2H1,
 	output reg nVCS,
 	output reg [7:0] L0_DATA,
+	
 	inout [23:0] PBUS
 );
 
-	reg [4:0] CYCLE_P;		// Both edges
-	
+	// L0_DATA is probably latched on LOAD posedge
+
+	reg [4:0] CYCLE_P;		// Both edges of 24M ?
+
 	reg [23:16] PBUS_U;		// inout
-	reg [15:0] PBUS_L;		// out
+	reg [15:0] PBUS_L;		// out only
 	
-	assign nCLK_24M = ~CLK_24M;
+	assign S_ADDR_OUT = {FIX_ROM_ADDR[4], FIX_ROM_ADDR[2:0], FIX_ROM_ADDR[16:5]};
+	assign C_ADDR_OUT = {SPR_ROM_ADDR[24:21], SPR_ROM_ADDR[3:0], FIX_ROM_ADDR[20:5]};
 	
 	assign PBUS = {PBUS_U, PBUS_L};
 
-	// UPDATED !
-	// 0,1
-	assign PCK1 = (CYCLE_P[4:1] == 4'b0000) ? 1'b0 : 1'b1;
-	// 16,17
-	assign PCK2 = (CYCLE_P[4:1] == 4'b1000) ? 1'b0 : 1'b1;
+	// CYCLE_P 0,1
+	assign PCK1 = (CYCLE_P[4:1] == 4'b0000) ? 1'b1 : 1'b0;
+	// CYCLE_P 16,17
+	assign PCK2 = (CYCLE_P[4:1] == 4'b1000) ? 1'b1 : 1'b0;
 	
-	// UPDATED !
-	// 13,14,15,16 and 29,30,31,0
-	assign LOAD = (CYCLE_P[4:0] == 5'b01101) ? 1'b1 :
-						(CYCLE_P[4:0] == 5'b01110) ? 1'b1 :
-						(CYCLE_P[4:0] == 5'b01111) ? 1'b1 :
-						(CYCLE_P[4:0] == 5'b10000) ? 1'b1 :
-						(CYCLE_P[4:0] == 5'b11101) ? 1'b1 :
-						(CYCLE_P[4:0] == 5'b11110) ? 1'b1 :
-						(CYCLE_P[4:0] == 5'b11111) ? 1'b1 :
-						(CYCLE_P[4:0] == 5'b00000) ? 1'b1 : 1'b0;
+	// Alpha68k LOAD is CLK_C & SNKCLK_8. 6M & 3M ?
+	// CYCLE_P 13,14,15,16 and 29,30,31,0
+	assign LOAD = CLK_C & SNKCLK_8;
 	
-	// UPDATED !
 	assign S1H1 = CYCLE_P[3];
 	assign S2H1 = ~CYCLE_P[4];		// Fix quarter selection
-
-	// 28px backporch
 	
+	always @(posedge CLK_24M)	// or posedge nCLK_24M
+	begin
+		if (!nRESET)
+		begin
+			CYCLE_P <= 0;
+		end
+		else
+		begin
+			CYCLE_P <= CYCLE_P + 1'b1;
+			
+			// Probably not a register...
+			if (CYCLE_P == 2) nVCS <= 1'b0;
+			if (CYCLE_P == 12) nVCS <= 1'b1;
+			
+			// Wrong logic, but sequence is good
+			case (CYCLE_P)
+				0: {PBUS_U, PBUS_L} <= C_ADDR_OUT;	// Sprite ROM address - Is CA4 latched here or free-running ?
+				3: {PBUS_U, PBUS_L} <= {8'bzzzzzzzz, L0_ROM_ADDR};	// L0 ROM address
+				13: {PBUS_U, PBUS_L} <= {SPR_PAL, SPR_XPOS, 8'b00000000};	// Sprite palette and X position
+				16: {PBUS_U, PBUS_L} <= S_ADDR_OUT;	// Fix ROM address - Is S2H1 latched here or free-running ?
+				19: {PBUS_U, PBUS_L} <= 24'hFF0000;	// FF0000 ? Maybe PBUS_U is z ?
+				29: {PBUS_U, PBUS_L} <= {4'b0000, FIX_PAL, 16'b0000000000000000};	// Fix palette
+			endcase
+		end
+	end
+
+endmodule
+
 	/*
 	Guess work:
 	Logical order of things to render 8 fix pixels:
@@ -126,67 +148,3 @@ module p_cycle(
 		S2H1 = HCOUNT[1]; (ok)
 		S1H1 = div2 from negedge of 6M ?
 	*/
-	
-	always @(posedge CLK_24M)	// or posedge nCLK_24M
-	begin
-		if (!nRESET)
-		begin
-			CYCLE_P <= 0;
-		end
-		else
-		begin
-			CYCLE_P <= CYCLE_P + 1;
-			//if (CLK_24M)
-			//	CYCLE_LOAD <= CYCLE_LOAD + 1;		// Pos
-			//else
-			//	CYCLE_PCK <= CYCLE_PCK + 1;		// Neg
-			
-			// UPDATED !
-			if (CYCLE_P == 2) nVCS <= 1'b0;
-			if (CYCLE_P == 12) nVCS <= 1'b1;
-			
-			// UPDATED !
-			case (CYCLE_P)
-				0 :
-				begin
-					// SPRT
-					PBUS_L <= SPR_ADDR[20:5];
-					PBUS_U <= {SPR_ADDR[24:21], SPR_ADDR[3:0]};
-					//CA4 <= SPR_ADDR[4];
-				end
-				3 :
-				begin
-					// L0
-					PBUS_L <= L0_ADDR;
-					PBUS_U <= 8'bzzzzzzzz;
-				end
-				13 :
-				begin
-					// SP
-					PBUS_L <= {SPR_XPOS, 8'b00000000};
-					PBUS_U <= SPR_PAL;
-				end
-				16 :
-				begin
-					// FIXT
-					PBUS_L <= {FIX_ADDR[4], FIX_ADDR[2:0], FIX_ADDR[16:5]};
-					PBUS_U <= 8'b00000000;			// z?
-					//S2H1 <= FIX_ADDR[3];
-				end
-				19:
-				begin
-					// FF0000
-					PBUS_L <= 16'b0000000000000000;
-					PBUS_U <= 8'b11111111;			// Maybe z ?
-				end
-				29:
-				begin
-					// FP
-					PBUS_L <= 16'b0000000000000000;
-					PBUS_U <= {4'b0000, FIX_PAL};
-				end
-			endcase
-		end
-	end
-
-endmodule

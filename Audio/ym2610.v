@@ -167,7 +167,7 @@ module ym2610(
 	
 	always @(posedge P1)
 		{nWRITE_S, ADDR_S, DATA_S} <= {nWR_COPY, ADDR_COPY, DATA_COPY};
-
+						
 	ym_regs 		YMREGS(PHI_M, nRESET, nWRITE_S, ADDR_S, DATA_S, BUSY_MMR,
 						SSG_FREQ_A, SSG_FREQ_B, SSG_FREQ_C, SSG_NOISE, SSG_EN, SSG_VOL_A, SSG_VOL_B, SSG_VOL_C,
 						SSG_ENV_FREQ, SSG_ENV,
