@@ -39,8 +39,7 @@ module p_cycle(
 	assign PCK2 = (CYCLE_P[4:1] == 4'b1000) ? 1'b1 : 1'b0;
 	
 	// Alpha68k LOAD is CLK_C & SNKCLK_8. 6M & 3M ?
-	// CYCLE_P 13,14,15,16 and 29,30,31,0
-	assign LOAD = CLK_C & SNKCLK_8;
+	//assign LOAD = CLK_C & SNKCLK_8;
 	
 	assign S1H1 = CYCLE_P[3];
 	assign S2H1 = ~CYCLE_P[4];		// Fix quarter selection

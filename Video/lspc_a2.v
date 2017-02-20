@@ -49,28 +49,6 @@ module lspc_a2(
 
 	// Todo: Merge VRAM cycle counters together if possible ? Even with P bus ?
 	
-	// Alpha68k stuff:
-	// M12:
-	assign RBA = nBFLIP ? 1'b0 : CLK_CLEAR;
-	assign RBB = nBFLIP ? CLK_CLEAR : 1'b0;
-	assign CLK_EVEN_B = nBFLIP ? nCLK_12M : CLK_CLEAR;
-	assign CLK_EVEN_A = nBFLIP ? CLK_CLEAR : nCLK_12M;
-	// J5
-	// SELJ5 comes from K5:A
-	assign CLK_CLEAR = SELJ5 ? nCLK_12M : TODO;
-	assign nCLEAR_WE = SELJ5 ? nCLK_12M : 1'b1;
-	always @(posedge SNKCLK_26)
-		BFLIP <= 1'bz;	// TODO
-	
-	// P6
-	assign nODD_WE = ~(DOTB & CLK_12M);
-	assign nEVEN_WE = ~(DOTA & CLK_12M);
-	// WSE signals to B1
-	assign nWE_ODD_A = nBFLIP ? nODD_WE : nCLEAR_WE;
-	assign nWE_ODD_B = nBFLIP ? nCLEAR_WE : nODD_WE;
-	assign nWE_EVEN_A = nBFLIP ? nEVEN_WE : nCLEAR_WE;
-	assign nWE_EVEN_B = nBFLIP ? nCLEAR_WE : nEVEN_WE;
-	
 	wire [8:0] VCOUNT;
 	
 	// VRAM CPU I/O
@@ -120,6 +98,31 @@ module lspc_a2(
 	wire IRQ_S3;
 	
 	
+
+	// Alpha68k stuff:
+	assign nBFLIP = TMS0;	// ?
+	// M12:
+	assign RBA = nBFLIP ? 1'b0 : CLK_CLEAR;
+	assign RBB = nBFLIP ? CLK_CLEAR : 1'b0;
+	assign CLK_EVEN_B = nBFLIP ? nCLK_12M : CLK_CLEAR;
+	assign CLK_EVEN_A = nBFLIP ? CLK_CLEAR : nCLK_12M;
+	// J5
+	// SELJ5 comes from K5:A
+	assign CLK_CLEAR = SELJ5 ? nCLK_12M : TODO;
+	assign nCLEAR_WE = SELJ5 ? nCLK_12M : 1'b1;
+	always @(posedge SNKCLK_26)
+		BFLIP <= 1'bz;	// TODO
+	
+	// P6
+	assign nODD_WE = ~(DOTB & CLK_12M);
+	assign nEVEN_WE = ~(DOTA & CLK_12M);
+	// WSE signals to B1
+	assign nWE_ODD_A = nBFLIP ? nODD_WE : nCLEAR_WE;
+	assign nWE_ODD_B = nBFLIP ? nCLEAR_WE : nODD_WE;
+	assign nWE_EVEN_A = nBFLIP ? nEVEN_WE : nCLEAR_WE;
+	assign nWE_EVEN_B = nBFLIP ? nCLEAR_WE : nEVEN_WE;
+	
+	
 	assign IRQ_S3 = VBLANK;			// To check
 	assign CLK_24MB = ~CLK_24M;
 	assign SYNC = nVSYNC ^ HSYNC;
@@ -128,6 +131,7 @@ module lspc_a2(
 	assign CPU_VRAM_READ_BUFFER = CPU_VRAM_ZONE ? CPU_VRAM_READ_BUFFER_FCY : CPU_VRAM_READ_BUFFER_SCY;
 	
 	
+	timer TIMER(nRESET, VBLANK, VIDEO_MODE, TIMERSTOP, VCOUNT);
 	
 	resetp RSTP(CLK_24M, nRESET, nRESETP);
 	

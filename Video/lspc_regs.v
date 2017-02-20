@@ -111,7 +111,7 @@ module lspc_regs(
 				begin
 					$display("LSPC set timer reload LSB to 0x%H", M68K_DATA);	// DEBUG
 					TIMERLOAD[15:0] <= M68K_DATA;
-					// if (TIMERINT_MODE[0]) TIMER <= TIMERLOAD;
+					if (TIMERINT_MODE[0]) TIMER <= TIMERLOAD;		// Relative mode
 				end
 				// $3C000C: Interrupt ack
 				3'b110 :

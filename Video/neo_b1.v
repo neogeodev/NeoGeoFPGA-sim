@@ -47,6 +47,8 @@ module neo_b1(
 	assign nWE_EVEN_A = WE[2];
 	assign nWE_EVEN_B = WE[3];
 	
+	wire RBA, RBB;
+	
 	// -------------------------------- Alpha68k logic --------------------------------
 	
 	wire [3:0] P10_OUT;
@@ -80,7 +82,6 @@ module neo_b1(
 	
 	wire SNKCLK_26;	// TODO
 	wire SNKCLK_40;	// TODO
-	reg BFLIP;
 	wire nBFLIP;
 	wire nLATCH_X;		// TODO
 	reg [7:0] SPRX;

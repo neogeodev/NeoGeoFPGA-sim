@@ -2,7 +2,7 @@
 
 module lspc_timer(
 	input nRESET,
-	
+	input VBLANK,
 	input  VIDEO_MODE,
 	input  TIMERSTOP,
 	input  [8:0] VCOUNT
@@ -32,14 +32,15 @@ module lspc_timer(
 		end
 		else
 		begin
+			if (TIMERINT_MODE[1] & VBLANK) TIMER <= TIMERLOAD;		// Vblank mode
 			if (!nTIMERRUN)
 			begin
 				if (TIMER)
 					TIMER <= TIMER - 1'b1;
 				else
 				begin
-					//if (TIMERINT_EN) nIRQS[1] <= 1'b0;	// IRQ2 plz
-					if (TIMERINT_MODE[2]) TIMER <= TIMERLOAD;
+					if (TIMERINT_EN) nIRQS[1] <= 1'b0;				// IRQ2 plz
+					if (TIMERINT_MODE[2]) TIMER <= TIMERLOAD;		// Repeat mode
 				end
 			end
 		end
