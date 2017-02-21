@@ -1,34 +1,29 @@
 `timescale 1ns/1ns
 
 module linebuffer(
-	input CK,
-	input WE,
-	input nLDX,
-	input [7:0] XPOS,
-	inout [11:0] DATA,
-	input MODE
+	input nOE_TO_WRITE,
+	input nWE,
+	input [7:0] ADDRESS,
+	inout [11:0] DATA
 );
 
-	reg [7:0] X_CNT;
-	reg [11:0] LBRAM[0:191];
+	reg [11:0] LB_RAM[0:255];	// CHECK: Should never go over 191
+	wire [7:0] DATA_OUT;
+	wire [7:0] DATA_IN;
 
-	// TMS0=0:Output, =1:Write
-	assign DATA = MODE ? 12'bzzzzzzzzzzzz : LBRAM[X_CNT];
+	// Read
+	assign #35 DATA_OUT = LB_RAM[ADDRESS];
+	assign DATA = nWE ? DATA_OUT : 8'bzzzzzzzz;
 
-	always @(negedge CK)
-	begin
-		if (!nLDX)
-			X_CNT <= XPOS;			// Disabled in MODE=0 ?
-		else
-			X_CNT <= X_CNT + 1;
-	end
+	// Write
+	assign DATA_IN = nOE_TO_WRITE ? 12'b111111111111 : DATA;
+	always @(*)
+		if (!nWE)
+			#10 LB_RAM[ADDRESS] <= DATA_IN;
 	
-	always @(posedge WE)
-	begin
-		if (!MODE)
-			LBRAM[X_CNT] <= 12'hFFF;	// Clear to backdrop. This is inherited from the Alpha68k
-		else
-			LBRAM[X_CNT] <= DATA;		// Render
-	end
+	// nOE_TO_WRITE = 0 and nWE = 1 should NEVER happen !
+	always @(*)
+		if (!nOE_TO_WRITE && nWE)
+			$display("ERROR: LINEBUFFER: data contention !");
 
 endmodule

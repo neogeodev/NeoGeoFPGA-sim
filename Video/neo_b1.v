@@ -9,24 +9,24 @@
 
 module neo_b1(
 	input CLK_6MB,				// 1px
-	input CLK_1MB,				// 2px Even/odd pixel selection ?
+	input CLK_1MB,				// 3MHz 2px Even/odd pixel selection ?
 	
 	input [23:0] PBUS,		// Used for X position, SPR palette # and FIX palette #
-	input [7:0] FIXD,			// Color data
+	input [7:0] FIXD,			// 2 fix pixels
 	input PCK1,					// What for ?
 	input PCK2,					// What for ?
-	input CHBL,					// Set PA to zeros
-	input BNKB,					// What for ?
-	input [3:0] GAD, GBD,	// Color data
+	input CHBL,					// Force PA to zeros
+	input BNKB,					// What for ? Watchdog ? PA ?
+	input [3:0] GAD, GBD,	// 2 sprite pixels
 	input [3:0] WE,			// LB writes
-	input [3:0] CK,			// LB clocks
+	input [3:0] CK,			// LB address counter clocks
 	input TMS0,					// LB flip, watchdog ?
-	input LD1, LD2,			// Latch x position of sprite from P bus ?
+	input LD1, LD2,			// Load x positions
 	input SS1, SS2,			// Up/Down for LB address counters ?
-	input S1H1,					// ?
+	input S1H1,					// 3MHz 2px Even/odd pixel selection ?
 	
 	input A23Z, A22Z,
-	output [11:0] PA,
+	output [11:0] PA,			// Palette address bus
 	
 	input nLDS,					// For watchdog
 	input RW,
@@ -38,8 +38,21 @@ module neo_b1(
 	input nRST
 );
 
-	// Tests...
-	assign BFLIP = TMS0;			// Inverted ?
+	// Testing...
+	// Connects to Alpha68k stuff
+	
+	reg BFLIP;
+	wire J8_12;
+	
+	// This might be in LSPC, BFLIP = TMS0
+	always @(posedge SNKCLK_26)
+		BFLIP <= J8_12;
+	
+	assign nBFLIP = ~BFLIP;
+	
+	// BFLIP = 0 : B OUTPUT, A WRITE
+	// BFLIP = 1 : A OUTPUT, B WRITE
+	
 	assign nLATCH_X_A = LD1;
 	assign nLATCH_X_B = LD2;
 	assign nWE_ODD_A = WE[0];
@@ -47,16 +60,33 @@ module neo_b1(
 	assign nWE_EVEN_A = WE[2];
 	assign nWE_EVEN_B = WE[3];
 	
+	// ?
+	assign CLK_OB_EA = CK[0];
+	assign CLK_OA_EB = CK[1];
+	// Some CK[] might be RBA and RBB !
+	
+	// Opposite ?
+	assign nLOAD_X_A = LD1;
+	assign nLOAD_X_B = LD2;
+
+	// ?
+	assign SNKCLK_40 = CLK_1MB;	// Or S1H1 ?
+	
+	
+	
+	
 	wire RBA, RBB;
 	
 	// -------------------------------- Alpha68k logic --------------------------------
 	
+	// +1 adders
 	wire [3:0] P10_OUT;
 	wire [3:0] N10_OUT;
 	wire [3:0] P11_OUT;
 	wire [3:0] N11_OUT;
 	wire PLUS_ONE;
 	
+	// Line buffers address and data
 	wire [7:0] LB_EVEN_A_ADDR;
 	wire [7:0] LB_EVEN_B_ADDR;
 	wire [7:0] LB_ODD_A_ADDR;
@@ -66,36 +96,33 @@ module neo_b1(
 	wire [11:0] LB_ODD_A_DATA;
 	wire [11:0] LB_ODD_B_DATA;
 	
+	// Byte delays
 	reg [7:0] SPR_PAL_REG_A;
 	reg [7:0] SPR_PAL_REG_B;
-	reg [3:0] FIX_PAL_REG;
-	
 	reg [7:0] FIXD_REG_A;
 	reg [7:0] FIXD_REG_B;
+	
+	reg [3:0] FIX_PAL_REG;
 	
 	wire [3:0] FIX_COLOR;
 	wire [3:0] SPR_COLOR;
 	wire [3:0] COLOR;
 	wire [7:0] SPR_PAL;
-	
 	wire [7:0] PAL;
 	
+	wire FIX_OPAQUE;
+	
 	wire SNKCLK_26;	// TODO
-	wire SNKCLK_40;	// TODO
-	wire nBFLIP;
 	wire nLATCH_X;		// TODO
 	reg [7:0] SPRX;
-	wire K2_1;			// TODO
-	wire K8_6;			// TODO
-	wire P6_16;			// TODO
 	wire HFLIP;			// TODO
 	wire TODO_FIXCLK;	// TODO
-	wire PACLK;			// TODO
-	reg [11:0] PA_VIDEO;
+	wire CLK_PA;		// TODO
+	wire nPA_OE;		// TODO
+	reg [11:0] PA_VIDEO_REG;
+	wire [11:0] PA_VIDEO;
 	
 	assign PA = PA_VIDEO;	// CPU acces switch here !
-	
-	assign nBFLIP = ~BFLIP;
 	
 	// G3 (374): nOE seems used !
 	always @(posedge nLATCH_X)
@@ -106,31 +133,21 @@ module neo_b1(
 	// G5:C
 	// assign PLUS_ONE = ~?;
 	
+	// Both of these output the exact same thing, something must be wrong
 	assign {P10_C4, P10_OUT} = SPRX[3:0] + PLUS_ONE;
-	assign P11_OUT = SPRX[7:4] + P10_C4;		// P11_C4 apparently not used
-	
+	assign P11_OUT = SPRX[7:4] + P10_C4;	// P11_C4 apparently not used
 	assign {N10_C4, N10_OUT} = SPRX[3:0] + PLUS_ONE;
-	assign N11_OUT = SPRX[7:4] + N10_C4;		// N11_C4 apparently not used
+	assign N11_OUT = SPRX[7:4] + N10_C4;	// N11_C4 apparently not used
 	
-	// K2
-	assign K2_4 = K2_1 ? 1'b1 : nLATCH_X;	// TODO
-	assign K2_7 = K2_1 ? nLATCH_X : 1'b1;
-	assign K2_9 = K2_1 ? K8_6 : 1'b1;		// TODO
-	assign K2_12 = K2_1 ? 1'b1 : K8_6;		// TODO
+	// P6:C and P6:D
+	assign DIR_OB_EA = ~(nBFLIP & HFLIP);	// TODO: Check if really HFLIP
+	assign DIR_OA_EB = ~(BFLIP & HFLIP);	// TODO: Check if really HFLIP
 	
-	// K5:C
-	assign nLOAD_X_A = K2_7 & K2_12;
-	assign nLOAD_X_B = K2_4 & K2_9;		// To check !
-	
-	// P6:C & P6:D
-	assign UPDOWN_A = ~(nBFLIP & HFLIP);
-	assign UPDOWN_B = ~(BFLIP & HFLIP);
-	
-	// Counters:
-	hc669_dual P13P12(CLK_EVEN_A, nLOAD_X_A, UPDOWN_A, {P11_OUT, P10_OUT}, LB_EVEN_B_ADDR[7:0]);
-	hc669_dual N13N12(CLK_EVEN_B, nLOAD_X_B, UPDOWN_B, {N11_OUT, N10_OUT}, LB_EVEN_A_ADDR[7:0]);
-	hc669_dual K12L13(CLK_EVEN_A, nLOAD_X_A, UPDOWN_A, {SPRX[7:4], SPRX[3:0]} , LB_ODD_B_ADDR[7:0]);	// ?
-	hc669_dual L12M13(CLK_EVEN_B, nLOAD_X_B, UPDOWN_B, {SPRX[7:4], SPRX[3:0]} , LB_ODD_A_ADDR[7:0]);	// ?
+	// LB address counters:
+	hc669_dual P13P12(CLK_OB_EA, nLOAD_X_A, DIR_OB_EA, {P11_OUT, P10_OUT}, LB_EVEN_B_ADDR);
+	hc669_dual N13N12(CLK_OA_EB, nLOAD_X_B, DIR_OA_EB, {N11_OUT, N10_OUT}, LB_EVEN_A_ADDR);
+	hc669_dual K12L13(CLK_OB_EA, nLOAD_X_A, DIR_OB_EA, SPRX, LB_ODD_B_ADDR);	// ?
+	hc669_dual L12M13(CLK_OA_EB, nLOAD_X_B, DIR_OA_EB, SPRX, LB_ODD_A_ADDR);	// ?
 	
 	// Sprite palette latch G6 (273):
 	always @(posedge 1'bz)	// TODO
@@ -145,39 +162,46 @@ module neo_b1(
 		SPR_PAL_REG_B <= SPR_PAL_REG_A;
 	end
 	
-	// J6 (174) TODO, no nMR
+	// J6 (174) CLK TODO, no nMR
 	always @(posedge 1'bz)
 		FIX_PAL_REG <= PBUS[19:16];	// FIX_PAL should be part of P_BUS
 	
-	// TODO: Z state in read mode
-	// HC367s - 12'b111111111111 are caused by pullups (see PCB), allows for clearing
-	assign LB_EVEN_A_DATA = nOE_P18P20 ? 12'b111111111111 : {SPR_PAL_REG_B, GAD[1], GAD[0], GAD[3], GAD[2]};
-	assign LB_EVEN_B_DATA = nOE_P19P21 ? 12'b111111111111 : {SPR_PAL_REG_B, GAD[1], GAD[0], GAD[3], GAD[2]};
-	assign LB_ODD_A_DATA = nOE_M18N18 ? 12'b111111111111 : {SPR_PAL_REG_B, GBD[1], GBD[0], GBD[3], GBD[2]};
-	assign LB_ODD_B_DATA = nOE_M19N19 ? 12'b111111111111 : {SPR_PAL_REG_B, GBD[1], GBD[0], GBD[3], GBD[2]};
+	linebuffer LB1(nOE_P18P20, nWE_EVEN_A,
+						LB_EVEN_A_ADDR, {SPR_PAL_REG_B, GAD[1], GAD[0], GAD[3], GAD[2]});
+	linebuffer LB2(nOE_P19P21, nWE_EVEN_B,
+						LB_EVEN_B_ADDR, {SPR_PAL_REG_B, GAD[1], GAD[0], GAD[3], GAD[2]});
+	linebuffer LB3(nOE_M18N18, nWE_ODD_A,
+						LB_ODD_A_ADDR, {SPR_PAL_REG_B, GBD[1], GBD[0], GBD[3], GBD[2]});
+	linebuffer LB4(nOE_M19N19, nWE_ODD_B,
+						LB_ODD_B_ADDR, {SPR_PAL_REG_B, GBD[1], GBD[0], GBD[3], GBD[2]});
 	
-	// ORs
+	// N4 and N7 ORs
 	assign nOE_P18P20 = RBA | nWE_EVEN_A;
 	assign nOE_P19P21 = RBB | nWE_EVEN_B;
 	assign nOE_M18N18 = RBA | nWE_ODD_A;
 	assign nOE_M19N19 = RBB | nWE_ODD_B;
 	
+	// M12 is in LSPC
+	// J5 is in LSPC
+	// N6 is in LSPC
+	// P6 is in LSPC
+	
 	// FIX stuff, FIX/SPR mux and PA output
 	
-	// L5
 	always @(posedge TODO_FIXCLK)
-		FIXD_REG_A <= FIXD;
-	// M5
-	always @(posedge TODO_FIXCLK)
-		FIXD_REG_B <= FIXD_REG_A;
+	begin
+		FIXD_REG_A <= FIXD;			// L5
+		FIXD_REG_B <= FIXD_REG_A;	// M5
+	end
 	
 	// M4 Odd/even tile pixel demux
 	assign FIX_COLOR = SNKCLK_40 ? {FIXD_REG_B[7], FIXD_REG_B[5], FIXD_REG_B[3], FIXD_REG_B[1]} :
 												{FIXD_REG_B[6], FIXD_REG_B[4], FIXD_REG_B[2], FIXD_REG_B[0]};
-	// N4 & M6 Opacity detection
-	assign nSPR_FIX_SW = |{FIX_COLOR};
 	
-	assign MUX_BA = {P6_16, SNKCLK_40};
+	// N4 & M6 Opacity detection
+	assign FIX_OPAQUE = |{FIX_COLOR};
+	
+	assign MUX_BA = {BFLIP, SNKCLK_40};
 	
 	// K15 & L15 Sprite color bits mux
 	assign SPR_COLOR = (MUX_BA == 2'b00) ? LB_EVEN_B_DATA[3:0] :
@@ -186,7 +210,7 @@ module neo_b1(
 								LB_ODD_A_DATA[3:0];
 	
 	// J12 Sprite/fix color bits mux
-	assign COLOR = nSPR_FIX_SW ? FIX_COLOR : SPR_COLOR;
+	assign COLOR = FIX_OPAQUE ? FIX_COLOR : SPR_COLOR;
 								
 	// N15, P15, K13, M15 Sprite palette bits mux
 	assign SPR_PAL = (MUX_BA == 2'b00) ? LB_EVEN_B_DATA[11:4] :
@@ -195,15 +219,15 @@ module neo_b1(
 							LB_ODD_A_DATA[11:4];
 	
 	// H12 & H9 Sprite/fix palette bits mux
-	assign PAL = nSPR_FIX_SW ? {4'b0000, FIX_PAL_REG} : SPR_PAL;
+	assign PAL = FIX_OPAQUE ? {4'b0000, FIX_PAL_REG} : SPR_PAL;
 	
 	// H10 & H11 Palette RAM address latches
-	// nOE is used !
-	always @(posedge PACLK)
+	// nOE is used, certainly to gate outputs during CPU access
+	assign PA_VIDEO = nPA_OE ? 12'bzzzzzzzzzzzz : PA_VIDEO_REG;
+	always @(posedge CLK_PA)
 	begin
-		PA_VIDEO <= {PAL, COLOR};
+		PA_VIDEO_REG <= {PAL, COLOR};
 	end
-
 	
 	// --------------------------------------------------------------------------------
 	
@@ -213,27 +237,8 @@ module neo_b1(
 	
 	// Todo: Wrong, nRESET is sync'd to frame start
 	watchdog WD(nLDS, RW, A23Z, A22Z, M68K_ADDR_U, M68K_ADDR_L, BNKB, nHALT, nRESET, nRST);
-
+	
 	/*
-	linebuffer LB1(CK[0], WE[0], PCK1, PBUS[15:8], LBDATA_A_E, TMS0);
-	linebuffer LB2(CK[1], WE[1], PCK1, PBUS[15:8], LBDATA_A_O, TMS0);
-	linebuffer LB3(CK[2], WE[2], PCK2, PBUS[15:8], LBDATA_B_E, ~TMS0);
-	linebuffer LB4(CK[3], WE[3], PCK2, PBUS[15:8], LBDATA_B_O, ~TMS0);
-	
-	assign LBDATA_A_E = TMS0 ? {GAD, SPR_PAL} : 12'bzzzzzzzzzzzz;
-	assign LBDATA_A_O = TMS0 ? {GBD, SPR_PAL} : 12'bzzzzzzzzzzzz;
-	assign LBDATA_B_E = TMS0 ? 12'bzzzzzzzzzzzz : {GAD, SPR_PAL};
-	assign LBDATA_B_O = TMS0 ? 12'bzzzzzzzzzzzz : {GBD, SPR_PAL};
-	
-	assign LBDATA_OUT = TMS0 ?
-								CLK_1MB ?
-									LBDATA_B_O :	// TMS0,1MB=11
-									LBDATA_B_E		// TMS0,1MB=10
-								:
-								CLK_1MB ?
-									LBDATA_A_O :	// TMS0,1MB=01
-									LBDATA_A_E;		// TMS0,1MB=00
-
 	assign FIX_PIXEL = CLK_1MB ? FIX_DATA[7:4] : FIX_DATA[3:0];		// Opposite ?
 	assign FIX_OPAQUE = |{FIX_PIXEL};
 	

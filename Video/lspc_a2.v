@@ -97,26 +97,46 @@ module lspc_a2(
 	
 	wire IRQ_S3;
 	
+	wire K2_1;		// TODO
+	wire K8_6;		// TODO
+	wire nBFLIP;	// TODO
+	wire SELJ5;		// TODO
+	wire CLK_12M;	// TODO
+	wire nCLK_12M;	// TODO
+	wire nLATCH_X;	// TODO
 	
 
 	// Alpha68k stuff:
-	assign nBFLIP = TMS0;	// ?
-	// M12:
-	assign RBA = nBFLIP ? 1'b0 : CLK_CLEAR;
-	assign RBB = nBFLIP ? CLK_CLEAR : 1'b0;
-	assign CLK_EVEN_B = nBFLIP ? nCLK_12M : CLK_CLEAR;
-	assign CLK_EVEN_A = nBFLIP ? CLK_CLEAR : nCLK_12M;
+	// K2
+	assign K2_4 = K2_1 ? 1'b1 : nLATCH_X;	// TODO
+	assign K2_7 = K2_1 ? nLATCH_X : 1'b1;
+	assign K2_9 = K2_1 ? K8_6 : 1'b1;		// TODO
+	assign K2_12 = K2_1 ? 1'b1 : K8_6;		// TODO
+	
+	// Opposite ?
+	// K5:C
+	assign LD1 = K2_7 & K2_12;
+	// K5:?
+	assign LD2 = K2_4 & K2_9;		// To check !
+	
+	// M12
+	assign RBA = nBFLIP ? 1'b0 : CLK_RD;
+	assign RBB = nBFLIP ? CLK_RD : 1'b0;
+	assign CLK_EVEN_B = nBFLIP ? nCLK_12M : CLK_RD;
+	assign CLK_EVEN_A = nBFLIP ? CLK_RD : nCLK_12M;
 	// J5
 	// SELJ5 comes from K5:A
-	assign CLK_CLEAR = SELJ5 ? nCLK_12M : TODO;
+	assign CLK_RD = SELJ5 ? nCLK_12M : 1'bz;	// TODO
 	assign nCLEAR_WE = SELJ5 ? nCLK_12M : 1'b1;
-	always @(posedge SNKCLK_26)
-		BFLIP <= 1'bz;	// TODO
+	//always @(posedge SNKCLK_26)
+	//	BFLIP <= 1'bz;	// TODO
 	
 	// P6
 	assign nODD_WE = ~(DOTB & CLK_12M);
 	assign nEVEN_WE = ~(DOTA & CLK_12M);
-	// WSE signals to B1
+	// Second half of P6 in B1
+	
+	// N6 - WSE signals to B1
 	assign nWE_ODD_A = nBFLIP ? nODD_WE : nCLEAR_WE;
 	assign nWE_ODD_B = nBFLIP ? nCLEAR_WE : nODD_WE;
 	assign nWE_EVEN_A = nBFLIP ? nEVEN_WE : nCLEAR_WE;
@@ -131,7 +151,8 @@ module lspc_a2(
 	assign CPU_VRAM_READ_BUFFER = CPU_VRAM_ZONE ? CPU_VRAM_READ_BUFFER_FCY : CPU_VRAM_READ_BUFFER_SCY;
 	
 	
-	timer TIMER(nRESET, VBLANK, VIDEO_MODE, TIMERSTOP, VCOUNT);
+	lspc_timer TIMER(nRESET, CLK_6M_LSPC, VBLANK, VIDEO_MODE, TIMER_MODE, TIMER_INT_EN, TIMER_LOAD,
+							TIMER_PAL_STOP, VCOUNT);
 	
 	resetp RSTP(CLK_24M, nRESET, nRESETP);
 	

@@ -13,11 +13,11 @@ module lspc_regs(
 	
 	output [15:0] REG_LSPCMODE,
 	
-	output reg [31:0] TIMERLOAD,		// Reload value
-	output reg TIMERSTOP,				// Timer pause in top and bottom of display in PAL mode (LSPC2)
+	output reg [31:0] TIMER_LOAD,		// Timer reload value
+	output reg TIMER_PAL_STOP,			// Timer pause in top and bottom of display in PAL mode (LSPC2)
 	output reg [15:0] REG_VRAMMOD,
-	output reg [2:0] TIMERINT_MODE,	// Timer interrupt mode
-	output reg TIMERINT_EN,				// Timer interrupt enable
+	output reg [2:0] TIMER_MODE,		// Timer mode
+	output reg TIMER_IRQ_EN,			// Timer interrupt enable
 	output reg [7:0] AA_SPEED,			// Auto-animation speed
 	output reg AA_DISABLE,				// Auto-animation disable
 	
@@ -93,10 +93,11 @@ module lspc_regs(
 				// $3C0006: Set mode
 				3'b011 :
 				begin
-					$display("LSPC set mode to 0x%H", M68K_DATA);	// DEBUG
+					$display("LSPC set timer mode to %b, timer irq to %b, AA disable to %b, AA speed to 0x%H",
+								M68K_DATA[7:5], M68K_DATA[4], M68K_DATA[3], M68K_DATA[15:8]);	// DEBUG
 					AA_SPEED <= M68K_DATA[15:8];
-					TIMERINT_MODE <= M68K_DATA[7:5];
-					TIMERINT_EN <= M68K_DATA[4];
+					TIMER_MODE <= M68K_DATA[7:5];
+					TIMER_IRQ_EN <= M68K_DATA[4];
 					AA_DISABLE <= M68K_DATA[3];
 					// Todo: is [2:0] registered or NC ?
 				end
@@ -110,20 +111,24 @@ module lspc_regs(
 				3'b101 :
 				begin
 					$display("LSPC set timer reload LSB to 0x%H", M68K_DATA);	// DEBUG
-					TIMERLOAD[15:0] <= M68K_DATA;
-					if (TIMERINT_MODE[0]) TIMER <= TIMERLOAD;		// Relative mode
+					TIME_LOAD[15:0] <= M68K_DATA;
+					if (TIMER_MODE[0])
+					begin
+						$display("LSPC reloaded timer to 0x%H", {TIMER_LOAD[31:16], M68K_DATA});		// DEBUG
+						TIMER <= {TIMER_LOAD[31:16], M68K_DATA};		// Relative mode
+					end
 				end
 				// $3C000C: Interrupt ack
 				3'b110 :
 				begin
-					$display("LSPC ack interrupt 0x%H", M68K_DATA[2:0]);	// DEBUG
+					$display("LSPC ack interrupt %d", M68K_DATA[2:0]);	// DEBUG
 					// Done in combi. logic above
 				end
 				// $3C000E: Timer fix for PAL mode
 				3'b111 :
 				begin
-					$display("LSPC set timer stop (PAL) to %B", M68K_DATA[0]);	// DEBUG
-					TIMERSTOP <= M68K_DATA[0];
+					$display("LSPC set timer stop for PAL mode to %B", M68K_DATA[0]);	// DEBUG
+					TIMER_PAL_STOP <= M68K_DATA[0];
 				end
 			endcase
 		end
