@@ -1,7 +1,7 @@
 `timescale 1ns/1ns
 
 // All pins listed ok. REF, DIVI and DIVO only used on AES for video PLL hack
-	
+
 module lspc_a2(
 	input CLK_24M,
 	input nRESET,
@@ -28,11 +28,8 @@ module lspc_a2(
 	output nVCS,
 	output CLK_8M,
 	output CLK_4M,
-	output [8:0] HCOUNT				// TODO: REMOVE, only used for debug in videout and as a hack in B1
+	output [8:0] H_COUNT				// TODO: REMOVE, only used for debug in videout and as a hack in B1
 );
-
-	assign HCOUNT = MAIN_CNT[10:2];	// TODO: REMOVE
-	
 
 	parameter VIDEO_MODE = 0;			// NTSC
 
@@ -49,7 +46,7 @@ module lspc_a2(
 
 	// Todo: Merge VRAM cycle counters together if possible ? Even with P bus ?
 	
-	wire [8:0] VCOUNT;
+	wire [8:0] V_COUNT;
 	
 	// VRAM CPU I/O
 	reg CPU_RW;										// Direction
@@ -73,6 +70,8 @@ module lspc_a2(
 	reg [3:0] SPR_PIXELCNT;				// Sprite render pixel counter for H-shrink
 	wire WR_PIXEL;
 	
+	wire [15:0] SLOW_VRAM_DATA;
+	
 	wire [7:0] L0_DATA;
 	
 	wire [11:0] MAIN_CNT;
@@ -84,16 +83,21 @@ module lspc_a2(
 	wire [19:0] SPR_TILE_NB;
 	wire [7:0] SPR_TILE_PAL;
 	
-	wire [11:0] FIX_TILE_NB;
-	wire [3:0] FIX_TILE_PAL;
+	reg [11:0] FIX_TILE_NB;
+	wire [5:0] FIX_MAP_COL;		// 0~47
 
-	wire [16:0] FIX_ROM_ADDR;
+	wire [15:0] PBUS_S_ADDR;
 	wire [24:0] SPR_ROM_ADDR;
 	
 	wire [4:0] SPR_ROM_LINE;
 	
 	wire [7:0] SPR_XPOS;
 	wire [15:0] L0_ROM_ADDR;
+	
+	reg CA4_Q;
+	reg S2H1_Q;
+	wire FIX_A4;
+	reg [3:0] FIX_PAL_NB;
 	
 	wire IRQ_S3;
 	
@@ -150,23 +154,42 @@ module lspc_a2(
 	// Todo: Probably wrong:
 	assign CPU_VRAM_READ_BUFFER = CPU_VRAM_ZONE ? CPU_VRAM_READ_BUFFER_FCY : CPU_VRAM_READ_BUFFER_SCY;
 	
+	// CA4	''''|______|''''
+	// PCK1	____|'|_________
+	always @(negedge CLK_24M)
+		CA4_Q <= CA4;
+	assign PCK1 = (CA4_Q & !CA4);
+
+	// 2H1	''''|______|''''
+	// PCK2	____|'|_________
+	always @(negedge CLK_24M)
+		S2H1_Q <= S2H1;
+	assign PCK2 = (S2H1_Q & !S2H1);
 	
 	lspc_timer TIMER(nRESET, CLK_6M_LSPC, VBLANK, VIDEO_MODE, TIMER_MODE, TIMER_INT_EN, TIMER_LOAD,
-							TIMER_PAL_STOP, VCOUNT);
+							TIMER_PAL_STOP, V_COUNT);
 	
 	resetp RSTP(CLK_24M, nRESET, nRESETP);
 	
 	irq IRQ(IRQ_S1, IRQ_R1, IRQ_S2, IRQ_R2, IRQ_S3, IRQ_R3, IPL0, IPL1);		// Probably uses nRESETP
 	
-	videosync VS(CLK_24M, nRESETP, VCOUNT, MAIN_CNT, TMS0, VBLANK, nVSYNC, HSYNC, nBNKB);
+	videosync VS(CLK_24M, nRESETP, V_COUNT, H_COUNT, TMS0, VBLANK, nVSYNC, HSYNC, nBNKB, CHBL, FIX_MAP_COL);
 
 	odd_clk ODDCLK(CLK_24M, nRESETP, CLK_8M, CLK_4M, CLK_4MB);
 	
-	slow_cycle SCY(CLK_24M, nRESETP,
-					HCOUNT[8:0], VCOUNT[7:3], SPR_NB, SPR_TILEIDX,	SPR_TILE_NB, SPR_TILEPAL,
+	// This needs to be way simpler. Use FIX_MAP_COL as input, output SLOW_VRAM_DATA.
+	/*slow_cycle SCY(CLK_24M, nRESETP,
+					H_COUNT[8:0], V_COUNT[7:3], SPR_NB, SPR_TILEIDX,	SPR_TILE_NB, SPR_TILEPAL,
 					SPR_TILE_AA, SPR_TILEFLIP, FIX_TILE_NB, FIX_TILEPAL,
 					CPU_VRAM_ADDRESS_BUFFER, CPU_VRAM_ADDR, CPU_VRAM_READ_BUFFER_SCY, CPU_VRAM_WRITE_BUFFER,
-					CPU_VRAM_ZONE, CPU_RW);
+					CPU_VRAM_ZONE, CPU_RW, SLOW_VRAM_DATA);*/
+	
+	// Slow VRAM latches
+	always @(posedge PCK1)				// Good ?
+	begin
+		FIX_TILE_NB <= SLOW_VRAM_DATA[11:0];
+		FIX_PAL_NB <= SLOW_VRAM_DATA[15:12];
+	end
 	
 	// Todo: this needs to give SPR_NB, SPR_TILEIDX, SPR_XPOS, L0_ADDR, SPR_ATTR_SHRINK
 	// Todo: this needs L0_DATA (from P bus)
@@ -175,28 +198,21 @@ module lspc_a2(
 					CPU_VRAM_ZONE, CPU_RW);
 	
 	// This needs SPR_XPOS, L0_ADDR
-	p_cycle PCY(nRESET, CLK_24M, HSYNC, FIX_ROM_ADDR, FIX_TILEPAL, SPR_ROM_ADDR, SPR_TILEPAL, SPR_XPOS, L0_ADDR,
-					PCK1, PCK2, LOAD, S1H1, nVCS, L0_DATA, {PBUS_IO, PBUS_OUT});
+	p_cycle PCY(nRESET, CLK_24M, PBUS_S_ADDR, FIX_TILEPAL, SPR_ROM_ADDR, SPR_TILEPAL, SPR_XPOS, L0_ADDR,
+					LOAD, S1H1, nVCS, L0_DATA, {PBUS_IO, PBUS_OUT});
 	
 	autoanim AA(nRESET, VBLANK, AA_SPEED, SPR_TILE_NB[2:0], AA_DISABLE, SPR_ATTR_AA, SPR_TILE_NB_AA, AA_COUNT);
 	
 	hshrink HSHRINK(SPR_ATTR_SHRINK[11:8], SPR_PIXELCNT, WR_PIXEL);
 	
-	// - -------- ---10000 HCOUNT for first fix address latch would be 4 ?
-	// n nnnnnnnn nnnHHvvv
-	// 6M: PCK2 = 4 pixels
-	// 4: Latch from P, has 2 pixels
-	// 5: Nothing
-	// 6: S2H1 changes, has 2 pixels
-	// 7: Nothing
+	// P bus values
+	assign PBUS_S_ADDR = {FIX_A4, V_COUNT[2:0], FIX_TILE_NB};
 	
-	// Same as Alpha68k:
-	assign FIX_ROM_ADDR = {FIX_TILE_NB, HCOUNT[2:1], VCOUNT[2:0]};
-	assign S2H1 = FIX_ROM_ADDR[3];
+	assign CA4 = H_COUNT[1];
+	assign S2H1 = ~CA4;
 		
 	// One address = 32bit of data = 8 pixels
 	// 16,0 17,1 18,2 19,3 ... 31,15
 	assign SPR_ROM_ADDR = {{SPR_TILE_NB[19:3], SPR_TILE_NB_AA}, SPR_ROM_LINE};
-	assign CA4 = SPR_ROM_ADDR[4];
 	
 endmodule

@@ -4,17 +4,16 @@ module p_cycle(
 	input nRESET,
 	input CLK_24M,
 	
-	input [16:0] FIX_ROM_ADDR,
+	input [15:0] S_ROM_ADDR,
 	input [3:0] FIX_PAL,
-	input [24:0] SPR_ROM_ADDR,
+	input [24:0] C_ROM_ADDR,
 	input [7:0] SPR_PAL,
 	
 	input [7:0] SPR_XPOS,
 	input [15:0] L0_ROM_ADDR,
 	
-	output PCK1, PCK2,
 	output LOAD,
-	output S1H1, S2H1,
+	output S1H1,
 	output reg nVCS,
 	output reg [7:0] L0_DATA,
 	
@@ -23,51 +22,59 @@ module p_cycle(
 
 	// L0_DATA is probably latched on LOAD posedge
 
-	reg [4:0] CYCLE_P;		// Both edges of 24M ?
+	reg [3:0] P_CYCLE_P;
+	reg [3:0] P_CYCLE_N;
 
 	reg [23:16] PBUS_U;		// inout
 	reg [15:0] PBUS_L;		// out only
 	
-	assign S_ADDR_OUT = {FIX_ROM_ADDR[4], FIX_ROM_ADDR[2:0], FIX_ROM_ADDR[16:5]};
-	assign C_ADDR_OUT = {SPR_ROM_ADDR[24:21], SPR_ROM_ADDR[3:0], FIX_ROM_ADDR[20:5]};
-	
 	assign PBUS = {PBUS_U, PBUS_L};
 
-	// CYCLE_P 0,1
-	assign PCK1 = (CYCLE_P[4:1] == 4'b0000) ? 1'b1 : 1'b0;
-	// CYCLE_P 16,17
-	assign PCK2 = (CYCLE_P[4:1] == 4'b1000) ? 1'b1 : 1'b0;
+	// P bus sequencing
+	always @(posedge CLK_24M)
+	begin
+		if (!nRESET)
+			P_CYCLE_P <= 0;
+		else
+			P_CYCLE_P <= P_CYCLE_P + 1'b1;
+	end
+	always @(negedge CLK_24M)
+	begin
+		if (!nRESET)
+			P_CYCLE_N <= 0;
+		else
+			P_CYCLE_N <= P_CYCLE_N + 1'b1;
+	end
 	
 	// Alpha68k LOAD is CLK_C & SNKCLK_8. 6M & 3M ?
 	//assign LOAD = CLK_C & SNKCLK_8;
 	
-	assign S1H1 = CYCLE_P[3];
-	assign S2H1 = ~CYCLE_P[4];		// Fix quarter selection
+	assign S1H1 = P_CYCLE_P[3];	// To test
 	
-	always @(posedge CLK_24M)	// or posedge nCLK_24M
+	// Simplified P bus data, for now
+	//                                 XXXXXX                  XXXXXX
+	// P FFFF0000111122223333444455556666777788889999AAAABBBBCCCCDDDDEEEE
+	// N FF0000111122223333444455556666777788889999AAAABBBBCCCCDDDDEEEEFF
+	assign PBUS = ((P_CYCLE_P == 4'd7) || (P_CYCLE_N == 4'd7)) ?
+						{8'bzzzzzzzz, S_ROM_ADDR} :
+						((P_CYCLE_P == 4'd13) || (P_CYCLE_N == 4'd13)) ?
+						{4'h0, FIX_PAL, 16'h0000} :
+						24'h000000;
+	
+	always @(posedge CLK_24M)	// or posedge nCLK_24M ?
 	begin
-		if (!nRESET)
-		begin
-			CYCLE_P <= 0;
-		end
-		else
-		begin
-			CYCLE_P <= CYCLE_P + 1'b1;
-			
-			// Probably not a register...
-			if (CYCLE_P == 2) nVCS <= 1'b0;
-			if (CYCLE_P == 12) nVCS <= 1'b1;
-			
-			// Wrong logic, but sequence is good
-			case (CYCLE_P)
-				0: {PBUS_U, PBUS_L} <= C_ADDR_OUT;	// Sprite ROM address - Is CA4 latched here or free-running ?
-				3: {PBUS_U, PBUS_L} <= {8'bzzzzzzzz, L0_ROM_ADDR};	// L0 ROM address
-				13: {PBUS_U, PBUS_L} <= {SPR_PAL, SPR_XPOS, 8'b00000000};	// Sprite palette and X position
-				16: {PBUS_U, PBUS_L} <= S_ADDR_OUT;	// Fix ROM address - Is S2H1 latched here or free-running ?
-				19: {PBUS_U, PBUS_L} <= 24'hFF0000;	// FF0000 ? Maybe PBUS_U is z ?
-				29: {PBUS_U, PBUS_L} <= {4'b0000, FIX_PAL, 16'b0000000000000000};	// Fix palette
-			endcase
-		end
+		// nVCS probably not a register
+		if (P_CYCLE_P == 2) nVCS <= 1'b0;
+		if (P_CYCLE_P == 12) nVCS <= 1'b1;
+		
+		/*case (CYCLE_P)
+			0: {PBUS_U, PBUS_L} <= C_ADDR_OUT;		// Sprite ROM address - Is CA4 latched here or free-running ?
+			3: {PBUS_U, PBUS_L} <= {8'bzzzzzzzz, L0_ROM_ADDR};	// L0 ROM address
+			13: {PBUS_U, PBUS_L} <= {SPR_PAL, SPR_XPOS, 8'b00000000};	// Sprite palette and X position
+			16: {PBUS_U, PBUS_L} <= {8'bzzzzzzzz, S_ROM_ADDR};	// Fix ROM address - Is S2H1 latched here or free-running ?
+			19: {PBUS_U, PBUS_L} <= 24'hFF0000;		// FF0000 ? Maybe PBUS_U is z ?
+			29: {PBUS_U, PBUS_L} <= {4'b0000, FIX_PAL, 16'b0000000000000000};	// Fix palette
+		endcase*/
 	end
 
 endmodule

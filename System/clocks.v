@@ -13,6 +13,8 @@ module clocks(
 	output CLK_6MB,
 	output reg CLK_1MB
 );
+
+	wire CLK_3M;
 	
 	always @(negedge CLK_24M or negedge nRESETP)
 	begin
@@ -32,7 +34,7 @@ module clocks(
 		if (!nRESETP)
 			CLKDIV_B <= 3'b100;	// Load
 		else
-			CLKDIV_B <= CLKDIV_B + 1;
+			CLKDIV_B <= CLKDIV_B + 1'b1;
 	end
 	
 	assign CLK_12M = CLKDIV_B[0];

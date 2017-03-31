@@ -77,7 +77,7 @@ module neo_b1(
 	
 	wire RBA, RBB;
 	
-	// -------------------------------- Alpha68k logic --------------------------------
+	// -------------------------------- Alpha68k logic and additions --------------------------------
 	
 	// +1 adders
 	wire [3:0] P10_OUT;
@@ -101,8 +101,10 @@ module neo_b1(
 	reg [7:0] SPR_PAL_REG_B;
 	reg [7:0] FIXD_REG_A;
 	reg [7:0] FIXD_REG_B;
+	reg [7:0] FIXD_REG_C;
 	
-	reg [3:0] FIX_PAL_REG;
+	reg [3:0] FIX_PAL_REG_A;
+	reg [3:0] FIX_PAL_REG_B;
 	
 	wire [3:0] FIX_COLOR;
 	wire [3:0] SPR_COLOR;
@@ -117,12 +119,14 @@ module neo_b1(
 	reg [7:0] SPRX;
 	wire HFLIP;			// TODO
 	wire TODO_FIXCLK;	// TODO
-	wire CLK_PA;		// TODO
+	//wire CLK_PA;		// TODO
 	wire nPA_OE;		// TODO
-	reg [11:0] PA_VIDEO_REG;
-	wire [11:0] PA_VIDEO;
+	//reg [11:0] PA_VIDEO_REG;
+	//wire [11:0] PA_VIDEO;
+	wire PCK;
+	reg PAL_SWITCH;	// Good ?
 	
-	assign PA = PA_VIDEO;	// CPU acces switch here !
+	//assign PA = PA_VIDEO;	// CPU acces switch here !
 	
 	// G3 (374): nOE seems used !
 	always @(posedge nLATCH_X)
@@ -163,8 +167,37 @@ module neo_b1(
 	end
 	
 	// J6 (174) CLK TODO, no nMR
-	always @(posedge 1'bz)
+	/*always @(posedge 1'bz)
 		FIX_PAL_REG <= PBUS[19:16];	// FIX_PAL should be part of P_BUS
+		*/
+	
+	// When are palettes latched from the P BUS ?
+	// PCK* are sharing the edges, so it can't be them
+	// CLK_1MB has just the right timing, but NEO-B1 must differentiate between SPR palette and FIX palette
+	// Is this done with a S/R latch using PCK1/2 ? Let's try...
+	assign PCK = (PCK1 | PCK2);
+	always @(posedge PCK)
+	begin
+		if (PCK1)
+			PAL_SWITCH <= 1'b0;	// Sprite palette comes next
+		else if (PCK2)
+			PAL_SWITCH <= 1'b1;	// Fix palette comes next
+	end
+	
+	// Palette index latch + Fix palette pipeline
+	always @(posedge CLK_1MB)
+	begin
+		if (PAL_SWITCH)
+		begin
+			FIX_PAL_REG_A <= PBUS[19:16];
+			FIX_PAL_REG_B <= FIX_PAL_REG_A;
+		end
+		else
+		begin
+			SPR_PAL_REG_A <= PBUS[23:16];
+			SPR_PAL_REG_B <= SPR_PAL_REG_A;
+		end
+	end
 	
 	linebuffer LB1(nOE_P18P20, nWE_EVEN_A,
 						LB_EVEN_A_ADDR, {SPR_PAL_REG_B, GAD[1], GAD[0], GAD[3], GAD[2]});
@@ -192,11 +225,11 @@ module neo_b1(
 	begin
 		FIXD_REG_A <= FIXD;			// L5
 		FIXD_REG_B <= FIXD_REG_A;	// M5
+		FIXD_REG_C <= FIXD_REG_B;	// NeoGeo
 	end
 	
 	// M4 Odd/even tile pixel demux
-	assign FIX_COLOR = SNKCLK_40 ? {FIXD_REG_B[7], FIXD_REG_B[5], FIXD_REG_B[3], FIXD_REG_B[1]} :
-												{FIXD_REG_B[6], FIXD_REG_B[4], FIXD_REG_B[2], FIXD_REG_B[0]};
+	assign FIX_COLOR = SNKCLK_40 ? FIXD_REG_C[3:0] : FIXD_REG_C[7:4];
 	
 	// N4 & M6 Opacity detection
 	assign FIX_OPAQUE = |{FIX_COLOR};
@@ -219,15 +252,17 @@ module neo_b1(
 							LB_ODD_A_DATA[11:4];
 	
 	// H12 & H9 Sprite/fix palette bits mux
-	assign PAL = FIX_OPAQUE ? {4'b0000, FIX_PAL_REG} : SPR_PAL;
+	assign PAL = FIX_OPAQUE ? {4'b0000, FIX_PAL_REG_B} : SPR_PAL;
+	
+	assign PA = CHBL ? 12'h000 : {PAL, COLOR};
 	
 	// H10 & H11 Palette RAM address latches
 	// nOE is used, certainly to gate outputs during CPU access
-	assign PA_VIDEO = nPA_OE ? 12'bzzzzzzzzzzzz : PA_VIDEO_REG;
+	/*assign PA_VIDEO = nPA_OE ? 12'bzzzzzzzzzzzz : PA_VIDEO_REG;
 	always @(posedge CLK_PA)
 	begin
 		PA_VIDEO_REG <= {PAL, COLOR};
-	end
+	end*/
 	
 	// --------------------------------------------------------------------------------
 	

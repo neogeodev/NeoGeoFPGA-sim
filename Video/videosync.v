@@ -3,67 +3,84 @@
 module videosync(
 	input CLK_24M,
 	input nRESETP,
-	output reg [8:0] VCOUNT = 9'hF8,	// F8 ~ 1FF
-	output reg [11:0] MAIN_CNT = 12'h0,
+	output reg [8:0] V_COUNT,		// 0~263
+	output reg [8:0] H_COUNT,		// 0~383
 	output TMS0,
-	output reg VBLANK = 1'b0,
-	output nVSYNC,
-	output HSYNC,
-	output reg nBNKB
+	output reg VBLANK,
+	output reg nVSYNC,
+	output reg HSYNC,
+	output reg nBNKB,
+	output reg CHBL,
+	output reg [5:0] FIX_MAP_COL	// 0~47
 );
+
+	wire MASKING;
+	reg [3:0] FOURTEEN_CNT;
+	reg [1:0] LSPC_DIV;
+	reg [7:0] FT_CNT;
 	
-	// CSYNC low 56px (224mclk) before TMS0, high 28px (112mclk) before TMS0
-	
-	// CSYNC falls with TMS0 on RESET
-	// TMS0 stays low for 87mclk
-	// CSYNC stays low for 1399mclk
-	// CSYNC stays high for 112mclk = 28px
-	
+	// Do not reset CHBL between (NTSC):
+	// x 0000 0000 ~ x 0000 1111
+	// x 1111 0000 ~ x 1111 1111
+	assign MASKING = ~|{V_COUNT[7:4]} | &{V_COUNT[7:4]};
+
 	always @(negedge CLK_24M)
 	begin
-		if (MAIN_CNT == 12'd55)		// 56 (14px)
-		begin
-			if (VCOUNT == 9'h1F0) nBNKB <= 1'b0;
-			if (VCOUNT == 9'h110) nBNKB <= 1'b1;
-		end
-	end
-
-	always @(negedge CLK_24M or negedge nRESETP)
-	begin
 		if (!nRESETP)
-			MAIN_CNT <= 12'b0;
+		begin
+			H_COUNT <= 0;
+			FOURTEEN_CNT <= 4'd0;
+			LSPC_DIV <= 0;
+		end
 		else
 		begin
-			if (MAIN_CNT < 12'hBFF)		// (1536*2)-1 = 2 full lines
-				MAIN_CNT <= MAIN_CNT + 1'b1;
-			else
-				MAIN_CNT <= 12'b0;
-			
-			if (MAIN_CNT == 12'd1535) VCOUNT <= VCOUNT + 1'b1;
-			
-			if (MAIN_CNT == 12'd3071)
+			if (FOURTEEN_CNT == 4'd14)
 			begin
-				if (VCOUNT == 9'h1FF)
+				FOURTEEN_CNT <= 4'd0;
+				FT_CNT <= FT_CNT + 1'b1;
+				HSYNC <= |{FT_CNT[7:3]};		// Good ?	HSYNC low (112mclk, 0~28px)
+				if (FT_CNT == 7'd12)				// 11 ?
 				begin
-					// End of frame
-					VCOUNT <= 9'hF8;				// VSSTART	F8:VSync start
+					nVSYNC <= V_COUNT[8];			// Good ?
+					nBNKB <= ~MASKING;
 				end
-				else
+
+				if (FT_CNT == 7'd16)				// 15 ?
 				begin
-					if (VCOUNT == 9'h0FF)		// VBEND		100:VSync/VBlank end
-						VBLANK <= 0;
-					if (VCOUNT == 9'h1F1)		// VBSTART	1F0:VBlank start
-						VBLANK <= 1;
-				
-					VCOUNT <= VCOUNT + 1'b1;
+					if (!MASKING)
+						CHBL <= 1'b0;				// NTSC Good ?
 				end
 			end
+			else
+				FOURTEEN_CNT <= FOURTEEN_CNT + 1'b1;
+			
+			if (LSPC_DIV == 2'd1)
+			begin
+				if (H_COUNT < 9'd383)
+					H_COUNT <= H_COUNT + 1'b1;
+				else
+				begin
+					H_COUNT <= 9'd0;
+					FOURTEEN_CNT <= 4'd0;		// Force reset each new line
+					FT_CNT <= 7'd0;
+					if (V_COUNT < 9'd263)
+						V_COUNT <= V_COUNT + 1'b1;
+					else
+						V_COUNT <= 0;
+				end
+				if (H_COUNT == 9'd48)
+					FIX_MAP_COL <= 6'd0;	// This probably isn't done that way
+				if (&{H_COUNT[2:0]})
+					FIX_MAP_COL <= FIX_MAP_COL + 1'b1;	// This probably isn't done that way
+				if (H_COUNT == 9'd375)
+					CHBL <= 1'b1;			// This probably isn't done that way
+			end
+			LSPC_DIV <= LSPC_DIV + 1'b1;
 		end
-
 	end
 	
-	assign TMS0 = MAIN_CNT[11] | (MAIN_CNT[10] & MAIN_CNT[9]);
-	assign nVSYNC = VCOUNT[8];
+	// Certainly wrong:
+	//assign TMS0 = MAIN_CNT[11] | (MAIN_CNT[10] & MAIN_CNT[9]);
 	
 	// -------------------------------- Unreadable notes follow --------------------------------
 	// HSYNC = 0 28	0~1B		000000000	000011011
@@ -87,19 +104,9 @@ module videosync(
 	// 328~355: L
 	// 356~383: H
 	// F0 = (A)(C)(D'+F')(D'+E')(D+E+F)(D'+G');
-/*	assign HSYNC = ((HCOUNT[8]&HCOUNT[6]) & 
-							(~HCOUNT[5]|~HCOUNT[3]) &
-							(~HCOUNT[5]|~HCOUNT[4]) &
-							(|{HCOUNT[5:3]}) &
-							(~HCOUNT[5]|~HCOUNT[2]));*/
-							
-	assign HSYNC = 1'b0;
 	
 	// Stuff happens 14px after HSYNC rises: VSYNC and nBNKB
 	// Not sure about this at all...
 	//assign HTRIG = (HSYNC == 42) ? 1 : 0;
-	/*always @(posedge HTRIG)
-	begin
-	end*/
 
 endmodule

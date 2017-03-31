@@ -42,7 +42,7 @@ module lspc_timer(
 					TIMER <= TIMER - 1'b1;
 				else
 				begin
-					if (TIMER_INT_EN) nIRQS[1] <= 1'b0;				// IRQ2 plz
+					//if (TIMER_INT_EN) nIRQS[1] <= 1'b0;				// IRQ2 plz
 					if (TIMER_MODE[2]) TIMER <= TIMER_LOAD;		// Repeat mode
 				end
 			end
