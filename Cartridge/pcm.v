@@ -1,5 +1,6 @@
 `timescale 1ns/1ns
 
+// SIMULATION - UNUSED
 // SNK "PCM" chip (in cartridge)
 
 module pcm(

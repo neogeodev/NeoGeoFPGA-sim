@@ -1,6 +1,6 @@
 `timescale 1ns/1ns
 
-// SIMULATION
+// SIMULATION - UNUSED
 // Latches and buffers on the 68K bus for MVS cab I/Os
 // 273s and 245s on the verification board
 // Signals: nBITWD0, nDIPRD0, nLED_LATCH, nLED_DATA

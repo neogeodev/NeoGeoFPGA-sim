@@ -4,12 +4,11 @@ module linebuffer(
 	input nOE_TO_WRITE,
 	input nWE,
 	input [7:0] ADDRESS,
-	inout [11:0] DATA
+	input [11:0] DATA_IN,
+	output [11:0] DATA_OUT
 );
 
-	reg [11:0] LB_RAM[0:255];	// CHECK: Should never go over 191
-	wire [7:0] DATA_OUT;
-	wire [7:0] DATA_IN;
+	reg [11:0] LB_RAM[0:255];	// TODO: Add a check, should never go over 191
 
 	// Read
 	assign #35 DATA_OUT = LB_RAM[ADDRESS];

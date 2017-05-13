@@ -31,7 +31,7 @@ module lspc_a2(
 	output [8:0] H_COUNT				// TODO: REMOVE, only used for debug in videout and as a hack in B1
 );
 
-	parameter VIDEO_MODE = 0;			// NTSC
+	parameter VIDEO_MODE = 1'b0;	// NTSC
 
 	/*
 		Slow cycle:
@@ -58,10 +58,13 @@ module lspc_a2(
 	wire [15:0] CPU_VRAM_READ_BUFFER_FCY;
 	wire [15:0] CPU_VRAM_READ_BUFFER;
 	
+	wire [7:0] AA_SPEED;
 	wire [2:0] AA_COUNT;				// Auto-animation tile #
 	wire [2:0] SPR_TILE_NB_AA;		// SPR_ATTR_TILE_NB after auto-animation applied
 	wire [1:0] SPR_ATTR_AA;			// Auto-animation config bits
 	wire [11:0] SPR_ATTR_SHRINK;
+	
+	wire [2:0] TIMER_MODE;
 	
 	wire VBLANK;
 	wire nVSYNC;
@@ -72,7 +75,7 @@ module lspc_a2(
 	
 	wire [15:0] SLOW_VRAM_DATA;
 	
-	wire [7:0] L0_DATA;
+	wire [7:0] L0_ROM_DATA;
 	
 	wire [11:0] MAIN_CNT;
 	
@@ -108,6 +111,43 @@ module lspc_a2(
 	wire CLK_12M;	// TODO
 	wire nCLK_12M;	// TODO
 	wire nLATCH_X;	// TODO
+	
+	
+	// Fix stuff checked on DE1 board
+	assign CLK_24MB = ~CLK_24M;
+	assign SYNC = HSYNC ^ nVSYNC;
+	
+	// CA4	''''|______|''''
+	// PCK1	____|'|_________
+	always @(negedge CLK_24M)
+		CA4_Q <= CA4;
+	assign PCK1 = (CA4_Q & !CA4);
+
+	// 2H1	''''|______|''''
+	// PCK2	____|'|_________
+	always @(negedge CLK_24M)
+		S2H1_Q <= S2H1;
+	assign PCK2 = (S2H1_Q & !S2H1);
+
+	// Slow VRAM latches
+	always @(posedge PCK1)				// Good ?
+	begin
+		FIX_TILE_NB <= SLOW_VRAM_DATA[11:0];
+		FIX_PAL_NB <= SLOW_VRAM_DATA[15:12];
+	end
+	
+	// The fix map is 16bit/tile in slow VRAM starting @ $7000
+	// 0 111 0CCC CCCL LLLL
+	assign FIX_MAP_LINE = V_COUNT[7:3];		// Fix renders only for the first 256 lines (not during vblank ?)
+	assign SLOW_VRAM_ADDR = {4'b1110, FIX_MAP_COL, FIX_MAP_LINE};
+	
+	// P bus values
+	assign FIX_A4 = H_COUNT[2];		// Good ?
+	assign PBUS_S_ADDR = {FIX_A4, V_COUNT[2:0], FIX_TILE_NB};
+	
+	assign CA4 = H_COUNT[1];
+	assign S2H1 = ~CA4;
+	
 	
 
 	// Alpha68k stuff:
@@ -146,25 +186,10 @@ module lspc_a2(
 	assign nWE_EVEN_A = nBFLIP ? nEVEN_WE : nCLEAR_WE;
 	assign nWE_EVEN_B = nBFLIP ? nCLEAR_WE : nEVEN_WE;
 	
-	
 	assign IRQ_S3 = VBLANK;			// To check
-	assign CLK_24MB = ~CLK_24M;
-	assign SYNC = nVSYNC ^ HSYNC;
 	
 	// Todo: Probably wrong:
 	assign CPU_VRAM_READ_BUFFER = CPU_VRAM_ZONE ? CPU_VRAM_READ_BUFFER_FCY : CPU_VRAM_READ_BUFFER_SCY;
-	
-	// CA4	''''|______|''''
-	// PCK1	____|'|_________
-	always @(negedge CLK_24M)
-		CA4_Q <= CA4;
-	assign PCK1 = (CA4_Q & !CA4);
-
-	// 2H1	''''|______|''''
-	// PCK2	____|'|_________
-	always @(negedge CLK_24M)
-		S2H1_Q <= S2H1;
-	assign PCK2 = (S2H1_Q & !S2H1);
 	
 	lspc_timer TIMER(nRESET, CLK_6M_LSPC, VBLANK, VIDEO_MODE, TIMER_MODE, TIMER_INT_EN, TIMER_LOAD,
 							TIMER_PAL_STOP, V_COUNT);
@@ -184,13 +209,6 @@ module lspc_a2(
 					CPU_VRAM_ADDRESS_BUFFER, CPU_VRAM_ADDR, CPU_VRAM_READ_BUFFER_SCY, CPU_VRAM_WRITE_BUFFER,
 					CPU_VRAM_ZONE, CPU_RW, SLOW_VRAM_DATA);*/
 	
-	// Slow VRAM latches
-	always @(posedge PCK1)				// Good ?
-	begin
-		FIX_TILE_NB <= SLOW_VRAM_DATA[11:0];
-		FIX_PAL_NB <= SLOW_VRAM_DATA[15:12];
-	end
-	
 	// Todo: this needs to give SPR_NB, SPR_TILEIDX, SPR_XPOS, L0_ADDR, SPR_ATTR_SHRINK
 	// Todo: this needs L0_DATA (from P bus)
 	fast_cycle FCY(CLK_24M, nRESETP,
@@ -198,18 +216,12 @@ module lspc_a2(
 					CPU_VRAM_ZONE, CPU_RW);
 	
 	// This needs SPR_XPOS, L0_ADDR
-	p_cycle PCY(nRESET, CLK_24M, PBUS_S_ADDR, FIX_TILEPAL, SPR_ROM_ADDR, SPR_TILEPAL, SPR_XPOS, L0_ADDR,
-					LOAD, S1H1, nVCS, L0_DATA, {PBUS_IO, PBUS_OUT});
+	p_cycle PCY(nRESET, CLK_24M, PBUS_S_ADDR, FIX_PAL_NB, SPR_ROM_ADDR, SPR_TILE_PAL, SPR_XPOS, L0_ROM_ADDR,
+					LOAD, S1H1, nVCS, L0_ROM_DATA, {PBUS_IO, PBUS_OUT});
 	
 	autoanim AA(nRESET, VBLANK, AA_SPEED, SPR_TILE_NB[2:0], AA_DISABLE, SPR_ATTR_AA, SPR_TILE_NB_AA, AA_COUNT);
 	
 	hshrink HSHRINK(SPR_ATTR_SHRINK[11:8], SPR_PIXELCNT, WR_PIXEL);
-	
-	// P bus values
-	assign PBUS_S_ADDR = {FIX_A4, V_COUNT[2:0], FIX_TILE_NB};
-	
-	assign CA4 = H_COUNT[1];
-	assign S2H1 = ~CA4;
 		
 	// One address = 32bit of data = 8 pixels
 	// 16,0 17,1 18,2 19,3 ... 31,15

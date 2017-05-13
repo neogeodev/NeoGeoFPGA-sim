@@ -1,28 +1,25 @@
 `timescale 1ns/1ns
 
-module prog_board(
-	input nSDROE, RMPX,
-	input [23:20] RA_U,
-	input [9:8] RA_L,
-	
-	input nSDPOE, PMPX,
+module aes_prog(
+	input nPORTADRS,
+	input PMPX,
 	input [11:8] PA,
-	
-	input nSLOTCS,
-	input nPORTADRS, nPORTWEL, nPORTWEU, nPORTOEL, nPORTOEU,
+	inout [7:0] PAD,
+	input nRESET,
+	input CLK_68KCLKB,
+	input nPORTWEL, nPORTWEU,
+	input nPORTOEL, nPORTOEU,
 	input nROMOEL, nROMOEU,
-	
 	input nAS, M68K_RW,
 	inout [15:0] M68K_DATA,
 	input [19:1] M68K_ADDR,
-	input CLK_68KCLKB,
-	output nROMWAIT, nPWAIT0, nPWAIT1, PDTACK,
 	input nROMOE,
-	
-	input CLK_4MB, nRESET,
-
-	inout [7:0] PAD,
-	inout [7:0] RAD
+	output nROMWAIT, nPWAIT1, nPWAIT0, PDTACK,
+	inout [7:0] RAD,
+	input [9:8] RA_L,
+	input [23:20] RA_U,
+	input PMPX, nSDPOE,
+	input CLK_4MB
 );
 
 	//wire nPORTOE;

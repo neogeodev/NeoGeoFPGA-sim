@@ -1,6 +1,6 @@
 `timescale 1ns/1ns
 
-// SIMULATION
+// SIMULATION - UNUSED
 // Latches and buffers on the 68K bus for joypad I/Os
 // 273s and 245s on the verification board
 // Signals: nCTRL1ZONE, nCTRL2ZONE, nSTATUSBZONE, nBITWD0, (memcard nWP, nCD2, nCD1), SYSTEM_MODE

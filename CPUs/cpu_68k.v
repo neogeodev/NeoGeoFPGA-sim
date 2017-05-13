@@ -15,14 +15,14 @@ module cpu_68k(
 wire [15:0] TG68K_DATAIN;
 wire [15:0] TG68K_DATAOUT;
 wire [31:0] TG68K_ADDR;
-wire [24:0] DEBUG_ADDR;							// Remove
+wire [24:0] DEBUG_ADDR;							// TODO: Remove
 
 assign M68K_DATA = M68K_RW ? 16'bzzzzzzzzzzzzzzzz : TG68K_DATAOUT;
 assign TG68K_DATAIN = M68K_RW ? M68K_DATA : 16'bzzzzzzzzzzzzzzzz;
 
 assign M68K_ADDR = TG68K_ADDR[23:1];
 
-assign DEBUG_ADDR = {M68K_ADDR, 1'b0};		// Remove
+assign DEBUG_ADDR = {M68K_ADDR, 1'b0};		// TODO: Remove
 
 tg68 TG68K(
 		.clk(CLK_68KCLK),

@@ -1,5 +1,7 @@
 `timescale 1ns/1ns
 
+// TB specific - UNUSED
+
 module ser_video(
 	input nRESET,
 	input CLK_SERVID,

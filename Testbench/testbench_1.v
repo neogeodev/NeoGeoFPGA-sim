@@ -1,51 +1,54 @@
 `timescale 1ns/1ns
 // `default_nettype none
 
-// Todo: delegate some stuff to CPLD ? Like clock divider for cartridge and SROM, SRAM and WRAM control ?
+// SIMULATION ONLY
+// TB = Test Board
+
+// TODO TB: delegate some stuff to CPLD (clock divider for cartridge and SROM, SRAM and WRAM control...)
 
 module testbench_1();
 	reg MCLK;
-	reg nRESET_BTN;
-	reg [9:0] P1_IN;
+	reg nRESET_BTN;			// Present on AES only
+	reg [9:0] P1_IN;			// Joypad
 	reg [9:0] P2_IN;
-	reg nTEST_BTN;				// MVS only
-	reg [7:0] DIPSW;
+	reg nTEST_BTN;				// Present on MVS only
+	reg [7:0] DIPSW;			// Present on MVS only
 	
 	wire [15:0] M68K_DATA;
-	//wire [19:1] M68K_ADDR;
 	wire [23:1] M68K_ADDR;
 	
-	wire [2:0] LED_LATCH;
-	wire [7:0] LED_DATA;
+	wire [2:0] LED_LATCH;	// Present on MVS only
+	wire [7:0] LED_DATA;		// Present on MVS only
 	
 	wire [23:0] PBUS;
 	
 	wire [7:0] FIXD;
-	wire [7:0] FIXD_SFIX;
+	wire [7:0] FIXD_SFIX;	// Present on MVS only
 	wire [7:0] FIXD_CART;
 
-	wire [2:0] P1_OUT, P2_OUT;
+	wire [2:0] P1_OUT;		// Joypad
+	wire [2:0] P2_OUT;
 	
-	wire [4:0] CDA_U;
-	wire [15:0] CDD;			// Memcard data (is this a register ?)
+	wire [4:0] CDA_U;			// Memcard
+	wire [15:0] CDD;			// TODO: is this a register ?
 
-	wire [3:0] EL_OUT;
-	wire [8:0] LED_OUT1;
-	wire [8:0] LED_OUT2;
+	wire [3:0] EL_OUT;		// Present on MVS only
+	wire [8:0] LED_OUT1;		// Present on MVS only
+	wire [8:0] LED_OUT2;		// Present on MVS only
 
-	wire [7:0] SDRAD;
+	wire [7:0] SDRAD;			// ADPCM
 	wire [9:8] SDRA_L;
 	wire [23:20] SDRA_U;
 	wire [7:0] SDPAD;
 	wire [11:8] SDPA;
 
-	wire [15:0] SDA;				// Z80
+	wire [15:0] SDA;			// Z80
 	wire [7:0] SDD;
 	
+	wire [31:0] CR;			// Present on MVS only
 	wire [3:0] GAD, GBD;
-	wire [31:0] CR;
 	
-	wire [6:0] VIDEO_R;
+	wire [6:0] VIDEO_R;		// TB specific
 	wire [6:0] VIDEO_G;
 	wire [6:0] VIDEO_B;
 
@@ -110,19 +113,19 @@ module testbench_1();
 	assign M68K_DATA = (M68K_RW & ~nCRDC) ? CDD : 16'bzzzzzzzzzzzzzzzz;
 	assign CDD = (~M68K_RW | nCRDC) ? 16'bzzzzzzzzzzzzzzzz : M68K_DATA;
 	
-	// Put the following in the CPLD !
-	neo_zmc2 ZMC2(CLK_12M, EVEN, LOAD, H, CR, GAD, GBD, , ); // DOTA and DOTB not used, done in NG from GAD and GBD
-	
+	// TODO TB: Put the following in the CPLD
+	// DOTA and DOTB are not used, done in NG from GAD and GBD (saves 2 lines)
+	neo_zmc2 ZMC2(CLK_12M, EVEN, LOAD, H, CR, GAD, GBD, , );
 	
 	
 	initial
 	begin
 		MCLK = 0;
 		nRESET_BTN = 1;
-		P1_IN = 10'b1111111111;
+		P1_IN = 10'b1111111111;		// Idle joypads
 		P2_IN = 10'b1111111111;
 		
-		nTEST_BTN = 1;					// MVS only
+		nTEST_BTN = 1;
 		DIPSW = 8'b11111111;
 		
 		// Apply reset
@@ -137,7 +140,7 @@ module testbench_1();
 	
 	always @(posedge MCLK)
 	begin
-		// These addresses are only valid for the patched SP-S2.SP1 !
+		// These addresses are only valid for the patched SP-S2.SP1 system ROM !
 		if ({M68K_ADDR, 1'b0} == 24'hC16ADA)
 		begin
 			$display("SELF-TEST ERROR: See M68K reg D6:");
