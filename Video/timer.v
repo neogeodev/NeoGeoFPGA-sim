@@ -7,7 +7,7 @@ module lspc_timer(
 	input VIDEO_MODE,
 	input [2:0] TIMER_MODE,
 	input TIMER_INT_EN,
-	input TIMER_LOAD,
+	input [31:0] TIMER_LOAD,
 	input TIMER_PAL_STOP,
 	input [8:0] VCOUNT
 );

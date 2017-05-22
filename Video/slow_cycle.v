@@ -4,88 +4,125 @@ module slow_cycle(
 	input CLK_24M,
 	input nRESETP,
 	
-	input [8:0] HCOUNT,					// Todo: Should be [8:3] only, [2:0] for dirty sync hack
-	input [7:3] VCOUNT,
+	input [1:0] H_COUNT,
+	input PCK1,
+	input PCK2,
+	
+	input [5:0] FIX_MAP_COL,
+	input [7:3] V_COUNT,
 	input [8:0] SPR_NB,					// Sprite number being rendered (0~381 ?)
 	input [4:0] SPR_TILEIDX,			// Sprite tile index (0~31)
 	output [19:0] SPR_ATTR_TILENB,
 	output reg [7:0] SPR_ATTR_PAL,	// Todo: Probaby just wires
 	output reg [1:0] SPR_ATTR_AA,
 	output reg [1:0] SPR_ATTR_FLIP,	// Todo: H flip goes to ZMC2
-	output [11:0] FIX_ATTR_TILENB,
-	output reg [3:0] FIX_ATTR_PAL,
+	output reg [11:0] FIX_TILE_NB,
+	output reg [3:0] FIX_PAL_NB,
 	
-	input [14:0] CPU_ADDR_WR,
-	input [14:0] CPU_ADDR_RD,
+	input [14:0] REG_VRAMMOD,
+	input RELOAD_REQ,
+	
+	input [14:0] CPU_ADDR,
 	output reg [15:0] CPU_RDDATA,
 	input [15:0] CPU_WRDATA,
 	input CPU_ZONE,
-	input CPU_RW
+	input CPU_WRITE,
+	output CPU_WRITE_ACK
 );
+
+	reg [14:0] CPU_ADDR_SLOW;
+	wire [14:0] B;		// Slow VRAM address
+	wire [15:0] E;		// Slow VRAM data
+	wire nBOE;
+	reg nBWE;
+	
+	wire [4:0] FIX_MAP_LINE;
+	
+	reg [1:0] CYCLE_SLOW;
+	reg RELOAD_CPU_ADDR;
+	
+	vram_slow_u VRAMLU(B, E[15:8], 1'b0, nBOE, nBWE);
+	vram_slow_l VRAMLL(B, E[7:0], 1'b0, nBOE, nBWE);
+	
+	always @(posedge RELOAD_REQ or posedge CYCLE_SLOW[1])
+	begin
+		if (RELOAD_REQ)
+			RELOAD_CPU_ADDR <= 1'b1;
+		else
+			RELOAD_CPU_ADDR <= 1'b0;
+	end
+	
+	// Slow VRAM latches
+	always @(posedge PCK1)				// Good ?
+	begin
+		FIX_TILE_NB <= E[11:0];
+		FIX_PAL_NB <= E[15:12];
+	end
+	
+	// The fix map is 16bit/tile in slow VRAM starting @ $7000
+	// 0 111 0CCC CCCL LLLL
+	assign FIX_MAP_LINE = V_COUNT[7:3];		// Fix renders only for the first 256 lines (not during vblank ?)
+	
+	always @(posedge CLK_24M)
+	begin
+		// Timing cycle change on PCK* signals seems to fit in well, but not sure how the FIXMAP is triggered
+		if (PCK1)
+			CYCLE_SLOW <= 2'd0;		// SPRMAP
+		
+		if (PCK2)
+		begin
+			CYCLE_SLOW <= 2'd1;		// CPU
+			if (RELOAD_CPU_ADDR) CPU_ADDR_SLOW <= CPU_ADDR;
+			nBWE <= ~(CPU_WRITE & ~CPU_ZONE);
+		end
+		
+		if (H_COUNT[1:0] == 2'd3)
+		begin
+			CYCLE_SLOW <= 2'd2;		// FIXMAP
+			if (!nBWE)
+				CPU_ADDR_SLOW <= CPU_ADDR_SLOW + REG_VRAMMOD;
+			nBWE <= 1'b1;
+		end
+	end
+	
+	// Terrible.
+	always @(posedge CYCLE_SLOW[1])
+	begin
+		CPU_RDDATA <= E;
+	end
+	
+	assign CPU_WRITE_ACK = nBWE;	// Does this work ?
+	
+	assign B = (CYCLE_SLOW == 2'd0) ? 15'bzzzzzzzzzzzzzzz :		// SPR: Todo
+						(CYCLE_SLOW == 2'd1) ? CPU_ADDR_SLOW :			// CPU
+						{4'b1110, FIX_MAP_COL, FIX_MAP_LINE};			// FIX
+
+
+
 
 	// Guesswork:
 	// Slow VRAM is 120ns, so at least 3mclk needed between address set and data valid
-
-	// Todo: CPU access if zone=0
-
-	// 4 cycles of CLK_6M corresponds to 16 cycles of CLK_24M, so...
-	reg [3:0] CYCLE_SLOW;
 	
 	reg [3:0] SPR_TILENB_U;
 	reg [15:0] SPR_TILENB_L;
-	
-	reg CPU_RW_LATCHED;
-
-	wire [14:0] B;		// Low VRAM address
-	wire [15:0] E;		// Low VRAM data
-	
-	wire [14:0] FIXVRAM_ADDR;
 	wire [13:0] SPRVRAM_ADDR;	// LSB added later for even/odd word selection
 	
-	wire nBWE;
-	wire nBOE;
 	
-	assign nBWE = (CPU_RW_LATCHED | CPU_ZONE | ~&{CYCLE_SLOW[3:2]});		// TODO: Verify on hw
 	// TODO: An OE signal is used for slow VRAM, but not for fast VRAM. What's up with that ? Shared internal bus ?
-	assign nBOE = ~(CPU_RW_LATCHED | CPU_ZONE | ~&{CYCLE_SLOW[3:2]});	// TODO: Verify on hw
+	assign nBOE = ~nBWE;
 
-	vram_slow_u VRAMLU(B, E[15:8], 1'b0, nBOE, nBWE);
-	vram_slow_l VRAMLL(B, E[7:0], 1'b0, nBOE, nBWE);
-
-	// Not sure if all of this is right...
-	// Cycle order is good at least: FIX, SPR, SPR, CPU
-	assign B = (CYCLE_SLOW[3:2] == 2'b00) ? FIXVRAM_ADDR :	// 0000~0011 (4)
-					(CYCLE_SLOW[3:2] == 2'b11) ?						// 1100~1111 (4)
-						(CPU_RW_LATCHED) ? CPU_ADDR_RD : CPU_ADDR_WR :
-					{SPRVRAM_ADDR, CYCLE_SLOW[3]};					// 0100~1011 (8)	Is LSB right ?
+	//assign B = {SPRVRAM_ADDR, CYCLE_SLOW[3]};		// 0100~1011 (8)	Is LSB good ?
 	
-	assign E = ((CYCLE_SLOW[3:2] == 2'b11) && ~(CPU_RW_LATCHED | CPU_ZONE)) ? CPU_WRDATA : 16'bzzzzzzzzzzzzzzzz;
+	assign E = nBWE ? 16'bzzzzzzzzzzzzzzzz : CPU_WRDATA;
+	
 	
 	assign SPR_ATTR_TILENB = {SPR_TILENB_U, SPR_TILENB_L};
-	
-	// Fix map x,y = VRAM address:
-	// 0,0 = 7000
-	// 39,31 = 74FF
-	// 47,31 = 75FF (Rendering actually never stops: 48*8 = 384 ! NEO-CMC chip exploits this)
-	
-	// Fix map address:
-	// ((HCOUNT / 8) << 5) | ((VCOUNT & 255) / 8) | $7000
-	// 01110HHHHHHVVVVV
-	
-	// Wrong, same sync hack
-	// Todo: should just be HCOUNT[8:3], VCOUNT[7:3]
-	wire [8:0] DEBUG_HCOUNT;
-	assign DEBUG_HCOUNT = (HCOUNT == 9'd383) ? 9'd0 : HCOUNT + 9'd1;
-	assign FIXVRAM_ADDR = {4'b1110, DEBUG_HCOUNT[8:3], VCOUNT[7:3]};
 	
 	// SPR_TILEIDX   /------- --xxxxx! [4:0]
 	// SPR_NB        /xxxxxxx xx-----! [8:0]
 	assign SPRVRAM_ADDR = {SPR_NB, SPR_TILEIDX};
-
-	// This doesn't seem/need to be registered, gated in p_cycle.v
-	assign FIX_ATTR_TILENB = E[11:0];
 	
-	always @(posedge CLK_24M)
+	/*always @(posedge CLK_24M)
 	begin
 		if (!nRESETP)
 		begin
@@ -94,12 +131,6 @@ module slow_cycle(
 		else
 		begin
 			case (CYCLE_SLOW)
-				4'd2 :
-				begin
-					// End of FIX map cycle (should be 3 ?)
-					// Should match PCK2 ?
-					FIX_ATTR_PAL <= E[15:12];	// Maybe no latch required here, as with FIX_ATTR_TILENB ?
-				end
 				4'd6 :
 				begin
 					// End of SPR map cycle A (should be 7 ?)
@@ -130,6 +161,6 @@ module slow_cycle(
 			
 			CYCLE_SLOW <= CYCLE_SLOW + 1'b1;
 		end
-	end
+	end*/
 
 endmodule

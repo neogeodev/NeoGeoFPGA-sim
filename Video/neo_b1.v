@@ -36,6 +36,8 @@ module neo_b1(
 	input nRST
 );
 
+	wire [11:0] PA_VIDEO;
+
 	// Byte delays
 	reg [7:0] SPR_PAL_REG_A;
 	reg [7:0] SPR_PAL_REG_B;
@@ -78,7 +80,7 @@ module neo_b1(
 	assign FIX_OPAQUE = |{FIX_COLOR};
 	assign COLOR = FIX_OPAQUE ? FIX_COLOR : 4'b0000;	// SPR_COLOR
 	assign PAL = FIX_OPAQUE ? {4'b0000, FIX_PAL_REG_B} : SPR_PAL_REG_B;
-	assign PA = CHBL ? 12'h000 : {PAL, COLOR};
+	assign PA_VIDEO = CHBL ? 12'h000 : {PAL, COLOR};
 	
 
 	// Testing...
@@ -160,8 +162,6 @@ module neo_b1(
 	//reg [11:0] PA_VIDEO_REG;
 	//wire [11:0] PA_VIDEO;
 	reg PAL_SWITCH;	// Good ?
-	
-	//assign PA = PA_VIDEO;	// CPU access switch here !
 	
 	// G3 (374): nOE seems used !
 	always @(posedge nLATCH_X)
@@ -275,7 +275,8 @@ module neo_b1(
 	
 	
 	// $400000~$7FFFFF why not use nPAL ?
-	assign nPAL_ACCESS = |{A23Z, ~A22Z};	// |nAS ?
+	// Not sure about inclusion of nAS
+	assign nPAL_ACCESS = |{A23Z, ~A22Z, nAS};
 	
 	// Todo: Wrong, nRESET is sync'd to frame start
 	watchdog WD(nLDS, RW, A23Z, A22Z, M68K_ADDR_U, M68K_ADDR_L, BNKB, nHALT, nRESET, nRST);
@@ -283,18 +284,16 @@ module neo_b1(
 	/*
 	assign FIX_PIXEL = CLK_1MB ? FIX_DATA[7:4] : FIX_DATA[3:0];		// Opposite ?
 	assign FIX_OPAQUE = |{FIX_PIXEL};
+	*/
 	
 	// Priority for palette address bus (PA):
 	// -CPU over everything else (?)
 	// -CHBL (priority over CPU ?)
 	// -FIX pixel if opaque
 	// -Line buffer (sprites) output is last
-	assign PA = nPAL_ACCESS ?
-					CHBL ? 12'b000000000000 :
-					FIX_OPAQUE ? {FIX_PAL, FIX_PIXEL} :
-					LBDATA_OUT :
-					M68K_ADDR_L;
+	assign PA = nPAL_ACCESS ? PA_VIDEO : M68K_ADDR_L;
 	
+	/*
 	// Todo: Compare with Alpha68k schematic, maybe identical
 	// Todo: Check sync of 1H1, 1HB on real hw
 	// Does this work with PCK* signals ?

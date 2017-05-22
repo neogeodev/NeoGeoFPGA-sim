@@ -18,7 +18,7 @@ module vram_slow_l(
 	end
 
 	assign #120 DATA_OUT = RAMDATA[ADDR];
-	assign DATA = (!nCE && !nOE) ? RAMDATA[ADDR] : 8'bzzzzzzzz;
+	assign DATA = (!nCE && !nOE) ? DATA_OUT : 8'bzzzzzzzz;
 
 	always @(nCE or nWE)
 		if (!nCE && !nWE)

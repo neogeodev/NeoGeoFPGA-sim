@@ -48,8 +48,6 @@ module neo_c1(
 	wire nSRAM_ZONE;		// Internal (external for PCB)
 	wire nWORDACCESS;		// Internal
 	
-	//assign nVALID = nAS | (nLDS & nUDS);
-	
 	c1_regs C1REGS(nICOM_ZONE, RW, M68K_DATA, SDD, nSDZ80R, nSDZ80W, nSDZ80CLR, nSDW);
 	
 	c1_wait C1WAIT(CLK_68KCLK, nAS, nROM_ZONE, nPORT_ZONE, nCARD_ZONE, nROMWAIT, nPWAIT0,
@@ -105,7 +103,7 @@ module neo_c1(
 	// 3E0000~3FFFFF is not mapped ? To check
 	
 	// 400000~7FFFFF
-	assign nPAL = |{A23Z, ~A22Z};
+	assign nPAL_ZONE = |{A23Z, ~A22Z};
 	
 	// 800000~BFFFFF odd bytes ? To check, is A19~A17 used ? MAME limits to 800FFF, impossible ?
 	assign nCARD_ZONE = nLDS | |{~A23Z, A22Z};
@@ -134,6 +132,8 @@ module neo_c1(
 	assign nSRAMWEL = RW | nLDS | nSRAM_ZONE | nAS;
 	assign nSRAMWEU = RW | nUDS | nSRAM_ZONE | nAS;
 
+	assign nPAL = nPAL_ZONE | nAS;
+	
 	// Todo: Check if TG68k duplicates byte on data bus on byte writes
 	assign nLSPWE = RW | nUDS | nLSPC_ZONE | nAS;		// MAME says LSB write isn't mapped
 	assign nLSPOE = ~RW | nUDS | nLSPC_ZONE | nAS;		// MAME says LSB write isn't mapped

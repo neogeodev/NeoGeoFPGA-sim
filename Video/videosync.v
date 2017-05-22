@@ -6,7 +6,7 @@ module videosync(
 	output reg [8:0] V_COUNT,		// 0~263
 	output reg [8:0] H_COUNT,		// 0~383
 	output TMS0,
-	output reg VBLANK,
+	output VBLANK,
 	output reg nVSYNC,
 	output reg HSYNC,
 	output reg nBNKB,
@@ -15,15 +15,18 @@ module videosync(
 );
 
 	wire MASKING;
-	reg [3:0] FOURTEEN_CNT;
-	reg [1:0] LSPC_DIV;
-	reg [7:0] FT_CNT;
+	reg [3:0] FOURTEEN_CNT = 4'd0;
+	reg [1:0] LSPC_DIV = 2'd0;
+	reg [7:0] FT_CNT = 8'd0;
 	
 	// Do not reset CHBL between (NTSC):
 	// x 0000 0000 ~ x 0000 1111
 	// x 1111 0000 ~ x 1111 1111
 	assign MASKING = ~|{V_COUNT[7:4]} | &{V_COUNT[7:4]};
+	
+	assign VBLANK = ~|{V_COUNT[7:3]};
 
+	// Video sync must always run (even during reset) since nBNKB is the watchdog clock
 	always @(negedge CLK_24M)
 	begin
 		if (!nRESETP)

@@ -4,14 +4,19 @@ module fast_cycle(
 	input CLK_24M,
 	input nRESETP,
 	
-	input [10:0] CPU_ADDR_WR,
-	input [10:0] CPU_ADDR_RD,
+	input [10:0] REG_VRAMMOD,
+	input RELOAD_REQ,
+	
+	input [10:0] CPU_ADDR,
 	output reg [15:0] CPU_RDDATA,
 	input [15:0] CPU_WRDATA,
 	input CPU_ZONE,
-	input CPU_RW
+	input CPU_WRITE,
+	output CPU_WRITE_ACK
 );
 
+	reg [10:0] CPU_ADDR_FAST;
+	
 	// Fast VRAM is 35ns, so at least 1mclk needed between address set and data valid
 	// Todo: CPU access if zone=1
 	
@@ -32,16 +37,23 @@ module fast_cycle(
 	wire [10:0] SCB4_ADDR;
 	//wire [10:0] RENDER_ADDR;
 	
-	reg CPU_RW_LATCHED;
+	wire [10:0] C;		// Fast VRAM address
+	wire [15:0] F;		// Fast VRAM data
 	
-	wire [10:0] C;		// High VRAM address
-	wire [15:0] F;		// High VRAM data
-	
-	
-	assign nCWE = (CPU_RW_LATCHED | ~CPU_ZONE | (CYCLE_FAST >= 5'd03));		// TODO: Verify on hw
+	reg nCWE;
+	reg RELOAD_CPU_ADDR;
 	
 	vram_fast_u VRAMUU(C, F[15:8], 1'b0, 1'b0, nCWE);
 	vram_fast_l VRAMUL(C, F[7:0], 1'b0, 1'b0, nCWE);
+	
+	assign TEST = (CYCLE_FAST == 5'd0) ? 1'b1 : 1'b0;
+	always @(posedge RELOAD_REQ or posedge TEST)
+	begin
+		if (RELOAD_REQ)
+			RELOAD_CPU_ADDR <= 1'b1;
+		else
+			RELOAD_CPU_ADDR <= 1'b0;
+	end
 	
 	assign YMATCH_ADDR = {2'b00, SPR_PARSEIDX};	// $0000~$01FF
 	assign SCB2_ADDR = {2'b00, SPR_RENDERIDX};	// $0000~$01FF
@@ -50,16 +62,16 @@ module fast_cycle(
 	
 	// TODO: Cycle sync with the rest is wrong
 	// Cycle order is good at least: CPU, 5 parse, read active list, SCB2, SCB3, SCB4
-	assign C = ((CYCLE_FAST >= 5'd00) && (CYCLE_FAST <= 5'd02)) ? 
-						(CPU_RW_LATCHED) ? CPU_ADDR_RD : CPU_ADDR_WR :						// CPU
+	assign C = ((CYCLE_FAST >= 5'd00) && (CYCLE_FAST <= 5'd02)) ? CPU_ADDR_FAST : // CPU
 					((CYCLE_FAST >= 5'd03) && (CYCLE_FAST <= 5'd18)) ? YMATCH_ADDR :	// Parse (TODO)
 					((CYCLE_FAST >= 5'd19) && (CYCLE_FAST <= 5'd22)) ? 11'd0 :			// Read list (TODO)
 					((CYCLE_FAST >= 5'd23) && (CYCLE_FAST <= 5'd25)) ? SCB2_ADDR :		// SCB2 (TODO)
 					((CYCLE_FAST >= 5'd26) && (CYCLE_FAST <= 5'd28)) ? SCB3_ADDR :		// SCB3 (TODO)
 					SCB4_ADDR;																			// SCB4 (TODO)
+
+	assign F = nCWE ? 16'bzzzzzzzzzzzzzzzz : CPU_WRDATA;
 	
-	assign F = (((CYCLE_FAST >= 5'd00) && (CYCLE_FAST <= 5'd02)) && (~CPU_RW_LATCHED & CPU_ZONE)) ?
-					CPU_WRDATA : 16'bzzzzzzzzzzzzzzzz;
+	assign CPU_WRITE_ACK = nCWE;	// Does this work ?
 	
 	//TODO: display lists
 	//assign AL1_ADDR = {4'b1100, SPR_PARSEIDX};	// $0600
@@ -76,11 +88,13 @@ module fast_cycle(
 		else
 		begin
 			case (CYCLE_FAST)
-				5'd1:
+				5'd2:
 				begin
-					// End of CPU cycle (should be 2 ?)
-					if (CPU_RW_LATCHED)
-						CPU_RDDATA <= F;	// Read: latch data
+					// End of CPU cycle
+					CPU_RDDATA <= F;
+					if (!nCWE)
+						CPU_ADDR_FAST <= CPU_ADDR_FAST + REG_VRAMMOD;
+					nCWE <= 1'b1;
 				end
 				5'd5:
 				begin
@@ -104,19 +118,13 @@ module fast_cycle(
 				begin
 					// End of SCB3 read cycle (should be 28 ?)
 				end
-				5'd30:
-				begin
-					// End of SCB4 read cycle (should be 31 ?)
-				end
 				5'd31:
 				begin
-					// Merged with previous ?
-					SPR_RENDERIDX <= SPR_RENDERIDX + 1;
+					// End of SCB4 read cycle, start of CPU cycle
+					if (RELOAD_CPU_ADDR) CPU_ADDR_FAST <= CPU_ADDR;
+					nCWE <= ~(CPU_WRITE & CPU_ZONE);
 					
-					if (!CPU_RW_LATCHED)
-						CPU_RW_LATCHED <= 1'b1;		// Do writes only once. Ugly, probably simpler.
-					else
-						CPU_RW_LATCHED <= CPU_RW;	// Avoids CPU_RW changing during VRAM CPU access cycle (not verified on hw)
+					SPR_RENDERIDX <= SPR_RENDERIDX + 1;
 				end
 			endcase
 			

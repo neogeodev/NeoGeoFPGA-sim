@@ -83,6 +83,8 @@ module neogeo(
 	wire [7:0] FIXD;
 	wire [7:0] FIXD_SFIX;
 	
+	wire [23:0] CDA;
+	
 	//wire [23:1] M68K_ADDR;
 	
 	//assign M68K_ADDR_OUT = M68K_ADDR[19:1];
@@ -130,8 +132,8 @@ module neogeo(
 				nSDZ80W, nSDZ80CLR, nSDROM, nSDMRD, nSDMWR, SDRD0, SDRD1, n2610CS, n2610RD, n2610WR, nZRAMCS,
 				BNK, P1_OUT, P2_OUT);
 	
-	neo_e0 E0(M68K_ADDR[23:7], BNK[2:0], nSROMOEU, nSROMOEL, nSROMOE,
-				nVEC, A23Z, A22Z, CDA_U);
+	neo_e0 E0(M68K_ADDR[23:1], BNK[2:0], nSROMOEU, nSROMOEL, nSROMOE,
+				nVEC, A23Z, A22Z, CDA);
 	
 	neo_f0 F0(nRESET, nDIPRD0, nDIPRD1, nBITWD0, DIPSW, M68K_ADDR[7:4], M68K_DATA[7:0], SYSTEMB, nSLOT, SLOTA,
 				SLOTB, SLOTC, LED_LATCH, LED_DATA, RTC_DOUT, RTC_TP, RTC_DIN, RTC_CLK, RTC_STROBE);
@@ -144,6 +146,8 @@ module neogeo(
 
 	// Normally in ZMC2, saves 2 FPGA inputs
 	assign {DOTA, DOTB} = {|GAD, |GBD};
+	
+	assign CDA_U = CDA[23:19];
 	
 	// Todo: REMOVE HCOUNT, it's only used for simulation in videout
 	lspc_a2 LSPC(CLK_24M, nRESET, PBUS[15:0], PBUS[23:16], M68K_ADDR[3:1], M68K_DATA, nLSPOE, nLSPWE, DOTA, DOTB, CA4, S2H1,
@@ -198,6 +202,6 @@ module neogeo(
 
 	// Palette data bidir buffer from/to 68k
 	assign M68K_DATA = (nPAL | ~M68K_RW) ? 16'bzzzzzzzzzzzzzzzz : PC;
-	assign PC = (nPAL | M68K_RW) ? 16'bzzzzzzzzzzzzzzzz : M68K_DATA;
+	assign PC = nPALWE ? 16'bzzzzzzzzzzzzzzzz : M68K_DATA;
 
 endmodule

@@ -49,14 +49,16 @@ module lspc_a2(
 	wire [8:0] V_COUNT;
 	
 	// VRAM CPU I/O
-	reg CPU_RW;										// Direction
-	reg CPU_VRAM_ZONE;							// Top bit of VRAM address (low/high indicator)
-	reg [14:0] CPU_VRAM_ADDR;
-	reg [14:0] CPU_VRAM_ADDRESS_BUFFER;
-	reg [15:0] CPU_VRAM_WRITE_BUFFER;
+	reg CPU_WRITE;									// Latch for VRAM write operation
+	wire CPU_VRAM_ZONE;							// Top bit of VRAM address (low/high indicator)
+	wire [14:0] CPU_VRAM_ADDR;
+	//reg [14:0] CPU_VRAM_ADDRESS_BUFFER;
+	wire [15:0] CPU_VRAM_WRITE_BUFFER;
 	wire [15:0] CPU_VRAM_READ_BUFFER_SCY;	// Are these all the same ?
 	wire [15:0] CPU_VRAM_READ_BUFFER_FCY;
 	wire [15:0] CPU_VRAM_READ_BUFFER;
+	
+	wire [15:0] REG_LSPCMODE;
 	
 	wire [7:0] AA_SPEED;
 	wire [2:0] AA_COUNT;				// Auto-animation tile #
@@ -65,6 +67,7 @@ module lspc_a2(
 	wire [11:0] SPR_ATTR_SHRINK;
 	
 	wire [2:0] TIMER_MODE;
+	wire [31:0] TIMER_LOAD;
 	
 	wire VBLANK;
 	wire nVSYNC;
@@ -73,34 +76,33 @@ module lspc_a2(
 	reg [3:0] SPR_PIXELCNT;				// Sprite render pixel counter for H-shrink
 	wire WR_PIXEL;
 	
-	wire [15:0] SLOW_VRAM_DATA;
+	//wire [15:0] SLOW_VRAM_DATA;
 	
 	wire [7:0] L0_ROM_DATA;
 	
 	wire [11:0] MAIN_CNT;
+	wire [15:0] REG_VRAMMOD;
 	
 	wire [8:0] SPR_NB;
 	wire [4:0] SPR_TILEIDX;
 	wire [1:0] SPR_TILEFLIP;
-	
 	wire [19:0] SPR_TILE_NB;
 	wire [7:0] SPR_TILE_PAL;
+	wire [4:0] SPR_ROM_LINE;
+	wire [7:0] SPR_XPOS;
 	
-	reg [11:0] FIX_TILE_NB;
+	wire [11:0] FIX_TILE_NB;
 	wire [5:0] FIX_MAP_COL;		// 0~47
+	wire [3:0] FIX_ATTR_PAL;
 
 	wire [15:0] PBUS_S_ADDR;
+	
 	wire [24:0] SPR_ROM_ADDR;
-	
-	wire [4:0] SPR_ROM_LINE;
-	
-	wire [7:0] SPR_XPOS;
 	wire [15:0] L0_ROM_ADDR;
 	
 	reg CA4_Q;
 	reg S2H1_Q;
 	wire FIX_A4;
-	reg [3:0] FIX_PAL_NB;
 	
 	wire IRQ_S3;
 	
@@ -112,6 +114,22 @@ module lspc_a2(
 	wire nCLK_12M;	// TODO
 	wire nLATCH_X;	// TODO
 	
+	reg CPU_WRITE_ACK_PREV;
+	assign CPU_WRITE_ACK = CPU_WRITE_ACK_SLOW & CPU_WRITE_ACK_FAST;
+	assign CPU_WRITE_ACK_PULSE = CPU_WRITE_ACK & ~CPU_WRITE_ACK_PREV;
+	
+	always @(posedge CLK_24M)	// negedge ?
+	begin
+		if (CPU_WRITE_REQ)
+			CPU_WRITE <= 1'b1;		// Set
+		else
+		begin
+			if (CPU_WRITE_ACK_PULSE)
+				CPU_WRITE <= 1'b0;	// Reset
+		end
+		
+		CPU_WRITE_ACK_PREV <= CPU_WRITE_ACK;
+	end
 	
 	// Fix stuff checked on DE1 board
 	assign CLK_24MB = ~CLK_24M;
@@ -128,18 +146,6 @@ module lspc_a2(
 	always @(negedge CLK_24M)
 		S2H1_Q <= S2H1;
 	assign PCK2 = (S2H1_Q & !S2H1);
-
-	// Slow VRAM latches
-	always @(posedge PCK1)				// Good ?
-	begin
-		FIX_TILE_NB <= SLOW_VRAM_DATA[11:0];
-		FIX_PAL_NB <= SLOW_VRAM_DATA[15:12];
-	end
-	
-	// The fix map is 16bit/tile in slow VRAM starting @ $7000
-	// 0 111 0CCC CCCL LLLL
-	assign FIX_MAP_LINE = V_COUNT[7:3];		// Fix renders only for the first 256 lines (not during vblank ?)
-	assign SLOW_VRAM_ADDR = {4'b1110, FIX_MAP_COL, FIX_MAP_LINE};
 	
 	// P bus values
 	assign FIX_A4 = H_COUNT[2];		// Good ?
@@ -186,10 +192,26 @@ module lspc_a2(
 	assign nWE_EVEN_A = nBFLIP ? nEVEN_WE : nCLEAR_WE;
 	assign nWE_EVEN_B = nBFLIP ? nCLEAR_WE : nEVEN_WE;
 	
-	assign IRQ_S3 = VBLANK;			// To check
+	assign IRQ_S3 = VBLANK;		// To check
 	
 	// Todo: Probably wrong:
 	assign CPU_VRAM_READ_BUFFER = CPU_VRAM_ZONE ? CPU_VRAM_READ_BUFFER_FCY : CPU_VRAM_READ_BUFFER_SCY;
+	
+	// Read
+	// Todo: See if M68K_ADDR[3] is used or not (msvtech.txt says no, MAME says yes)
+	// Todo: See if ~nLSPWE is used
+	assign M68K_DATA = (nLSPOE | ~nLSPWE) ? 16'bzzzzzzzzzzzzzzzz :
+								(M68K_ADDR[2] == 1'b0) ? CPU_VRAM_READ_BUFFER :		// $3C0000,$3C0002,$3C0008,$3C000A
+								(M68K_ADDR[1] == 1'b0) ? REG_VRAMMOD :					// 3C0004/3C000C
+								REG_LSPCMODE;													// 3C0006/3C000E
+	
+	lspc_regs REGS(nRESET, CLK_24M, M68K_ADDR, M68K_DATA, nLSPOE, nLSPWE, PCK1, AA_COUNT, V_COUNT[7:0],
+					VIDEO_MODE,
+					REG_LSPCMODE, CPU_VRAM_ZONE, CPU_WRITE_REQ, CPU_VRAM_ADDR, CPU_VRAM_WRITE_BUFFER,
+					RELOAD_REQ_SLOW, RELOAD_REQ_FAST,
+					TIMER_LOAD, TIMER_PAL_STOP, REG_VRAMMOD, TIMER_MODE, TIMER_IRQ_EN,
+					AA_SPEED, AA_DISABLE,
+					IRQ_S1, IRQ_R1, IRQ_S2, IRQ_R2, IRQ_R3);
 	
 	lspc_timer TIMER(nRESET, CLK_6M_LSPC, VBLANK, VIDEO_MODE, TIMER_MODE, TIMER_INT_EN, TIMER_LOAD,
 							TIMER_PAL_STOP, V_COUNT);
@@ -203,20 +225,22 @@ module lspc_a2(
 	odd_clk ODDCLK(CLK_24M, nRESETP, CLK_8M, CLK_4M, CLK_4MB);
 	
 	// This needs to be way simpler. Use FIX_MAP_COL as input, output SLOW_VRAM_DATA.
-	/*slow_cycle SCY(CLK_24M, nRESETP,
-					H_COUNT[8:0], V_COUNT[7:3], SPR_NB, SPR_TILEIDX,	SPR_TILE_NB, SPR_TILEPAL,
-					SPR_TILE_AA, SPR_TILEFLIP, FIX_TILE_NB, FIX_TILEPAL,
-					CPU_VRAM_ADDRESS_BUFFER, CPU_VRAM_ADDR, CPU_VRAM_READ_BUFFER_SCY, CPU_VRAM_WRITE_BUFFER,
-					CPU_VRAM_ZONE, CPU_RW, SLOW_VRAM_DATA);*/
+	slow_cycle SCY(CLK_24M, nRESETP, H_COUNT[1:0], PCK1, PCK2, FIX_MAP_COL, V_COUNT[7:3],
+					SPR_NB, SPR_TILEIDX,	SPR_TILE_NB,
+					SPR_TILE_PAL, SPR_ATTR_AA, SPR_TILEFLIP, FIX_TILE_NB, FIX_ATTR_PAL,
+					REG_VRAMMOD[14:0], RELOAD_REQ_SLOW,
+					CPU_VRAM_ADDR, CPU_VRAM_READ_BUFFER_SCY, CPU_VRAM_WRITE_BUFFER,
+					CPU_VRAM_ZONE, CPU_WRITE, CPU_WRITE_ACK_SLOW);
 	
 	// Todo: this needs to give SPR_NB, SPR_TILEIDX, SPR_XPOS, L0_ADDR, SPR_ATTR_SHRINK
 	// Todo: this needs L0_DATA (from P bus)
 	fast_cycle FCY(CLK_24M, nRESETP,
-					CPU_VRAM_ADDRESS_BUFFER[10:0], CPU_VRAM_ADDR[10:0], CPU_VRAM_READ_BUFFER_FCY, CPU_VRAM_WRITE_BUFFER,
-					CPU_VRAM_ZONE, CPU_RW);
+					REG_VRAMMOD[10:0], RELOAD_REQ_FAST,
+					CPU_VRAM_ADDR[10:0], CPU_VRAM_READ_BUFFER_FCY, CPU_VRAM_WRITE_BUFFER,
+					CPU_VRAM_ZONE, CPU_WRITE, CPU_WRITE_ACK_FAST);
 	
 	// This needs SPR_XPOS, L0_ADDR
-	p_cycle PCY(nRESET, CLK_24M, PBUS_S_ADDR, FIX_PAL_NB, SPR_ROM_ADDR, SPR_TILE_PAL, SPR_XPOS, L0_ROM_ADDR,
+	p_cycle PCY(nRESET, CLK_24M, PBUS_S_ADDR, FIX_ATTR_PAL, SPR_ROM_ADDR, SPR_TILE_PAL, SPR_XPOS, L0_ROM_ADDR,
 					LOAD, S1H1, nVCS, L0_ROM_DATA, {PBUS_IO, PBUS_OUT});
 	
 	autoanim AA(nRESET, VBLANK, AA_SPEED, SPR_TILE_NB[2:0], AA_DISABLE, SPR_ATTR_AA, SPR_TILE_NB_AA, AA_COUNT);
