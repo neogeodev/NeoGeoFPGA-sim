@@ -12,25 +12,19 @@ module p_cycle(
 	input [7:0] SPR_XPOS,
 	input [15:0] L0_ROM_ADDR,
 	
-	output LOAD,
 	output S1H1,
 	output reg nVCS,
 	output reg [7:0] L0_DATA,
 	
-	inout [23:0] PBUS
+	inout [23:0] PBUS		// Isim isn't happy with splitted PBUS inout/output apparently
 );
 
-	// L0_DATA is probably latched on LOAD posedge
+	// L0_DATA might be latched on LOAD posedge
 
 	reg [3:0] P_CYCLE_P;
 	reg [3:0] P_CYCLE_N;
 
-	reg [23:16] PBUS_U;		// inout
-	reg [15:0] PBUS_L;		// out only
-	
-	assign PBUS = {PBUS_U, PBUS_L};
-
-	// P bus sequencing
+	// Time slot sequencing
 	always @(posedge CLK_24M)
 	begin
 		if (!nRESET)
@@ -46,26 +40,22 @@ module p_cycle(
 			P_CYCLE_N <= P_CYCLE_N + 1'b1;
 	end
 	
-	// Alpha68k LOAD is CLK_C & SNKCLK_8. 6M & 3M ?
-	//assign LOAD = CLK_C & SNKCLK_8;
-	
 	assign S1H1 = P_CYCLE_P[3];	// To test
 	
 	// Simplified P bus data, for now
-	//                                 XXXXXX                  XXXXXX
-	// P FFFF0000111122223333444455556666777788889999AAAABBBBCCCCDDDDEEEE
-	// N FF0000111122223333444455556666777788889999AAAABBBBCCCCDDDDEEEEFF
-	assign PBUS = ((P_CYCLE_P == 4'd7) || (P_CYCLE_N == 4'd7)) ?
-						{8'bzzzzzzzz, S_ROM_ADDR} :
-						((P_CYCLE_P == 4'd13) || (P_CYCLE_N == 4'd13)) ?
-						{4'h0, FIX_PAL, 16'h0000} :
-						24'h000000;
+	assign PBUS = ((P_CYCLE_P == 4'd8) || (P_CYCLE_N == 4'd7)) ? {8'bzzzzzzzz, S_ROM_ADDR} :		// FT
+						((P_CYCLE_P >= 4'd9) && (P_CYCLE_P <= 4'd13)) ? {8'bzzzzzzzz, SPR_XPOS, 8'h00}:	// X
+						((P_CYCLE_P == 4'd14) || (P_CYCLE_N == 4'd14)) ? {4'h0, FIX_PAL, 16'h0000} :	// FP
+						((P_CYCLE_P == 4'd0) || (P_CYCLE_N == 4'd15)) ? C_ROM_ADDR :						// ST
+						((P_CYCLE_P >= 4'd1) && (P_CYCLE_P <= 4'd5)) ? {8'bzzzzzzzz, L0_ROM_ADDR} :	// LO
+						((P_CYCLE_P == 4'd6) || (P_CYCLE_N == 4'd6)) ? {SPR_PAL, 16'h0000} :				// SP
+						24'bxxxxxxxxxxxxxxxxxxxxxxxx;	// Shouldn't happen
 	
-	always @(posedge CLK_24M)	// or posedge nCLK_24M ?
+	always @(posedge CLK_24M)
 	begin
-		// nVCS probably not a register
-		if (P_CYCLE_P == 2) nVCS <= 1'b0;
-		if (P_CYCLE_P == 12) nVCS <= 1'b1;
+		// nVCS probably isn't a register
+		if (P_CYCLE_P == 8) nVCS <= 1'b0;
+		if (P_CYCLE_P == 13) nVCS <= 1'b1;
 		
 		/*case (CYCLE_P)
 			0: {PBUS_U, PBUS_L} <= C_ADDR_OUT;		// Sprite ROM address - Is CA4 latched here or free-running ?

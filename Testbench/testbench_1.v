@@ -6,6 +6,14 @@
 
 // TODO TB: delegate some stuff to CPLD (clock divider for cartridge and SROM, SRAM and WRAM control...)
 
+// Current status (23/05/2017):
+// Runs up to game entry point (after >200ms. Long because there are 2 resets, the first is after BRAM init.)
+// Slow VRAM cycle should be OK (sync and timing)
+// Fix data path should be OK (have to check video output)
+// Fast VRAM cycle is only good enough for CPU access
+// P cycle is OK but needs to be simplified
+// Sprite stuff needs some name cleanup
+
 module testbench_1();
 	reg MCLK;
 	reg nRESET_BTN;			// Present on AES only
@@ -22,8 +30,6 @@ module testbench_1();
 	
 	wire [23:0] PBUS;
 	
-	wire [7:0] FIXD;
-	wire [7:0] FIXD_SFIX;	// Present on MVS only
 	wire [7:0] FIXD_CART;
 
 	wire [2:0] P1_OUT;		// Joypad
@@ -84,7 +90,7 @@ module testbench_1();
 		
 		CLK_12M, EVEN, LOAD, H,									// 4		Get CLK_12M from MCLK ? -1
 		GAD, GBD, 													// 8
-		FIXD,															// 8
+		FIXD_CART,													// 8
 		
 		CDA_U,														// 5
 		nCRDC, nCRDO,												// 2

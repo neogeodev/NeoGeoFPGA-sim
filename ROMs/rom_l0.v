@@ -9,11 +9,13 @@ module rom_l0(
 );
 
 	reg [7:0] ROMDATA[0:65535];
+	wire [7:0] DATA_OUT;
 
 	initial begin
 		$readmemh("rom_l0.txt", ROMDATA);
 	end
 
-	assign #120 OUT = nCE ? 8'bzzzzzzzz : ROMDATA[ADDR];
+	assign #120 DATA_OUT = ROMDATA[ADDR];
+	assign OUT = nCE ? 8'bzzzzzzzz : DATA_OUT;
 
 endmodule
