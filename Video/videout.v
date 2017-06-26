@@ -10,17 +10,21 @@ module videout(
 	output reg [6:0] VIDEO_B,
 	input [8:0] HCOUNT			// Sim only: Only used to limit output to active display
 );
-/*
+
 	// Sim only
+	integer sim_line;
+	integer sim_frame;
 	integer f;
 	initial
 	begin
+		sim_line = 0;
+		sim_frame = 0;
 		f = $fopen("video_output.txt", "w");
-		#18000000			// Run for 18ms
+		#150000000			// Run for 150ms
 		$fclose(f);
 		$stop;
 	end
-*/
+	
 	// Color data latch/blanking
 	always @(posedge CLK_6MB)
 	begin
@@ -29,8 +33,21 @@ module videout(
 		VIDEO_B <= nBNKB ? {SHADOW, PC[3:0], PC[12], PC[15]} : 7'b0000000;
 		
 		// Sim only
-		//if ((HCOUNT > 9'd2) && (HCOUNT < 9'd323)) $fwrite(f, "%04X ", PC);
-		//if (HCOUNT == 9'd328) $fwrite(f, "\n");
+		if (HCOUNT < 9'd383)
+			$fwrite(f, "%04X ", PC);
+		else
+		begin
+			$fwrite(f, "YYYY ");
+			$display("Done line %d", sim_line);
+			if (sim_line == 263)
+			begin
+				$display("Done frame %d", sim_frame);
+				sim_frame = sim_frame + 1;
+				sim_line = 0;
+			end
+			else
+				sim_line = sim_line + 1;
+		end
 	end
 	
 endmodule

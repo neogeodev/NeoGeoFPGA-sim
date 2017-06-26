@@ -3,7 +3,7 @@
 // All pins ok except TRES, but apparently never used (something to do with crystal oscillator ?)
 
 module neo_d0(
-	input CLK_24M,				// Output on real chip
+	output reg CLK_24M,
 	input nRESET, nRESETP,
 	output CLK_12M,
 	output CLK_68KCLK,
@@ -27,6 +27,13 @@ module neo_d0(
 	output reg [2:0] P1_OUT,
 	output reg [2:0] P2_OUT
 );
+
+	// SIMULATION ONLY
+	initial
+		CLK_24M = 0;
+	
+	always
+		#21 CLK_24M = !CLK_24M;		// 24MHz -> 20.8ns half period
 
 	// Clock divider part
 	clocks CLK(CLK_24M, nRESETP, CLK_12M, CLK_68KCLK, CLK_68KCLKB, CLK_6MB, CLK_1MB);

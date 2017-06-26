@@ -37,6 +37,9 @@ module neo_b1(
 );
 
 	wire [11:0] PA_VIDEO;
+	wire [3:0] FIX_COLOR;
+	wire [3:0] COLOR;
+	wire [7:0] PAL;
 
 	// Byte delays
 	reg [7:0] SPR_PAL_REG_A;

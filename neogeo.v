@@ -10,7 +10,6 @@
 // Todo: Check watchdog timing
 
 module neogeo(
-	input CLK_24M,
 	input nRESET_BTN,		// VCCON on MVS
 	
 	input [9:0] P1_IN,

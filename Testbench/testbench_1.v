@@ -15,7 +15,6 @@
 // Sprite stuff needs some name cleanup
 
 module testbench_1();
-	reg MCLK;
 	reg nRESET_BTN;			// Present on AES only
 	reg [9:0] P1_IN;			// Joypad
 	reg [9:0] P2_IN;
@@ -59,7 +58,6 @@ module testbench_1();
 	wire [6:0] VIDEO_B;
 
 	neogeo NG(
-		MCLK,															// 2
 		nRESET_BTN,
 		
 		P1_IN, P2_IN,
@@ -126,7 +124,6 @@ module testbench_1();
 	
 	initial
 	begin
-		MCLK = 0;
 		nRESET_BTN = 1;
 		P1_IN = 10'b1111111111;		// Idle joypads
 		P2_IN = 10'b1111111111;
@@ -141,10 +138,7 @@ module testbench_1();
 		nRESET_BTN = 1;
 	end
 	
-	always
-		#21 MCLK = !MCLK;		// 24MHz -> 20.8ns half period
-	
-	always @(posedge MCLK)
+	always @(negedge nAS)
 	begin
 		// These addresses are only valid for the patched SP-S2.SP1 system ROM !
 		if ({M68K_ADDR, 1'b0} == 24'hC16ADA)
