@@ -1,19 +1,19 @@
 `timescale 1ns/1ns
 
-// 100ns 64k*8bit ROM
+// 100ns 128k*8bit ROM
 
 module rom_m1(
-	input [15:0] ADDR,
+	input [16:0] ADDR,
 	output [7:0] OUT,
 	input nCE,
 	input nOE
 );
 
-	reg [7:0] ROMDATA[0:65535];
+	reg [7:0] ROMDATA[0:131071];
 	wire [7:0] DATAOUT;
 
 	initial begin
-		$readmemh("rom_m1.txt", ROMDATA);
+		$readmemh("data_m1.txt", ROMDATA);
 	end
 
 	assign #100 DATAOUT = ROMDATA[ADDR];

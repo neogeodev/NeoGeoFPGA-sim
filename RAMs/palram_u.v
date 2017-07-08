@@ -14,7 +14,7 @@ module palram_u(
 	wire [7:0] DATA_OUT;
 	
 	initial begin
-		$readmemh("raminit_palu.txt", RAMDATA);
+		$readmemh("data_pal_u.txt", RAMDATA);
 	end
 
 	assign #100 DATA_OUT = RAMDATA[ADDR];

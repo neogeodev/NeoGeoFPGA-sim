@@ -20,7 +20,8 @@ module videout(
 		sim_line = 0;
 		sim_frame = 0;
 		f = $fopen("video_output.txt", "w");
-		#150000000			// Run for 150ms
+		//#150000000			// Run for 150ms
+		#500000000			// Run for 500ms
 		$fclose(f);
 		$stop;
 	end
@@ -38,7 +39,7 @@ module videout(
 		else
 		begin
 			$fwrite(f, "YYYY ");
-			$display("Done line %d", sim_line);
+			// $display("Done line %d", sim_line);
 			if (sim_line == 263)
 			begin
 				$display("Done frame %d", sim_frame);

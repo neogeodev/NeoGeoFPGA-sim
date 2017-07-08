@@ -14,7 +14,7 @@ module vram_fast_l(
 	wire [7:0] DATA_OUT;
 	
 	initial begin
-		$readmemh("raminit_vram_fastl.txt", RAMDATA);
+		$readmemh("data_fvram_l.txt", RAMDATA);
 	end
 
 	assign #35 DATA_OUT = RAMDATA[ADDR];

@@ -31,13 +31,13 @@ module zmc(
 	
 	assign MA = SDA_U[15] ?				// In mapped region ?
 						~SDA_U[14] ?
-							{RANGE_3, SDA_U[13:11]} :					//8000~BFFF
+							{RANGE_3, SDA_U[13:11]} :					// 8000~BFFF
 							~SDA_U[13] ?
-								{1'b0, RANGE_2, SDA_U[12:11]} :		//C000~DFFF
+								{1'b0, RANGE_2, SDA_U[12:11]} :		// C000~DFFF
 								~SDA_U[12] ?
-									{2'b00, RANGE_1, SDA_U[11]} :		//E000~EFFF
-									{3'b000, RANGE_0} :					//F000~F7FF
-					11'b00000000000;
+									{2'b00, RANGE_1, SDA_U[11]} :		// E000~EFFF
+									{3'b000, RANGE_0} :					// F000~F7FF
+					{6'b000000, SDA_U[15:11]};							// Pass through
 
 	always @(posedge SDRD0)
 	begin

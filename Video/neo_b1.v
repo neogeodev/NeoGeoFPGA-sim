@@ -26,7 +26,7 @@ module neo_b1(
 	input A23Z, A22Z,
 	output [11:0] PA,			// Palette address bus
 	
-	input nLDS,					// For watchdog
+	input nLDS,					// For watchdog kick
 	input RW,
 	input nAS,
 	input [21:17] M68K_ADDR_U,
@@ -68,7 +68,7 @@ module neo_b1(
 			FIX_PAL_REG_B <= FIX_PAL_REG_A;
 		end
 		else
-			SPR_PAL_REG_A <= 8'h00;	// PBUS[23:16];
+			SPR_PAL_REG_A <= PBUS[23:16];
 	end
 	
 	// Fix data pipeline
@@ -81,20 +81,17 @@ module neo_b1(
 	
 	assign FIX_COLOR = CLK_1MB ? FIXD_REG_C[3:0] : FIXD_REG_C[7:4];
 	assign FIX_OPAQUE = |{FIX_COLOR};
-	assign COLOR = FIX_OPAQUE ? FIX_COLOR : 4'b0000;	// SPR_COLOR
+	assign COLOR = FIX_OPAQUE ? FIX_COLOR : SPR_COLOR;
 	assign PAL = FIX_OPAQUE ? {4'b0000, FIX_PAL_REG_B} : SPR_PAL_REG_B;
 	assign PA_VIDEO = CHBL ? 12'h000 : {PAL, COLOR};
 	
-
-	// Testing...
 	// Connects to Alpha68k stuff
-	
 	reg BFLIP;
 	wire J8_12;
 	
 	// This might be in LSPC, BFLIP = TMS0
 	always @(posedge SNKCLK_26)
-		BFLIP <= J8_12;
+		BFLIP <= J8_12;	// Line number bit0 (SNKCLK_19)
 	
 	assign nBFLIP = ~BFLIP;
 	
@@ -116,12 +113,6 @@ module neo_b1(
 	// Opposite ?
 	assign nLOAD_X_A = LD1;
 	assign nLOAD_X_B = LD2;
-
-	// ?
-	assign SNKCLK_40 = CLK_1MB;	// Or S1H1 ?
-	
-	
-	
 	
 	wire RBA, RBB;
 	
@@ -169,7 +160,7 @@ module neo_b1(
 	// G3 (374): nOE seems used !
 	always @(posedge nLATCH_X)
 	begin
-		SPRX <= PBUS[15:8];	// SPRX should be part of P_BUS
+		SPRX <= PBUS[15:8];
 	end
 	
 	// G5:C
@@ -195,19 +186,14 @@ module neo_b1(
 	always @(posedge 1'bz)	// TODO
 	begin
 		// Is nMR used ?
-		SPR_PAL_REG_A <= PBUS[23:16];	// SPR_PAL should be part of P_BUS
+		//SPR_PAL_REG_A <= PBUS[23:16];	// SPR_PAL should be part of P_BUS
 	end
 	// Sprite palette latch G1 (273):
-	always @(posedge 1'bz)	// TODO
+	always @(posedge nLATCH_X)
 	begin
 		// Is nMR used ?
 		SPR_PAL_REG_B <= SPR_PAL_REG_A;
 	end
-	
-	// J6 (174) CLK TODO, no nMR
-	/*always @(posedge 1'bz)
-		FIX_PAL_REG <= PBUS[19:16];	// FIX_PAL should be part of P_BUS
-		*/
 	
 	linebuffer LB1(nOE_P18P20, nWE_EVEN_A,
 						LB_EVEN_A_ADDR, {SPR_PAL_REG_B, GAD[1], GAD[0], GAD[3], GAD[2]}, );
@@ -229,31 +215,13 @@ module neo_b1(
 	// N6 is in LSPC
 	// P6 is in LSPC
 	
-	// FIX stuff, FIX/SPR mux and PA output
-	
-	/*always @(posedge TODO_FIXCLK)
-	begin
-		FIXD_REG_A <= FIXD;			// L5
-		FIXD_REG_B <= FIXD_REG_A;	// M5
-		FIXD_REG_C <= FIXD_REG_B;	// NeoGeo
-	end*/
-	
-	// M4 Odd/even tile pixel demux
-	//assign FIX_COLOR = SNKCLK_40 ? FIXD_REG_C[3:0] : FIXD_REG_C[7:4];
-	
-	// N4 & M6 Opacity detection
-	//assign FIX_OPAQUE = |{FIX_COLOR};
-	
-	assign MUX_BA = {BFLIP, SNKCLK_40};
+	assign MUX_BA = {BFLIP, CLK_1MB};
 	
 	// K15 & L15 Sprite color bits mux
 	assign SPR_COLOR = (MUX_BA == 2'b00) ? LB_EVEN_B_DATA[3:0] :
 								(MUX_BA == 2'b01) ? LB_ODD_B_DATA[3:0] :
 								(MUX_BA == 2'b10) ? LB_EVEN_A_DATA[3:0] :
 								LB_ODD_A_DATA[3:0];
-	
-	// J12 Sprite/fix color bits mux
-	//assign COLOR = FIX_OPAQUE ? FIX_COLOR : SPR_COLOR;
 								
 	// N15, P15, K13, M15 Sprite palette bits mux
 	assign SPR_PAL = (MUX_BA == 2'b00) ? LB_EVEN_B_DATA[11:4] :
@@ -261,10 +229,9 @@ module neo_b1(
 							(MUX_BA == 2'b10) ? LB_EVEN_A_DATA[11:4] :
 							LB_ODD_A_DATA[11:4];
 	
-	// H12 & H9 Sprite/fix palette bits mux
-	//assign PAL = FIX_OPAQUE ? {4'b0000, FIX_PAL_REG_B} : SPR_PAL;
-	
 	//assign PA = CHBL ? 12'h000 : {PAL, COLOR};
+	
+	// --------------------------------------------------------------------------------
 	
 	// H10 & H11 Palette RAM address latches
 	// nOE is used, certainly to gate outputs during CPU access
@@ -274,20 +241,13 @@ module neo_b1(
 		PA_VIDEO_REG <= {PAL, COLOR};
 	end*/
 	
-	// --------------------------------------------------------------------------------
-	
-	
 	// $400000~$7FFFFF why not use nPAL ?
 	// Not sure about inclusion of nAS
 	assign nPAL_ACCESS = |{A23Z, ~A22Z, nAS};
 	
-	// Todo: Wrong, nRESET is sync'd to frame start
+	// Note: nRESET is sync'd to frame start
+	// To check: BNKB might have to be inverted (see Alpha68k K7:A)
 	watchdog WD(nLDS, RW, A23Z, A22Z, M68K_ADDR_U, M68K_ADDR_L, BNKB, nHALT, nRESET, nRST);
-	
-	/*
-	assign FIX_PIXEL = CLK_1MB ? FIX_DATA[7:4] : FIX_DATA[3:0];		// Opposite ?
-	assign FIX_OPAQUE = |{FIX_PIXEL};
-	*/
 	
 	// Priority for palette address bus (PA):
 	// -CPU over everything else (?)
@@ -295,27 +255,5 @@ module neo_b1(
 	// -FIX pixel if opaque
 	// -Line buffer (sprites) output is last
 	assign PA = nPAL_ACCESS ? PA_VIDEO : M68K_ADDR_L;
-	
-	/*
-	// Todo: Compare with Alpha68k schematic, maybe identical
-	// Todo: Check sync of 1H1, 1HB on real hw
-	// Does this work with PCK* signals ?
-	wire nS1H1;
-	assign nS1H1 = ~S1H1;
-	always @(posedge S1H1 or posedge nS1H1)
-	begin
-		if (S1H1)
-		begin
-			// Latch 2 pixels and palette
-			FIX_DATA <= FIXD;
-			FIX_PAL <= PBUS[19:16];
-		end
-		else
-		begin
-			// Only latch 2 new pixels
-			FIX_DATA <= FIXD;
-		end
-	end
-	*/
 
 endmodule

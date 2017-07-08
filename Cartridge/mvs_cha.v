@@ -21,28 +21,43 @@ module mvs_cha(
 );
 
 	wire [19:0] C_LATCH;
+	reg [1:0] C_LATCH_U;
 	wire [15:0] S_LATCH;
 	wire [20:0] C_ADDR;
 	wire [16:0] S_ADDR;
-	wire [15:0] C1DATA;
-	wire [15:0] C2DATA;
+	wire [15:0] C_ODD_DATA;
+	wire [15:0] C_EVEN_DATA;
 	wire [21:11] MA;
 	
 	assign C_ADDR = {C_LATCH[19:4], CA4, C_LATCH[3:0]};
 	assign S_ADDR = {S_LATCH[15:3], S2H1, S_LATCH[2:0]};
 	
-	assign CR = {C1DATA, C2DATA};		// Other way around ?
+	assign CR = {C_EVEN_DATA, C_ODD_DATA};		// Other way around ?
 	
-	rom_c1 C1(C_ADDR[17:0], C1DATA);
-	rom_c2 C2(C_ADDR[17:0], C2DATA);
+	rom_c1 C1(C_ADDR[20:0], C_ODD_DATA, nPAIR0_CE);
+	rom_c2 C2(C_ADDR[20:0], C_EVEN_DATA, nPAIR0_CE);
+	rom_c3 C3(C_ADDR[20:0], C_ODD_DATA, nPAIR1_CE);
+	rom_c4 C4(C_ADDR[20:0], C_EVEN_DATA, nPAIR1_CE);
+	
 	rom_s1 S1(S_ADDR[16:0], FIXD);
 	
-	rom_m1 M1(SDA, SDD, nSDROM, nSDMRD);
-	
 	// Joyjoy doesn't use ZMC
-	//rom_m1 M1({MA[16:11], SDA[10:0]}, SDD, nSDROM, nSDMRD);
+	//rom_m1 M1(SDA, SDD, nSDROM, nSDMRD);
+	// Metal Slug:
+	rom_m1 M1({MA[16:11], SDA[10:0]}, SDD, nSDROM, nSDMRD);
 	
-	//zmc ZMC(SDRD0, SDA[1:0], SDA[15:8], MA);
+	zmc ZMC(SDRD0, SDA[1:0], SDA[15:8], MA);
+	
 	neo_273 N273(PBUS[19:0], PCK1B, PCK2B, C_LATCH, S_LATCH);
+	
+	// Metal Slug: LS74 for the additionnal bit
+	always @(posedge PCK1B)
+	begin
+		C_LATCH_U <= {1'bz, PBUS[21:20]};
+	end
+	
+	// Metal Slug: LS139 to select pair of C ROMs
+	assign nPAIR0_CE = (C_LATCH_U[0] == 1'b0) ? 1'b0 : 1'b1;
+	assign nPAIR1_CE = (C_LATCH_U[0] == 1'b1) ? 1'b0 : 1'b1;
 
 endmodule

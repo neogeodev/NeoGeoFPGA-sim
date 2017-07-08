@@ -14,7 +14,7 @@ module vram_slow_u(
 	wire [7:0] DATA_OUT;
 	
 	initial begin
-		$readmemh("raminit_vram_slowu.txt", RAMDATA);
+		$readmemh("data_svram_u.txt", RAMDATA);
 	end
 
 	assign #120 DATA_OUT = RAMDATA[ADDR];

@@ -2,7 +2,7 @@
 
 module aes_prog(
 	input nPORTADRS,
-	input PMPX,
+	input PMPX, nSDPOE,
 	input [11:8] PA,
 	inout [7:0] PAD,
 	input nRESET,
@@ -18,7 +18,7 @@ module aes_prog(
 	inout [7:0] RAD,
 	input [9:8] RA_L,
 	input [23:20] RA_U,
-	input PMPX, nSDPOE,
+	input RMPX, nSDROE,
 	input CLK_4MB
 );
 

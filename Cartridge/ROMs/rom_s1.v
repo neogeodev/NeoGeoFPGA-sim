@@ -7,15 +7,14 @@ module rom_s1(
 	output [7:0] OUT
 );
 
-	// S1 ROM always enabled
-
 	reg [7:0] ROMDATA[0:131071];
 	wire [7:0] DATAOUT;
 	
 	initial begin
-		$readmemh("rom_s1.txt", ROMDATA);
+		$readmemh("data_s1.txt", ROMDATA);
 	end
 
+	// S1 ROM always enabled
 	assign #200 OUT = ROMDATA[ADDR];
 
 endmodule

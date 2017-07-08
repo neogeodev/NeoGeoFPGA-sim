@@ -29,7 +29,7 @@ module lspc_a2(
 	output nVCS,						// LO ROM output enable
 	output CLK_8M,
 	output CLK_4M,
-	output [8:0] H_COUNT				// TODO: REMOVE, only used for debug in videout and as a hack in B1
+	output [8:0] H_COUNT				// SIMULATION ONLY
 );
 
 	parameter VIDEO_MODE = 1'b0;	// NTSC
@@ -223,8 +223,8 @@ module lspc_a2(
 	
 	hshrink HSHRINK(SPR_ATTR_SHRINK[11:8], SPR_PIXELCNT, WR_PIXEL);
 	
-	// Alpha68k LOAD is CLK_C & SNKCLK_8. 6M & 3M ?
-	//assign LOAD = CLK_C & SNKCLK_8;
+	// Alpha68k LOAD is just (CLK_D & SNKCLK_8)
+	// assign LOAD = CLK_C & SNKCLK_8;
 		
 	// One address = 32bit of data = 8 pixels
 	// 16,0 17,1 18,2 19,3 ... 31,15

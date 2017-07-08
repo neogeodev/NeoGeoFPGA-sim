@@ -13,7 +13,7 @@ module p_cycle(
 	input [15:0] L0_ROM_ADDR,
 	
 	output S1H1,
-	output reg nVCS,
+	output nVCS,
 	output reg [7:0] L0_DATA,
 	
 	inout [23:0] PBUS		// Isim isn't happy with splitted PBUS inout/output apparently
@@ -50,13 +50,10 @@ module p_cycle(
 						((P_CYCLE_P >= 4'd1) && (P_CYCLE_P <= 4'd5)) ? {8'bzzzzzzzz, L0_ROM_ADDR} :	// LO
 						((P_CYCLE_P == 4'd6) || (P_CYCLE_N == 4'd6)) ? {SPR_PAL, 16'h0000} :				// SP
 						24'bxxxxxxxxxxxxxxxxxxxxxxxx;	// Shouldn't happen
+	assign nVCS = ((P_CYCLE_P >= 4'd1) && (P_CYCLE_P <= 4'd5)) ? 1'b0 : 1'b1;
 	
 	always @(posedge CLK_24M)
 	begin
-		// nVCS probably isn't a register
-		if (P_CYCLE_P == 8) nVCS <= 1'b0;
-		if (P_CYCLE_P == 13) nVCS <= 1'b1;
-		
 		/*case (CYCLE_P)
 			0: {PBUS_U, PBUS_L} <= C_ADDR_OUT;		// Sprite ROM address - Is CA4 latched here or free-running ?
 			3: {PBUS_U, PBUS_L} <= {8'bzzzzzzzz, L0_ROM_ADDR};	// L0 ROM address

@@ -1,22 +1,22 @@
 `timescale 1ns/1ns
 
-// 120ns 512k*16bit (256kB) ROM
+// 120ns 1024k*16bit (2048kB) ROM
 
 module rom_p1(
-	input [17:0] ADDR,
+	input [19:0] ADDR,
 	output [15:0] OUT,
 	input nCE,
 	input nOE
 );
 
-	reg [15:0] ROMDATA[0:262143];
+	reg [15:0] ROMDATA[0:1048575];
 	wire [15:0] DATAOUT;
 
 	initial begin
-		$readmemh("rom_p1.txt", ROMDATA);
+		$readmemh("data_p1.txt", ROMDATA);
 	end
 
-	assign #12 DATAOUT = ROMDATA[ADDR];		// TODO: Should be 120
+	assign #120 DATAOUT = ROMDATA[ADDR];
 	assign OUT = (nCE | nOE) ? 16'bzzzzzzzzzzzzzzzz : DATAOUT;
 
 endmodule

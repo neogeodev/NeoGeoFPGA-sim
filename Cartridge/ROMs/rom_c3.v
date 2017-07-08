@@ -2,7 +2,7 @@
 
 // 250ns 2048k*16bit (4096kB) ROM
 
-module rom_c1(
+module rom_c3(
 	input [20:0] ADDR,
 	output [15:0] OUT,
 	input nCE
@@ -12,7 +12,7 @@ module rom_c1(
 	wire [15:0] DATAOUT;
 
 	initial begin
-		$readmemh("data_c1.txt", ROMDATA);
+		$readmemh("data_c3.txt", ROMDATA);
 	end
 
 	assign #250 DATAOUT = ROMDATA[ADDR];

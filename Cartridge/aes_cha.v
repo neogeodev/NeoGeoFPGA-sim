@@ -1,8 +1,5 @@
 `timescale 1ns/1ns
 
-	aes_cha CHA(CLK_24M, nSDROM, nSDMRD, SDA, SDRD1, SDRD0, PBUS, CA4, LOAD, H, EVEN, S2H1, CLK_12M,
-					PCK2B, PCK1B, FIXD, DOTA, DOTB, GAD, GBD, SDD, CLK_8M);
-
 module aes_cha(
 	input CLK_24M,
 	input nSDROM, nSDMRD,

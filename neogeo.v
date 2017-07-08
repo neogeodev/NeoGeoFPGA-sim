@@ -113,11 +113,12 @@ module neogeo(
 	assign nBITWD0 = |{nBITW0, M68K_ADDR[6:5]};
 	assign nCOUNTOUT = |{nBITW0, ~M68K_ADDR[6:5]};
 	
-	wire [8:0] HCOUNT;		// Todo: remove
+	wire [8:0] HCOUNT;		// SIMULATION ONLY
 	
 	wire [15:0] G;				// SFIX address bus
 	
-	cpu_68k M68KCPU(CLK_68KCLK, nRESET, IPL1, IPL0, nDTACK, M68K_ADDR, M68K_DATA, nLDS, nUDS, nAS, M68K_RW);
+	// DEBUG: nRESET
+	cpu_68k M68KCPU(CLK_68KCLK, 1'b0, IPL1, IPL0, nDTACK, M68K_ADDR, M68K_DATA, nLDS, nUDS, nAS, M68K_RW);
 	cpu_z80 Z80CPU(CLK_4M, nRESET, SDD, SDA, nIORQ, nMREQ, nSDRD, nSDWR, nZ80INT, nZ80NMI);
 	
 	neo_c1 C1(M68K_ADDR[21:17], M68K_DATA[15:8], A22Z, A23Z, nLDS, nUDS, M68K_RW, nAS, nROMOEL, nROMOEU,
@@ -130,6 +131,9 @@ module neogeo(
 				nBITWD0, M68K_DATA[5:0], SDA[15:11], SDA[4:2], nSDRD, nSDWR, nMREQ, nIORQ, nZ80NMI, nSDW, nSDZ80R,
 				nSDZ80W, nSDZ80CLR, nSDROM, nSDMRD, nSDMWR, SDRD0, SDRD1, n2610CS, n2610RD, n2610WR, nZRAMCS,
 				BNK, P1_OUT, P2_OUT);
+	
+	// Fix to prevent TV80 from going nuts because the data bus is open on port reads for ZMC
+	assign SDD = (SDRD0 & SDRD1) ? 8'bzzzzzzzz : 8'b00000000;
 	
 	neo_e0 E0(M68K_ADDR[23:1], BNK[2:0], nSROMOEU, nSROMOEL, nSROMOE,
 				nVEC, A23Z, A22Z, CDA);
@@ -148,7 +152,6 @@ module neogeo(
 	
 	assign CDA_U = CDA[23:19];
 	
-	// Todo: REMOVE HCOUNT, it's only used for simulation in videout
 	lspc_a2 LSPC(CLK_24M, nRESET, PBUS[15:0], PBUS[23:16], M68K_ADDR[3:1], M68K_DATA, nLSPOE, nLSPWE, DOTA, DOTB, CA4, S2H1,
 				S1H1, LOAD, H, EVEN1, EVEN2, IPL0, IPL1, TMS0, LD1, LD1, PCK1, PCK2, WE[3:0], CK[3:0], SS1,
 				SS2, nRESETP, VIDEO_SYNC, CHBL, nBNKB, nVCS, CLK_8M, CLK_4M, HCOUNT);
@@ -176,10 +179,12 @@ module neogeo(
 	// MVS only
 	upd4990 RTC(CLK_RTC, 1'b1, 1'b1, RTC_CLK, RTC_DIN, RTC_STROBE, RTC_TP, RTC_DOUT);
 
-	// Todo: REMOVE HCOUNT, it's only used for simulation file output here:
 	videout VOUT(CLK_6MB, nBNKB, SHADOW, PC, VIDEO_R, VIDEO_G, VIDEO_B, HCOUNT);
 	/*ser_video SERVID(nRESET, CLK_SERVID, CLK_6MB, VIDEO_R, VIDEO_G, VIDEO_B,
 						VIDEO_R_SER, VIDEO_G_SER, VIDEO_B_SER, VIDEO_CLK_SER, VIDEO_LAT_SER);*/
+					
+	// DEBUG
+	snkclk SCLK(CLK_6MB, nRESET, , , , , , , , );
 	
 	// nSRAMCS comes from analog battery backup circuit
 	assign nSRAMCS = 1'b0;

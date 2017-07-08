@@ -6,40 +6,38 @@
 
 // TODO TB: delegate some stuff to CPLD (clock divider for cartridge and SROM, SRAM and WRAM control...)
 
-// Current status (23/05/2017):
+// Current status (08/07/2017):
 // Runs up to game entry point (after >200ms. Long because there are 2 resets, the first is after BRAM init.)
-// Slow VRAM cycle should be OK (sync and timing)
-// Fix data path should be OK (have to check video output)
-// Fast VRAM cycle is only good enough for CPU access
+// Slow VRAM cycle should be OK (sync and timing, no sprites)
+// Fix data path is OK
+// Fast VRAM cycle is only good enough for CPU access but wrong timing and no use by LSPC
 // P cycle is OK but needs to be simplified
 // Sprite stuff needs some name cleanup
 
 module testbench_1();
-	reg nRESET_BTN;			// Present on AES only
-	reg [9:0] P1_IN;			// Joypad
+	reg nRESET_BTN;			// AES reset button
+	reg [9:0] P1_IN;			// Joypad inputs
 	reg [9:0] P2_IN;
-	reg nTEST_BTN;				// Present on MVS only
-	reg [7:0] DIPSW;			// Present on MVS only
+	reg nTEST_BTN;				// MVS test button
+	reg [7:0] DIPSW;			// MVS dipswitches
 	
 	wire [15:0] M68K_DATA;
 	wire [23:1] M68K_ADDR;
 	
-	wire [2:0] LED_LATCH;	// Present on MVS only
-	wire [7:0] LED_DATA;		// Present on MVS only
+	wire [2:0] LED_LATCH;	// MVS credit board outputs
+	wire [7:0] LED_DATA;
 	
 	wire [23:0] PBUS;
 	
 	wire [7:0] FIXD_CART;
 
-	wire [2:0] P1_OUT;		// Joypad
+	wire [2:0] P1_OUT;		// Joypad outputs
 	wire [2:0] P2_OUT;
 	
-	wire [4:0] CDA_U;			// Memcard
+	wire [4:0] CDA_U;			// Memory card upper address lines
 	wire [15:0] CDD;			// TODO: is this a register ?
 
-	wire [3:0] EL_OUT;		// Present on MVS only
-	wire [8:0] LED_OUT1;		// Present on MVS only
-	wire [8:0] LED_OUT2;		// Present on MVS only
+	wire [3:0] EL_OUT;		// MVS marquee board outputs
 
 	wire [7:0] SDRAD;			// ADPCM
 	wire [9:8] SDRA_L;
@@ -50,7 +48,7 @@ module testbench_1();
 	wire [15:0] SDA;			// Z80
 	wire [7:0] SDD;
 	
-	wire [31:0] CR;			// Present on MVS only
+	wire [31:0] CR;			// Sprite graphics data
 	wire [3:0] GAD, GBD;
 	
 	wire [6:0] VIDEO_R;		// TB specific
@@ -153,6 +151,12 @@ module testbench_1();
 			$display("6 SYSTEM ROM ERROR !");
 			$display("7 MEMORY CARD ERROR !");
 			$display("8 Z80 ERROR !");
+			$stop;
+		end
+		
+		if ({M68K_ADDR, 1'b0} == 24'hC12038)
+		begin
+			$display("Z80 ERROR !");
 			$stop;
 		end
 		
