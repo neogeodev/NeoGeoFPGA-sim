@@ -29,12 +29,12 @@ module lspc_a2(
 	output nBNKB,
 	output nVCS,						// LO ROM output enable
 	output CLK_8M,
-	output CLK_4M,
-	output [8:0] H_COUNT				// SIMULATION ONLY
+	output CLK_4M
 );
 
 	parameter VIDEO_MODE = 1'b0;	// NTSC
 	
+	wire [8:0] H_COUNT;
 	wire [8:0] V_COUNT;
 	
 	// VRAM CPU I/O

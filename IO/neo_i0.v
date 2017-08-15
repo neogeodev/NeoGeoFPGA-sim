@@ -16,9 +16,7 @@ module neo_i0(
 );
 	
 	always @(posedge PCK2B)
-	begin
 		G <= {PBUS[11:0], PBUS[15:12]};
-	end
 	
 	// A7=Counter/lockout data
 	// A1=1/2

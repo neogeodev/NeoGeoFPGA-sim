@@ -361,6 +361,8 @@ architecture logic of TG68_fast is
  
 	type regfile_t is array(0 to 16) of std_logic_vector(15 downto 0);
 	-- NeoGeo
+	signal REG_D6	: std_logic_vector(15 downto 0);
+	
 	signal regfile_low	  : regfile_t := (others => (others=>'0'));
 	signal regfile_high	  : regfile_t := (others => (others=>'0'));
  	signal RWindex_A	  : integer range 0 to 16;
@@ -388,6 +390,9 @@ BEGIN
 		    IF clkena='1' THEN
 				IF Lwrena='1' THEN
 					regfile_low(RWindex_A) <= registerin(15 downto 0);
+					IF (RWindex_A=6) THEN
+						REG_D6 <= registerin(15 downto 0);
+					END IF;
 				END IF;
 				IF Hwrena='1' THEN
 					regfile_high(RWindex_A) <= registerin(31 downto 16);

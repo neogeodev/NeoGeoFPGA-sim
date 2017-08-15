@@ -127,7 +127,7 @@ module testbench_1();
 		P2_IN = 10'b1111111111;
 		
 		nTEST_BTN = 1;
-		DIPSW = 8'b11111111;
+		DIPSW = 8'b11111111;			// Test mode DISABLED
 		
 		// Apply reset
 		#30
@@ -141,7 +141,7 @@ module testbench_1();
 		// These addresses are only valid for the patched SP-S2.SP1 system ROM !
 		if ({M68K_ADDR, 1'b0} == 24'hC16ADA)
 		begin
-			$display("SELF-TEST ERROR: See M68K reg D6:");
+			//$display("SELF-TEST ERROR %d: See M68K reg D6:", NG.M68KCPU.TG68K.TG68_fast_inst.REG_D6);
 			$display("0 WORK RAM ERROR !");
 			$display("1 BACKUP RAM ERROR !");
 			$display("2 COLOR RAM BANK0 ERROR !");

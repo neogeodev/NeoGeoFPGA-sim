@@ -16,9 +16,9 @@ module sram_l(
 	integer k;
 	initial begin
 		//Clean init to 0 since the speed-patched system ROM skips SRAM init
-		for (k = 0; k < 32767; k = k + 1)
-			 RAMDATA[k] = 0;
-		//$readmemh("raminit_sram_l.txt", RAMDATA);
+		//for (k = 0; k < 32767; k = k + 1)
+		//	 RAMDATA[k] = 0;
+		$readmemh("raminit_sram_l.txt", RAMDATA);
 	end
 
 	assign #120 DATA_OUT = RAMDATA[ADDR];

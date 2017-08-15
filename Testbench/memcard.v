@@ -22,9 +22,9 @@ module memcard(
 	
 	integer k;
 	initial begin
-		for (k = 0; k < 2047; k = k + 1)
-			RAMDATA[k] = k & 255;
-		//$readmemh("raminit_sram_l.txt", RAMDATA);
+		//for (k = 0; k < 2047; k = k + 1)
+		//	RAMDATA[k] = k & 255;
+		$readmemh("raminit_memcard.txt", RAMDATA);
 	end
 	
 	assign nCD1 = nINSERTED;

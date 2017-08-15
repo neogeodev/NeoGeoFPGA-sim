@@ -6,10 +6,6 @@ module logger(
 	input CLK_6MB,
 	input nBNKB,
 	input SHADOW,
-	input [15:0] PC,
-	input [8:0] HCOUNT,
-	input [7:0] LED_DATA,
-	input [2:0] LED_LATCH,
 	input COUNTER1, COUNTER2, LOCKOUT1, LOCKOUT2
 );
 
@@ -23,8 +19,10 @@ module logger(
 
 	integer sim_line;
 	integer sim_frame;
+	integer i;
 	integer f_video;
 	integer f_cab_io;
+	integer f_ram;
 	
 	initial
 	begin
@@ -32,32 +30,51 @@ module logger(
 		sim_frame = 0;
 		f_video = $fopen("log_video.txt", "w");
 		f_cab_io = $fopen("log_cab_io.txt", "w");
-		#500000000			// Run for 500ms
+		
+		#40000000	// Run for 40ms
+		
+		// Save backup RAM contents
+		f_ram = $fopen("raminit_sram_l.txt", "w");
+		for (i = 0; i < 32768; i = i + 1)
+			$fwrite (f_ram, "%x\n", neogeo.SRAM.SRAML.RAMDATA[i]);
+		$fclose(f_ram);
+		f_ram = $fopen("raminit_sram_u.txt", "w");
+		for (i = 0; i < 32768; i = i + 1)
+			$fwrite (f_ram, "%x\n", neogeo.SRAM.SRAMU.RAMDATA[i]);
+		$fclose(f_ram);
+		
+		// Save memory card contents
+		f_ram = $fopen("raminit_memcard.txt", "w");
+		for (i = 0; i < 2048; i = i + 1)
+			$fwrite (f_ram, "%x\n", testbench_1.MC.RAMDATA[i]);
+		$fclose(f_ram);
+		
 		$fclose(f_video);
 		$fclose(f_cab_io);
 		$stop;
 	end
 	
 	// Simulates MV-ELA board
-	always @(negedge LED_LATCH[0])
-		MARQUEE <= LED_DATA[5:0];
-		
-	// Simulates MV-LED boards
-	always @(negedge LED_LATCH[1])
-		LED1 <= LED_DATA;
-	always @(negedge LED_LATCH[2])
-		LED2 <= LED_DATA;
+	always @(negedge neogeo.LED_LATCH[0])
+		MARQUEE <= neogeo.LED_DATA[5:0];
 	
-	assign LOG_VIDEO_R = nBNKB ? {SHADOW, PC[11:8], PC[14], PC[15]} : 7'b0000000;
-	assign LOG_VIDEO_G = nBNKB ? {SHADOW, PC[7:4], PC[13], PC[15]} : 7'b0000000;
-	assign LOG_VIDEO_B = nBNKB ? {SHADOW, PC[3:0], PC[12], PC[15]} : 7'b0000000;
+	// Simulates MV-LED boards
+	always @(negedge neogeo.LED_LATCH[1])
+		LED1 <= neogeo.LED_DATA;
+	always @(negedge neogeo.LED_LATCH[2])
+		LED2 <= neogeo.LED_DATA;
+	
+	assign LOG_VIDEO_R = nBNKB ? {SHADOW, neogeo.PC[11:8], neogeo.PC[14], neogeo.PC[15]} : 7'b0000000;
+	assign LOG_VIDEO_G = nBNKB ? {SHADOW, neogeo.PC[7:4], neogeo.PC[13], neogeo.PC[15]} : 7'b0000000;
+	assign LOG_VIDEO_B = nBNKB ? {SHADOW, neogeo.PC[3:0], neogeo.PC[12], neogeo.PC[15]} : 7'b0000000;
 	
 	always @(posedge CLK_6MB)
 	begin
-		if (HCOUNT < 383)
+		if (neogeo.LSPC.H_COUNT < 383)
 		begin
 			// Write each pixel
-			$fwrite(f_video, "%05X ", {LOG_VIDEO_R, LOG_VIDEO_G, LOG_VIDEO_B});
+			// 0RRRRRRR 0GGGGGGG 0BBBBBBB
+			$fwrite(f_video, "%06X ", {1'b0, LOG_VIDEO_R, 1'b0, LOG_VIDEO_G, 1'b0, LOG_VIDEO_B});
 		end
 		else
 		begin
@@ -69,7 +86,7 @@ module logger(
 				$display("Frame %d rendered", sim_frame);
 				
 				// Write cab I/O data each frame
-				// MM MMMMCCKK LLLLLLLL llllllll
+				// 000000MM MMMMCCKK LLLLLLLL llllllll
 				$fwrite(f_cab_io, "%08X ", {MARQUEE, COUNTER1, COUNTER2, LOCKOUT1, LOCKOUT2, LED2, LED1});
 				
 				sim_frame = sim_frame + 1;
