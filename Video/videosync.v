@@ -3,37 +3,52 @@
 module videosync(
 	input CLK_24M,
 	input nRESETP,
-	output reg [8:0] V_COUNT,		// 0~263
-	output reg [8:0] H_COUNT,		// 0~383
+	output [8:0] V_COUNT,				// 0~263
+	output reg [8:0] H_COUNT = 9'd0,	// 0~383
 	output TMS0,
 	output VBLANK,
 	output reg nVSYNC,
 	output reg HSYNC,
-	output reg nBNKB,
+	output nBNKB,
 	output reg CHBL,
-	output reg [5:0] FIX_MAP_COL	// 0~47
+	output [14:0] FIX_MAP_ADDR
 );
 
 	wire MASKING;
 	reg [3:0] FOURTEEN_CNT = 4'd0;
 	reg [1:0] LSPC_DIV = 2'd0;
 	reg [7:0] FT_CNT = 8'd0;
+	reg ACTIVE = 1'b0;
+	
+	reg [2:0] DIV_LINE_LOW = 3'd0;
+	reg [4:0] DIV_LINE_HIGH = 5'd0;
+	
+	assign V_COUNT = {ACTIVE, DIV_LINE_HIGH, DIV_LINE_LOW};
+	
+	// The fix map is 16bit/tile in slow VRAM starting @ $7000
+	// (0)111xCCC CCCLLLLL
+	assign FIX_MAP_ADDR = {4'b1110, H_COUNT[8:3], V_COUNT[7:3]};
 	
 	// Do not reset CHBL between (NTSC):
 	// x 0000 0000 ~ x 0000 1111
 	// x 1111 0000 ~ x 1111 1111
 	assign MASKING = ~|{V_COUNT[7:4]} | &{V_COUNT[7:4]};
 	
+	assign nBNKB = |{DIV_LINE_HIGH[4:1]} & ~&{DIV_LINE_HIGH[4:1]};
+	
 	assign VBLANK = ~|{V_COUNT[7:3]};
 
 	// Video sync must always run (even during reset) since nBNKB is the watchdog clock
-	always @(negedge CLK_24M)
+	always @(posedge CLK_24M)
 	begin
 		if (!nRESETP)
 		begin
-			H_COUNT <= 0;
+			H_COUNT <= 9'd0;
+			DIV_LINE_LOW <= 3'd0;
+			DIV_LINE_HIGH <= 5'd0;
 			FOURTEEN_CNT <= 4'd0;
 			LSPC_DIV <= 0;
+			ACTIVE <= 1'b1;
 		end
 		else
 		begin
@@ -44,8 +59,8 @@ module videosync(
 				HSYNC <= |{FT_CNT[7:3]};		// Good ?	HSYNC low (112mclk, 0~28px)
 				if (FT_CNT == 7'd12)				// 11 ?
 				begin
-					nVSYNC <= V_COUNT[8];			// Good ?
-					nBNKB <= ~MASKING;
+					nVSYNC <= V_COUNT[8];		// Good ?
+					//nBNKB <= ~MASKING;
 				end
 
 				if (FT_CNT == 7'd16)				// 15 ?
@@ -57,27 +72,43 @@ module videosync(
 			else
 				FOURTEEN_CNT <= FOURTEEN_CNT + 1'b1;
 			
-			if (LSPC_DIV == 2'd1)
+			// To check: this must match posedge of CLK_6MB
+			// H_COUNT is the pixel counter in SNKCLK
+			if (LSPC_DIV == 2'd3)
 			begin
-				if (H_COUNT < 9'd383)
-					H_COUNT <= H_COUNT + 1'b1;
-				else
+				if (H_COUNT == 9'd383)
 				begin
 					H_COUNT <= 9'd0;
+					
 					FOURTEEN_CNT <= 4'd0;		// Force reset each new line
 					FT_CNT <= 7'd0;
-					if (V_COUNT < 9'd263)
-						V_COUNT <= V_COUNT + 1'b1;
+
+					if (DIV_LINE_LOW == 3'b111)
+					begin
+						DIV_LINE_LOW <= 3'd0;
+						if (DIV_LINE_HIGH == 5'b11111)
+						begin
+							if (!ACTIVE)	// Must start at 1
+							begin
+								DIV_LINE_HIGH <= 5'd0;
+								//DIV_HSYNC <= 5'd5;		// Value on reset ?
+							end
+							ACTIVE <= ~ACTIVE;
+						end
+						else
+							DIV_LINE_HIGH <= DIV_LINE_HIGH + 1'b1;
+					end
 					else
-						V_COUNT <= 0;
+						DIV_LINE_LOW <= DIV_LINE_LOW + 1'b1;
+
 				end
-				if (H_COUNT == 9'd48)
-					FIX_MAP_COL <= 6'd0;	// This probably isn't done that way
-				if (&{H_COUNT[2:0]})
-					FIX_MAP_COL <= FIX_MAP_COL + 1'b1;	// This probably isn't done that way
+				else
+					H_COUNT <= H_COUNT + 1'b1;
+
 				if (H_COUNT == 9'd375)
-					CHBL <= 1'b1;			// This probably isn't done that way
+					CHBL <= 1'b1;			// This is wrong ! See Alpha68k /E signal of J12, H12 and H9
 			end
+			
 			LSPC_DIV <= LSPC_DIV + 1'b1;
 		end
 	end

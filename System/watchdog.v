@@ -32,7 +32,8 @@ module watchdog(
 	always @(posedge WDCLK or posedge WDKICK or negedge nRST)
 	begin
 		if (!nRST)
-			WDCNT <= 4'b1000;
+			WDCNT <= 4'b1111;			// DEBUG - Used to speed up simulation
+			//WDCNT <= 4'b1000;		// Correct value
 		else
 		begin
 			if (WDKICK)

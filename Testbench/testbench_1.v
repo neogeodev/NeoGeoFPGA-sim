@@ -6,11 +6,11 @@
 
 // TODO TB: delegate some stuff to CPLD (clock divider for cartridge and SROM, SRAM and WRAM control...)
 
-// Current status (08/07/2017):
+// Current status (09/07/2017):
 // Runs up to game entry point (after >200ms. Long because there are 2 resets, the first is after BRAM init.)
 // Slow VRAM cycle should be OK (sync and timing, no sprites)
 // Fix data path is OK
-// Fast VRAM cycle is only good enough for CPU access but wrong timing and no use by LSPC
+// Fast VRAM cycle is only good enough for CPU access but wrong timing and not used by LSPC
 // P cycle is OK but needs to be simplified
 // Sprite stuff needs some name cleanup
 

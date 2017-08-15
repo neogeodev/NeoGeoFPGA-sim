@@ -8,40 +8,37 @@ module clocks(
 	input CLK_24M,
 	input nRESETP,
 	output CLK_12M,
-	output reg CLK_68KCLK,
+	output reg CLK_68KCLK = 1'b0,	// Real hw doesn't clearly init DFF, this needs to be checked
 	output CLK_68KCLKB,
 	output CLK_6MB,
 	output reg CLK_1MB
 );
 
+	reg [2:0] CLK_DIV;
 	wire CLK_3M;
 	
-	always @(negedge CLK_24M or negedge nRESETP)
-	begin
-		if (!nRESETP)
-			CLK_68KCLK <= 1'b1;	// Real hw doesn't clearly init DFF, this needs to be checked
-		else
-			CLK_68KCLK <= ~CLK_68KCLK;
-	end
+	// MV4 C4:A
+	always @(posedge CLK_24M)
+		CLK_68KCLK <= ~CLK_68KCLK;
 	
 	assign CLK_68KCLKB = ~CLK_68KCLK;
 	
-	
-	reg [2:0] CLKDIV_B;			// Bit 3 of counter isn't used
-	
-	always @(negedge CLK_24M or negedge nRESETP)
+	// MV4 B5
+	assign RESETP = ~nRESETP;
+	always @(posedge CLK_24M or posedge RESETP)
 	begin
-		if (!nRESETP)
-			CLKDIV_B <= 3'b100;	// Load
+		if (RESETP)
+			CLK_DIV <= 3'b100;
 		else
-			CLKDIV_B <= CLKDIV_B + 1'b1;
+			CLK_DIV <= CLK_DIV + 1'b1;
 	end
 	
-	assign CLK_12M = CLKDIV_B[0];
-	assign CLK_6MB = ~CLKDIV_B[1];
-	assign CLK_3M = CLKDIV_B[2];
+	assign CLK_12M = CLK_DIV[0];
+	assign CLK_6MB = ~CLK_DIV[1];
+	assign CLK_3M = CLK_DIV[2];
 	
-	always @(posedge CLK_12M)	// DFF
+	// MV4 C4:B
+	always @(posedge CLK_12M)
 		CLK_1MB <= ~CLK_3M;
 	
 endmodule

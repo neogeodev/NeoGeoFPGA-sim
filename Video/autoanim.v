@@ -4,20 +4,22 @@ module autoanim(
 	input nRESET,
 	input VBLANK,
 	input [7:0] AA_SPEED,
-	input [2:0] TILENB_IN,
+	input [19:0] SPR_TILE_NB,
 	input AA_DISABLE,
 	input [1:0] AA_ATTR,
-	output [2:0] TILENB_OUT,
-	output reg [2:0] AA_COUNT	// Output used for REG_LSPCMODE read
+	output [19:0] SPR_TILE_NB_AA,
+	output reg [2:0] AA_COUNT			// Output used for REG_LSPCMODE read
 );
 
 	reg [7:0] AA_TIMER;
+	wire [2:0] TILE_NB_MUX;
 
-	// Todo: Only use TILENB_IN[2:0]
-	assign TILENB_OUT = AA_DISABLE ? TILENB_IN :									// nnn	No AA
+	assign SPR_TILE_NB_AA = {SPR_TILE_NB[19:3], TILE_NB_MUX};
+
+	assign TILE_NB_MUX = AA_DISABLE ? SPR_TILE_NB[2:0] :						// nnn	AA disabled
 								AA_ATTR[1] ? AA_COUNT :									// AAA	3-bit AA
-								AA_ATTR[0] ? {TILENB_IN[2], AA_COUNT[1:0]} :		// nAA	2-bit AA
-								TILENB_IN;													// nnn	No AA
+								AA_ATTR[0] ? {SPR_TILE_NB[2], AA_COUNT[1:0]} :	// nAA	2-bit AA
+								SPR_TILE_NB[2:0];											// nnn	Tile attribute: no AA
 	
 	// Todo: Is is really nRESET ?
 	// Todo: posedge VBLANK ?
