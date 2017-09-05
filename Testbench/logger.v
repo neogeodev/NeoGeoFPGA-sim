@@ -64,9 +64,9 @@ module logger(
 	always @(negedge neogeo.LED_LATCH[2])
 		LED2 <= neogeo.LED_DATA;
 	
-	assign LOG_VIDEO_R = nBNKB ? {SHADOW, neogeo.PC[11:8], neogeo.PC[14], neogeo.PC[15]} : 7'b0000000;
-	assign LOG_VIDEO_G = nBNKB ? {SHADOW, neogeo.PC[7:4], neogeo.PC[13], neogeo.PC[15]} : 7'b0000000;
-	assign LOG_VIDEO_B = nBNKB ? {SHADOW, neogeo.PC[3:0], neogeo.PC[12], neogeo.PC[15]} : 7'b0000000;
+	assign LOG_VIDEO_R = nBNKB ? {~SHADOW, neogeo.PC[11:8], neogeo.PC[14], neogeo.PC[15]} : 7'b0000000;
+	assign LOG_VIDEO_G = nBNKB ? {~SHADOW, neogeo.PC[7:4], neogeo.PC[13], neogeo.PC[15]} : 7'b0000000;
+	assign LOG_VIDEO_B = nBNKB ? {~SHADOW, neogeo.PC[3:0], neogeo.PC[12], neogeo.PC[15]} : 7'b0000000;
 	
 	always @(posedge CLK_6MB)
 	begin

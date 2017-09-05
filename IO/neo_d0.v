@@ -33,7 +33,7 @@ module neo_d0(
 		CLK_24M = 0;
 	
 	always
-		#21 CLK_24M = !CLK_24M;		// 24MHz -> 20.8ns half period
+		#20.8 CLK_24M = !CLK_24M;		// 24MHz -> 20.8ns half period
 
 	// Clock divider part
 	clocks CLK(CLK_24M, nRESETP, CLK_12M, CLK_68KCLK, CLK_68KCLKB, CLK_6MB, CLK_1MB);

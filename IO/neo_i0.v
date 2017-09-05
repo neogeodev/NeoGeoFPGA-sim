@@ -35,7 +35,24 @@ module neo_i0(
 		begin
 			if (!nCOUNTOUT)
 			begin
-				$display("Coin mechanism set %D to %B", M68K_ADDR[2:1], M68K_ADDR_7);	// DEBUG
+				// DEBUG
+				if ({M68K_ADDR[7], M68K_ADDR[2:1]} == 3'b000)
+					$display("COIN COUNTER 1 RESET");
+				else if ({M68K_ADDR[7], M68K_ADDR[2:1]} == 3'b001)
+					$display("COIN COUNTER 2 RESET");
+				else if ({M68K_ADDR[7], M68K_ADDR[2:1]} == 3'b010)
+					$display("COIN LOCKOUT 1 RESET");
+				else if ({M68K_ADDR[7], M68K_ADDR[2:1]} == 3'b011)
+					$display("COIN LOCKOUT 2 RESET");
+				else if ({M68K_ADDR[7], M68K_ADDR[2:1]} == 3'b100)
+					$display("COIN COUNTER 1 SET");
+				else if ({M68K_ADDR[7], M68K_ADDR[2:1]} == 3'b101)
+					$display("COIN COUNTER 2 SET");
+				else if ({M68K_ADDR[7], M68K_ADDR[2:1]} == 3'b110)
+					$display("COIN LOCKOUT 1 SET");
+				else if ({M68K_ADDR[7], M68K_ADDR[2:1]} == 3'b111)
+					$display("COIN LOCKOUT 2 SET");
+				
 				if (M68K_ADDR[2:1] == 2'b00) COUNTER1 <= M68K_ADDR_7;
 				if (M68K_ADDR[2:1] == 2'b01) COUNTER2 <= M68K_ADDR_7;
 				if (M68K_ADDR[2:1] == 2'b10) LOCKOUT1 <= M68K_ADDR_7;

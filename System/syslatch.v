@@ -41,8 +41,41 @@ module syslatch(
 		end
 		else if (!nBITW1)
 		begin							// Latch mode
-			$display("Wrote %B to syslatch %d", M68K_ADDR[4], M68K_ADDR[3:1]);	// DEBUG
 			SLATCH[M68K_ADDR[3:1]] <= M68K_ADDR[4];
+			
+			// DEBUG
+			if (M68K_ADDR[4:1] == 4'h0)
+				$display("SYSLATCH: NOSHADOW");
+			else if (M68K_ADDR[4:1] == 4'h1)
+				$display("SYSLATCH: REG_SWPBIOS");
+			else if (M68K_ADDR[4:1] == 4'h2)
+				$display("SYSLATCH: REG_CRDUNLOCK1");
+			else if (M68K_ADDR[4:1] == 4'h3)
+				$display("SYSLATCH: REG_CRDLOCK2");
+			else if (M68K_ADDR[4:1] == 4'h4)
+				$display("SYSLATCH: REG_CRDREGSEL");
+			else if (M68K_ADDR[4:1] == 4'h5)
+				$display("SYSLATCH: REG_BRDFIX");
+			else if (M68K_ADDR[4:1] == 4'h6)
+				$display("SYSLATCH: REG_SRAMLOCK");
+			else if (M68K_ADDR[4:1] == 4'h7)
+				$display("SYSLATCH: REG_PALBANK1");
+			else if (M68K_ADDR[4:1] == 4'h8)
+				$display("SYSLATCH: REG_SHADOW");
+			else if (M68K_ADDR[4:1] == 4'h9)
+				$display("SYSLATCH: REG_SWPROM");
+			else if (M68K_ADDR[4:1] == 4'hA)
+				$display("SYSLATCH: REG_CRDLOCK1");
+			else if (M68K_ADDR[4:1] == 4'hB)
+				$display("SYSLATCH: REG_CRDUNLOCK2");
+			else if (M68K_ADDR[4:1] == 4'hC)
+				$display("SYSLATCH: REG_CRDNORMAL");
+			else if (M68K_ADDR[4:1] == 4'hD)
+				$display("SYSLATCH: REG_CRTFIX");
+			else if (M68K_ADDR[4:1] == 4'hE)
+				$display("SYSLATCH: REG_SRAMUNLOCK");
+			else if (M68K_ADDR[4:1] == 4'hF)
+				$display("SYSLATCH: REG_PALBANK0");
 		end
 	end
 	

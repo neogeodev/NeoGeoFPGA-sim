@@ -63,7 +63,7 @@
 -- add odd Address test
 -- add TRACE
  
- 
+
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.std_logic_unsigned.all;
@@ -81,7 +81,8 @@ entity TG68_fast is
         state_out         : out std_logic_vector(1 downto 0);
 		LDS, UDS		  : out std_logic;		
         decodeOPC         : buffer std_logic;
-		wr				  : out std_logic
+		wr				  : out std_logic;
+		REG_D6			: out std_logic_vector(15 downto 0)	--NeoGeo
 		);
 end TG68_fast;
  
@@ -360,8 +361,6 @@ architecture logic of TG68_fast is
 	signal next_micro_state		: micro_states;
  
 	type regfile_t is array(0 to 16) of std_logic_vector(15 downto 0);
-	-- NeoGeo
-	signal REG_D6	: std_logic_vector(15 downto 0);
 	
 	signal regfile_low	  : regfile_t := (others => (others=>'0'));
 	signal regfile_high	  : regfile_t := (others => (others=>'0'));
@@ -390,7 +389,8 @@ BEGIN
 		    IF clkena='1' THEN
 				IF Lwrena='1' THEN
 					regfile_low(RWindex_A) <= registerin(15 downto 0);
-					IF (RWindex_A=6) THEN
+					-- NeoGeo
+					IF (RWindex_A=9) THEN	-- 6 ^ F = 9
 						REG_D6 <= registerin(15 downto 0);
 					END IF;
 				END IF;

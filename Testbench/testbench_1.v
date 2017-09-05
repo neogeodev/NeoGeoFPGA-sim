@@ -6,7 +6,10 @@
 
 // TODO TB: delegate some stuff to CPLD (clock divider for cartridge and SROM, SRAM and WRAM control...)
 
-// Current status (09/07/2017):
+// Current status (05/09/2017):
+// Video RAM error in fast VRAM because of modifications in cycle sequence
+
+// Status (09/07/2017):
 // Runs up to game entry point (after >200ms. Long because there are 2 resets, the first is after BRAM init.)
 // Slow VRAM cycle should be OK (sync and timing, no sprites)
 // Fix data path is OK
@@ -141,16 +144,24 @@ module testbench_1();
 		// These addresses are only valid for the patched SP-S2.SP1 system ROM !
 		if ({M68K_ADDR, 1'b0} == 24'hC16ADA)
 		begin
-			//$display("SELF-TEST ERROR %d: See M68K reg D6:", NG.M68KCPU.TG68K.TG68_fast_inst.REG_D6);
-			$display("0 WORK RAM ERROR !");
-			$display("1 BACKUP RAM ERROR !");
-			$display("2 COLOR RAM BANK0 ERROR !");
-			$display("3 COLOR RAM BANK1 ERROR !");
-			$display("4 VIDEO RAM ERROR !");
-			$display("5 CALENDAR ERROR ! (A)");
-			$display("6 SYSTEM ROM ERROR !");
-			$display("7 MEMORY CARD ERROR !");
-			$display("8 Z80 ERROR !");
+			if (NG.M68KCPU.REG_D6 == 15'h0000)
+				$display("0 WORK RAM ERROR !");
+			else if (NG.M68KCPU.REG_D6 == 15'h0001)
+				$display("1 BACKUP RAM ERROR !");
+			else if (NG.M68KCPU.REG_D6 == 15'h0002)
+				$display("2 COLOR RAM BANK0 ERROR !");
+			else if (NG.M68KCPU.REG_D6 == 15'h0003)
+				$display("3 COLOR RAM BANK1 ERROR !");
+			else if (NG.M68KCPU.REG_D6 == 15'h0004)
+				$display("4 VIDEO RAM ERROR !");
+			else if (NG.M68KCPU.REG_D6 == 15'h0005)
+				$display("5 CALENDAR ERROR ! (A)");
+			else if (NG.M68KCPU.REG_D6 == 15'h0006)
+				$display("6 SYSTEM ROM ERROR !");
+			else if (NG.M68KCPU.REG_D6 == 15'h0007)
+				$display("7 MEMORY CARD ERROR !");
+			else if (NG.M68KCPU.REG_D6 == 15'h0008)
+				$display("8 Z80 ERROR !");
 			$stop;
 		end
 		

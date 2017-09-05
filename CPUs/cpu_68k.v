@@ -16,6 +16,7 @@ wire [15:0] TG68K_DATAIN;
 wire [15:0] TG68K_DATAOUT;
 wire [31:0] TG68K_ADDR;
 wire [24:0] DEBUG_ADDR;							// TODO: Remove
+wire [15:0] REG_D6;								// TODO: Remove
 
 assign M68K_DATA = M68K_RW ? 16'bzzzzzzzzzzzzzzzz : TG68K_DATAOUT;
 assign TG68K_DATAIN = M68K_RW ? M68K_DATA : 16'bzzzzzzzzzzzzzzzz;
@@ -36,7 +37,8 @@ tg68 TG68K(
 		.as(nAS),
 		.uds(nUDS),
 		.lds(nLDS),
-		.rw(M68K_RW)
+		.rw(M68K_RW),
+		.REG_D6(REG_D6)
 		);
 	
 endmodule

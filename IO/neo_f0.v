@@ -54,6 +54,16 @@ module neo_f0(
 		end
 		else if (!nBITWD0)
 		begin
+			// DEBUG
+			if (M68K_ADDR[6:4] == 3'b010)
+				$display("SELECT SLOT %d", M68K_DATA[2:0]);
+			else if (M68K_ADDR[6:4] == 3'b011)
+				$display("SET LED LATCHES to %b", M68K_DATA[5:3]);
+			else if (M68K_ADDR[6:4] == 3'b100)
+				$display("SET LED DATA to %b", M68K_DATA[7:0]);
+			else if (M68K_ADDR[6:4] == 3'b101)
+				$display("SET RTCCTRL to %b", M68K_DATA[2:0]);
+			
 			case (M68K_ADDR[6:4])
 				3'b010:
 					SLOTS <= M68K_DATA[2:0];			// REG_SLOT $380021

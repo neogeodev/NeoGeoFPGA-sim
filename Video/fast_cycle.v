@@ -71,7 +71,7 @@ module fast_cycle(
 			RELOAD_CPU_ADDR <= 1'b0;
 	end
 	
-	assign CPU_WRITE_ACK = nCWE;	// Does this work ?
+	assign CPU_WRITE_ACK = nCWE | ~CPU_ZONE;	// Does this work ?
 	
 	
 	assign SCB2_ADDR = {2'b00, SPR_RENDER_IDX};		// $000~$1FF (shrinking values)

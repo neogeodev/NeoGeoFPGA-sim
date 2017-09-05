@@ -1,6 +1,9 @@
 `timescale 1ns/1ns
 
+// Slow VRAM is 120ns (3mclk or more, probably 3.5mclk)
+
 module slow_cycle(
+	input CLK_24M,
 	input CLK_6M,
 	input nRESETP,
 	
@@ -54,73 +57,73 @@ module slow_cycle(
 			RELOAD_CPU_ADDR <= 1'b0;
 	end
 	
-	always @(posedge CLK_6M)
+	assign SPR_ADDR_LSB = CYCLE_SLOW[0];
+	
+	always @(posedge CLK_24M)
 	begin
 		// Time slot change on PCK* signals seems to fit in well,
 		// but not sure how the FIXMAP and SPRMAP 2nd word are triggered
-		CYCLE_SLOW <= H_COUNT[1:0];
 		
-		/*
-		if (H_COUNT[1:0] == 2'd0)	// Sprite map first word
+		if (CLK_6M)
 		begin
-			SPR_ADDR_LSB <= 1'b0;	// This might not be a register
-		end
-		
-		if (H_COUNT[1:0] == 2'd1)	// Sprite map second word
-		begin
-			SPR_ADDR_LSB <= 1'b1;	// This might not be a register
-		end
-		*/
-		
-		if (H_COUNT[1:0] == 2'd2)	// CPU
-		begin
-			if (RELOAD_CPU_ADDR)
-				CPU_ADDR_SLOW <= CPU_ADDR;
-			nBWE <= ~(CPU_WRITE & ~CPU_ZONE);
-		end
-		
-		if (H_COUNT[1:0] == 2'd3)	// Fix map
-		begin
-			if (!nBWE)
-				CPU_ADDR_SLOW <= CPU_ADDR_SLOW + REG_VRAMMOD;
-			nBWE <= 1'b1;
+			// Beginning of cycle
+			CYCLE_SLOW <= H_COUNT[1:0];
+			
+			if (H_COUNT[1:0] == 2'd2)	// CPU
+			begin
+				if (RELOAD_CPU_ADDR)
+					CPU_ADDR_SLOW <= CPU_ADDR;
+				nBWE <= ~(CPU_WRITE & ~CPU_ZONE);
+			end
+			
+			if (H_COUNT[1:0] == 2'd3)	// Fix map
+			begin
+				if (!nBWE)
+					CPU_ADDR_SLOW <= CPU_ADDR_SLOW + REG_VRAMMOD;
+				nBWE <= 1'b1;
+			end
 		end
 	end
 	
-	// Read sprite map 1st word 0.5mclk before new cycle. Should be ok.
-	always @(posedge (~H_COUNT[1] & H_COUNT[0]))
+	always @(posedge CLK_6M)
 	begin
-		SPR_TILE_NB_L <= E;
+		// Read sprite map 1st word 0.5mclk before new cycle. Should be ok.
+		if (CYCLE_SLOW == 2'b00)
+			SPR_TILE_NB_L <= E;
+		
+		// Read sprite map 2nd word
+		if (CYCLE_SLOW == 2'b01)
+		begin
+			SPR_ATTR_PAL <= E[15:8];
+			SPR_TILE_NB_U <= E[7:4];
+			SPR_ATTR_AA <= E[3:2];
+			SPR_ATTR_FLIP <= E[1:0];
+		end
+		
+		// Read data for CPU 0.5mclk before new cycle. Should be ok.
+		if (CYCLE_SLOW == 2'b10)
+			CPU_RDDATA <= E;
+		
+		// Read fix map
+		if (CYCLE_SLOW == 2'b11)
+			FIX_TILE_NB <= E[11:0];
+			FIX_PAL_NB <= E[15:12];
 	end
 	
-	// Read sprite map 2nd word
-	always @(posedge PCK2)
-	begin
-		SPR_ATTR_PAL <= E[15:8];
-		SPR_TILE_NB_U <= E[7:4];
-		SPR_ATTR_AA <= E[3:2];
-		SPR_ATTR_FLIP <= E[1:0];
-	end
+	//always @(posedge PCK2)
+	//begin
+	//end
 	
-	// Read data for CPU 0.5mclk before new cycle. Should be ok.
-	always @(posedge (&{H_COUNT[1:0]}))
-	begin
-		CPU_RDDATA <= E;
-	end
-	
-	// Read fix map
-	always @(posedge PCK1)
-	begin
-		FIX_TILE_NB <= E[11:0];
-		FIX_PAL_NB <= E[15:12];
-	end
+	//always @(posedge PCK1)
+	//begin
+	//end
 	
 	// SPR_TILEIDX   /------- --xxxxx! [4:0]
 	// SPR_NB        /xxxxxxx xx-----! [8:0]
 	assign SPR_MAP_ADDR_L = {SPR_NB, SPR_TILE_IDX, CYCLE_SLOW[0]};
 	
-	assign B = (CYCLE_SLOW == 2'd0) ? CPU_ADDR_SLOW :		// CPU
-						(CYCLE_SLOW == 2'd1) ? FIX_MAP_ADDR :	// FIX
+	assign B = (CYCLE_SLOW == 2'd2) ? CPU_ADDR_SLOW :		// CPU
+						(CYCLE_SLOW == 2'd3) ? FIX_MAP_ADDR :	// FIX
 						SPR_MAP_ADDR_L;								// SPR (2 words)
 
 	assign E = nBWE ? 16'bzzzzzzzzzzzzzzzz : CPU_WRDATA;
