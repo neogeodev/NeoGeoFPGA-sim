@@ -49,7 +49,7 @@ module slow_cycle(
 	vram_slow_u VRAMLU(B, E[15:8], 1'b0, nBOE, nBWE);
 	vram_slow_l VRAMLL(B, E[7:0], 1'b0, nBOE, nBWE);
 	
-	always @(posedge RELOAD_REQ or posedge (&{CYCLE_SLOW[1:0]}))
+	always @(posedge RELOAD_REQ or posedge (~|{CYCLE_SLOW[1:0]}))
 	begin
 		if (RELOAD_REQ)
 			RELOAD_CPU_ADDR <= 1'b1;
@@ -69,14 +69,14 @@ module slow_cycle(
 			// Beginning of cycle
 			CYCLE_SLOW <= H_COUNT[1:0];
 			
-			if (H_COUNT[1:0] == 2'd2)	// CPU
+			if (H_COUNT[1:0] == 2'd0)	// CPU
 			begin
 				if (RELOAD_CPU_ADDR)
 					CPU_ADDR_SLOW <= CPU_ADDR;
 				nBWE <= ~(CPU_WRITE & ~CPU_ZONE);
 			end
 			
-			if (H_COUNT[1:0] == 2'd3)	// Fix map
+			if (H_COUNT[1:0] == 2'd1)	// Fix map
 			begin
 				if (!nBWE)
 					CPU_ADDR_SLOW <= CPU_ADDR_SLOW + REG_VRAMMOD;
@@ -88,11 +88,11 @@ module slow_cycle(
 	always @(posedge CLK_6M)
 	begin
 		// Read sprite map 1st word 0.5mclk before new cycle. Should be ok.
-		if (CYCLE_SLOW == 2'b00)
+		if (CYCLE_SLOW == 2'b10)
 			SPR_TILE_NB_L <= E;
 		
 		// Read sprite map 2nd word
-		if (CYCLE_SLOW == 2'b01)
+		if (CYCLE_SLOW == 2'b11)
 		begin
 			SPR_ATTR_PAL <= E[15:8];
 			SPR_TILE_NB_U <= E[7:4];
@@ -101,13 +101,15 @@ module slow_cycle(
 		end
 		
 		// Read data for CPU 0.5mclk before new cycle. Should be ok.
-		if (CYCLE_SLOW == 2'b10)
+		if (CYCLE_SLOW == 2'b00)
 			CPU_RDDATA <= E;
 		
 		// Read fix map
-		if (CYCLE_SLOW == 2'b11)
+		if (CYCLE_SLOW == 2'b01)
+		begin
 			FIX_TILE_NB <= E[11:0];
 			FIX_PAL_NB <= E[15:12];
+		end
 	end
 	
 	//always @(posedge PCK2)
@@ -122,8 +124,8 @@ module slow_cycle(
 	// SPR_NB        /xxxxxxx xx-----! [8:0]
 	assign SPR_MAP_ADDR_L = {SPR_NB, SPR_TILE_IDX, CYCLE_SLOW[0]};
 	
-	assign B = (CYCLE_SLOW == 2'd2) ? CPU_ADDR_SLOW :		// CPU
-						(CYCLE_SLOW == 2'd3) ? FIX_MAP_ADDR :	// FIX
+	assign B = (CYCLE_SLOW == 2'd0) ? CPU_ADDR_SLOW :		// CPU
+						(CYCLE_SLOW == 2'd1) ? FIX_MAP_ADDR :	// FIX
 						SPR_MAP_ADDR_L;								// SPR (2 words)
 
 	assign E = nBWE ? 16'bzzzzzzzzzzzzzzzz : CPU_WRDATA;

@@ -52,7 +52,9 @@ module fast_cycle(
 	wire [10:0] C;		// Fast VRAM address
 	wire [15:0] F;		// Fast VRAM data
 	
-	reg nCWE;
+	wire nCWE;
+	reg nCWE_CPU;
+	reg nCWE_LIST;
 	reg RELOAD_CPU_ADDR;
 	
 	reg MATCHED;
@@ -71,7 +73,7 @@ module fast_cycle(
 			RELOAD_CPU_ADDR <= 1'b0;
 	end
 	
-	assign CPU_WRITE_ACK = nCWE | ~CPU_ZONE;	// Does this work ?
+	assign CPU_WRITE_ACK = nCWE_CPU | ~CPU_ZONE;		// Does this work ?
 	
 	
 	assign SCB2_ADDR = {2'b00, SPR_RENDER_IDX};		// $000~$1FF (shrinking values)
@@ -95,6 +97,8 @@ module fast_cycle(
 					((CYCLE_FAST >= 5'd00) && (CYCLE_FAST <= 5'd02)) ? CPU_WRDATA : // CPU
 					{7'd0, SPR_PARSE_COUNTER};
 	
+	assign nCWE = ((CYCLE_FAST >= 5'd00) && (CYCLE_FAST <= 5'd02)) ? nCWE_CPU : nCWE_LIST;
+	
 	assign nCLK_24M = ~CLK_24M;
 	
 	assign {Y_CARRY, Y_ADDED} = F[14:7] + V_COUNT[7:0] + 1'b1;	// F[14:7] is SPRITE_Y[7:0]
@@ -106,120 +110,122 @@ module fast_cycle(
 	// Todo: Wrong cycles, sync/clock hack again.
 	always @(posedge CLK_24M or posedge nCLK_24M)		// Use P bus cycle counter ?
 	begin
-		if (CHBL)	// !nRESETP ? Resync cycle just on reset pulse (cycle continues during reset, right ?)
-		begin
+		if (!nRESETP)
 			CYCLE_FAST <= 5'd0;
-			MATCHED <= 1'b0;
-			AL_FILL_COUNTER <= 7'd0;
-			AL_READ_COUNTER <= 7'd0;
-			SPR_PARSE_COUNTER <= 9'd0;
-			ADVANCE <= 1'b0;
-			WRITING <= 1'b0;
-		end
 		else
 		begin
-			case (CYCLE_FAST)
-				5'd1:		// TESTING 1, was 2
-				begin
-					// End of CPU cycle
-					CPU_RDDATA <= F;
-					if (!nCWE)
-						CPU_ADDR_FAST <= CPU_ADDR_FAST + REG_VRAMMOD;
-					nCWE <= 1'b1;
-				end
-				
-				5'd5, 5'd8, 5'd11, 5'd14, 5'd17:
-				begin
-					// End-1 of parse cycles
-					ADVANCE <= 1'b1;
-					
-					if (!nCWE)
-					begin
-						MATCHED <= 1'b0;
-						nCWE <= 1'b1;		// Return to normal
-					end
-					else
-					begin
-						// Latch if we need to write the current sprite to the active list at next parsing cycle
-						MATCHED <= SIG1;
-					end
-					
-					// For a 1-tile-high sprite:
-					// How does height affect match ?
-					// HEIGHT = 1        0 0001			8BIT CARRY		SIG1 (CARRY ^ SPRITE_Y[8])
-					// 496 + 0 = 496		1 1111 0000		0					1
-					// 496 + 1 = 497		1 1111 0001		0					1
-					// 496 + 2 = 498		1 1111 0010		0					1
-					// 496 + 3 = 499		1 1111 0011		0					1
-					// 496 + 4 = 500		1 1111 0100		0					1
-					// 496 + 5 = 501		1 1111 0101		0					1
-					// 496 + 6 = 502		1 1111 0110		0					1
-					// 496 + 7 = 503		1 1111 0111		0					1
-					// 496 + 8 = 504		1 1111 1000		0					1
-					// 496 + 9 = 505		1 1111 1001		0					1
-					// 496 + 10 = 506		1 1111 1010		0					1
-					// 496 + 11 = 507		1 1111 1011		0					1
-					// 496 + 12 = 508		1 1111 1100		0					1
-					// 496 + 13 = 509		1 1111 1101		0					1
-					// 496 + 14 = 510		1 1111 1110		0					1
-					// 496 + 15 = 511		1 1111 1111		0					1
-					// 496 + 16 = 512		1 0000 0000		1					0
-					// 496 + 17 = 513		1 0000 0001		1					0
-					// 496 + 18 = 514		1 0000 0010		1					0
-				end
-				5'd21:
-				begin
-					// End of active list read cycle (should be 22 ?)
-					SPR_RENDER_IDX <= F;
-				end
-				5'd24:
-				begin
-					// End of SCB2 read cycle (should be 25 ?)
-					SPR_ATTR_SHRINK <= F[11:0];
-				end
-				5'd27:
-				begin
-					// End of SCB3 read cycle (should be 28 ?)
-					SPR_ATTR_STICKY <= F[6];
-					SPR_ATTR_SIZE <= F[5:0];
-					SPR_TILE_IDX <= SPR_RENDER_LINE[8:4];
-					SPR_TILE_LINE <= SPR_RENDER_LINE[3:0];
-				end
-				5'd31:
-				begin
-					// End of SCB4 read cycle, start of CPU cycle
-					SPR_ATTR_XPOS <= F[15:7];
-					
-					AL_READ_COUNTER <= AL_READ_COUNTER + 1'b1;
-					if (RELOAD_CPU_ADDR)
-						CPU_ADDR_FAST <= CPU_ADDR;
-					nCWE <= ~(CPU_WRITE & CPU_ZONE);
-				end
-			endcase
+			CYCLE_FAST <= CYCLE_FAST + 1'b1;
 			
-			// The sprite match logic and active list filling works but must be way simpler
-			if (ADVANCE)
+			if (CHBL)	// !nRESETP ? Resync cycle just on reset pulse (cycle continues during reset, right ?)
 			begin
+				MATCHED <= 1'b0;
+				AL_FILL_COUNTER <= 7'd0;
+				AL_READ_COUNTER <= 7'd0;
+				SPR_PARSE_COUNTER <= 9'd0;
 				ADVANCE <= 1'b0;
-				if (MATCHED)
-				begin
-					// We need to write the index of the last parsed sprite to the active list
-					// This cycle should output the active list address
-					// And the last parsed sprite index as data
-					WRITING <= 1'b1;
-					nCWE <= 1'b0;
-				end
-				else
-					SPR_PARSE_COUNTER <= SPR_PARSE_COUNTER + 1'b1;
-				
-				if (WRITING)
-				begin
-					WRITING <= 1'b0;
-					AL_FILL_COUNTER <= AL_FILL_COUNTER + 1'b1;
-				end
+				WRITING <= 1'b0;
 			end
 			
-			CYCLE_FAST <= CYCLE_FAST + 1'b1;
+				case (CYCLE_FAST)
+					5'd1:		// TESTING 1, was 2
+					begin
+						// End of CPU cycle
+						CPU_RDDATA <= F;
+						if (!nCWE_CPU)
+							CPU_ADDR_FAST <= CPU_ADDR_FAST + REG_VRAMMOD;
+						nCWE_CPU <= 1'b1;
+					end
+					
+					5'd5, 5'd8, 5'd11, 5'd14, 5'd17:
+					begin
+						// End-1 of parse cycles
+						ADVANCE <= 1'b1;
+						
+						if (!nCWE_LIST)
+						begin
+							MATCHED <= 1'b0;
+							nCWE_LIST <= 1'b1;		// Return to normal
+						end
+						else
+						begin
+							// Latch if we need to write the current sprite to the active list at next parsing cycle
+							MATCHED <= SIG1;
+						end
+						
+						// For a 1-tile-high sprite:
+						// How does height affect match ?
+						// HEIGHT = 1        0 0001			8BIT CARRY		SIG1 (CARRY ^ SPRITE_Y[8])
+						// 496 + 0 = 496		1 1111 0000		0					1
+						// 496 + 1 = 497		1 1111 0001		0					1
+						// 496 + 2 = 498		1 1111 0010		0					1
+						// 496 + 3 = 499		1 1111 0011		0					1
+						// 496 + 4 = 500		1 1111 0100		0					1
+						// 496 + 5 = 501		1 1111 0101		0					1
+						// 496 + 6 = 502		1 1111 0110		0					1
+						// 496 + 7 = 503		1 1111 0111		0					1
+						// 496 + 8 = 504		1 1111 1000		0					1
+						// 496 + 9 = 505		1 1111 1001		0					1
+						// 496 + 10 = 506		1 1111 1010		0					1
+						// 496 + 11 = 507		1 1111 1011		0					1
+						// 496 + 12 = 508		1 1111 1100		0					1
+						// 496 + 13 = 509		1 1111 1101		0					1
+						// 496 + 14 = 510		1 1111 1110		0					1
+						// 496 + 15 = 511		1 1111 1111		0					1
+						// 496 + 16 = 512		1 0000 0000		1					0
+						// 496 + 17 = 513		1 0000 0001		1					0
+						// 496 + 18 = 514		1 0000 0010		1					0
+					end
+					5'd21:
+					begin
+						// End of active list read cycle (should be 22 ?)
+						SPR_RENDER_IDX <= F;
+					end
+					5'd24:
+					begin
+						// End of SCB2 read cycle (should be 25 ?)
+						SPR_ATTR_SHRINK <= F[11:0];
+					end
+					5'd27:
+					begin
+						// End of SCB3 read cycle (should be 28 ?)
+						SPR_ATTR_STICKY <= F[6];
+						SPR_ATTR_SIZE <= F[5:0];
+						SPR_TILE_IDX <= SPR_RENDER_LINE[8:4];
+						SPR_TILE_LINE <= SPR_RENDER_LINE[3:0];
+					end
+					5'd31:
+					begin
+						// End of SCB4 read cycle, start of CPU cycle
+						SPR_ATTR_XPOS <= F[15:7];
+						
+						AL_READ_COUNTER <= AL_READ_COUNTER + 1'b1;
+						if (RELOAD_CPU_ADDR)
+							CPU_ADDR_FAST <= CPU_ADDR;
+						nCWE_CPU <= ~(CPU_WRITE & CPU_ZONE);
+					end
+				endcase
+				
+				// The sprite match logic and active list filling works but must be way simpler
+				if (ADVANCE)
+				begin
+					ADVANCE <= 1'b0;
+					if (MATCHED)
+					begin
+						// We need to write the index of the last parsed sprite to the active list
+						// This cycle should output the active list address
+						// And the last parsed sprite index as data
+						WRITING <= 1'b1;
+						nCWE_LIST <= 1'b0;
+					end
+					else
+						SPR_PARSE_COUNTER <= SPR_PARSE_COUNTER + 1'b1;
+					
+					if (WRITING)
+					begin
+						WRITING <= 1'b0;
+						AL_FILL_COUNTER <= AL_FILL_COUNTER + 1'b1;
+					end
+				end
 		end
 	end
 

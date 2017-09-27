@@ -23,11 +23,9 @@ module clocks(
 	
 	assign CLK_68KCLKB = ~CLK_68KCLK;
 	
-	// MV4 B5
-	assign RESETP = ~nRESETP;
-	always @(posedge CLK_24M or posedge RESETP)
+	always @(negedge CLK_24M or negedge nRESETP)
 	begin
-		if (RESETP)
+		if (!nRESETP)
 			CLK_DIV <= 3'b100;
 		else
 			CLK_DIV <= CLK_DIV + 1'b1;
@@ -35,7 +33,7 @@ module clocks(
 	
 	assign CLK_12M = CLK_DIV[0];
 	assign CLK_6MB = ~CLK_DIV[1];
-	assign CLK_3M = CLK_DIV[2];
+	assign CLK_3M = ~CLK_DIV[2];
 	
 	// MV4 C4:B
 	always @(posedge CLK_12M)

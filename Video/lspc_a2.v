@@ -12,10 +12,11 @@ module lspc_a2(
 	inout [15:0] M68K_DATA,
 	input nLSPOE, nLSPWE,
 	input DOTA, DOTB,
-	output CA4,
-	output reg S2H1,
+	output reg CA4,
+	output S2H1,
 	output S1H1,
-	output LOAD, H, EVEN1, EVEN2,	// For ZMC2
+	output reg LOAD,
+	output H, EVEN1, EVEN2,	// For ZMC2
 	output IPL0, IPL1,
 	output TMS0,						// Also called SCH and CHG
 	output LD1_, LD2_,				// Buffer address load
@@ -94,7 +95,7 @@ module lspc_a2(
 	
 	// M8 - Seems to be free-running on Alpha68k ? /MR and /LOAD aren't used
 	assign RESETP = ~nRESETP;
-	always @(posedge CLK_24M or posedge RESETP)
+	always @(negedge CLK_24M or posedge RESETP)
 	begin
 		if (RESETP)
 			CLKDIV_LSPC = 4'd0;
@@ -121,12 +122,10 @@ module lspc_a2(
 	always @(posedge CLK_24M)	// negedge ?
 	begin
 		if (CPU_WRITE_REQ)
-			CPU_WRITE <= 1'b1;		// Set
-		else
-		begin
-			if (CPU_WRITE_ACK_PULSE)
-				CPU_WRITE <= 1'b0;	// Reset
-		end
+			CPU_WRITE <= 1'b1;	// Set
+
+		if (CPU_WRITE_ACK_PULSE)
+			CPU_WRITE <= 1'b0;	// Reset
 		
 		CPU_WRITE_ACK_PREV <= CPU_WRITE_ACK;
 	end
@@ -144,20 +143,20 @@ module lspc_a2(
 	
 	// Graphics ROM addressing ================================================
 	
-	always @(posedge CLK_6M)
-		S2H1 <= H_COUNT[0] ^ H_COUNT[1];		// ?
+	always @(negedge CLK_6MB)
+		CA4 <= ~H_COUNT[1];
 	// CA4 should change depending on sprite V-flip attribute
-	assign CA4 = ~S2H1;
+	assign S2H1 = ~CA4;
 	
 	// CA4	''''|______|''''
 	// PCK1	____|'|_________
-	always @(posedge CLK_24M)
+	always @(negedge CLK_24M)
 		CA4_Q <= CA4;
 	assign PCK1 = (CA4_Q & !CA4);
 
 	// 2H1	''''|______|''''
 	// PCK2	____|'|_________
-	always @(posedge CLK_24M)
+	always @(negedge CLK_24M)
 		S2H1_Q <= S2H1;
 	assign PCK2 = (S2H1_Q & !S2H1);
 	
@@ -222,7 +221,10 @@ module lspc_a2(
 	assign WE[3] = nBFLIP ? nWE_LB_CLEAR : nEVEN_WE;	// nWE_EVEN_B
 	
 	// J13:D - LOAD signal for ZMC2
-	assign LOAD = CLK_6M & H_COUNT[0];
+	//assign LOAD = CLK_6M & H_COUNT[0];
+	// This seems to be different from the Alpha68k, 0.5mclk difference
+	always @(posedge CLK_24M)
+		LOAD <= CLK_6MB & ~H_COUNT[0];
 	
 	assign IRQ_S3 = VBLANK;		// Timing to check
 	

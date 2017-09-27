@@ -115,7 +115,15 @@ module neogeo(
 	
 	wire [15:0] G;				// SFIX address bus
 	
-	cpu_68k M68KCPU(CLK_68KCLK, nRESET, IPL1, IPL0, nDTACK, M68K_ADDR, M68K_DATA, nLDS, nUDS, nAS, M68K_RW);
+	// DEBUG: removed 68k
+	//cpu_68k M68KCPU(CLK_68KCLK, 1'b0, IPL1, IPL0, nDTACK, M68K_ADDR, M68K_DATA, nLDS, nUDS, nAS, M68K_RW);
+	assign M68K_ADDR = 24'h000000;
+	assign M68K_DATA = 16'hzzzz;
+	assign nLDS = 1'b1;
+	assign nUDS = 1'b1;
+	assign nAS = 1'b1;
+	assign M68K_RW = 1'b1;
+	
 	cpu_z80 Z80CPU(CLK_4M, nRESET, SDD, SDA, nIORQ, nMREQ, nSDRD, nSDWR, nZ80INT, nZ80NMI);
 	
 	neo_c1 C1(M68K_ADDR[21:17], M68K_DATA[15:8], A22Z, A23Z, nLDS, nUDS, M68K_RW, nAS, nROMOEL, nROMOEU,

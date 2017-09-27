@@ -71,9 +71,9 @@ void save_bitmap() {
 	for (wr_line = 0; wr_line < LINES_PER_FRAME; wr_line++) {
 		for (wr_pixel = 0; wr_pixel < PIXELS_PER_LINE; wr_pixel++) {
 			ng_color = pixels[LINES_PER_FRAME - 1 - wr_line][wr_pixel];
-			full_color[0] = (ng_color & 0x0000FF);			// Blue
-			full_color[1] = (ng_color & 0x00FF00) >> 8;		// Green
-			full_color[2] = (ng_color & 0xFF0000) >> 16;	// Red
+			full_color[0] = (ng_color & 0x00007F) << 2;			// Blue
+			full_color[1] = ((ng_color & 0x007F00) >> 8) << 2;	// Green
+			full_color[2] = ((ng_color & 0x7F0000) >> 16) << 2;	// Red
 			fwrite(&full_color, 1, sizeof(full_color), file_out);
 		}
 	}

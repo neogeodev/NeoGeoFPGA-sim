@@ -39,7 +39,7 @@ module videosync(
 	assign VBLANK = ~|{V_COUNT[7:3]};
 
 	// Video sync must always run (even during reset) since nBNKB is the watchdog clock
-	always @(posedge CLK_24M)
+	always @(negedge CLK_24M)
 	begin
 		if (!nRESETP)
 		begin

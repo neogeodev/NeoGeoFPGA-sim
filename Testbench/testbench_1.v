@@ -6,7 +6,10 @@
 
 // TODO TB: delegate some stuff to CPLD (clock divider for cartridge and SROM, SRAM and WRAM control...)
 
-// Current status (05/09/2017):
+// Current status (27/09/2017):
+// Fix rendering OK, blanking wrong, fast VRAM CPU access OK
+
+// Status (05/09/2017):
 // Video RAM error in fast VRAM because of modifications in cycle sequence
 
 // Status (09/07/2017):
@@ -142,7 +145,7 @@ module testbench_1();
 	always @(negedge nAS)
 	begin
 		// These addresses are only valid for the patched SP-S2.SP1 system ROM !
-		if ({M68K_ADDR, 1'b0} == 24'hC16ADA)
+		/*if ({M68K_ADDR, 1'b0} == 24'hC16ADA)
 		begin
 			if (NG.M68KCPU.REG_D6 == 15'h0000)
 				$display("0 WORK RAM ERROR !");
@@ -163,7 +166,7 @@ module testbench_1();
 			else if (NG.M68KCPU.REG_D6 == 15'h0008)
 				$display("8 Z80 ERROR !");
 			$stop;
-		end
+		end*/
 		
 		if ({M68K_ADDR, 1'b0} == 24'hC12038)
 		begin
