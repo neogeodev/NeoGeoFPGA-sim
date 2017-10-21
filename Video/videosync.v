@@ -5,13 +5,12 @@ module videosync(
 	input nRESETP,
 	output [8:0] V_COUNT,				// 0~263
 	output reg [8:0] H_COUNT = 9'd0,	// 0~383
-	output TMS0,
+	output reg TMS0,
 	output VBLANK,
 	output reg nVSYNC,
 	output reg HSYNC,
 	output nBNKB,
-	output reg CHBL,
-	output [14:0] FIX_MAP_ADDR
+	output CHBL
 );
 
 	wire MASKING;
@@ -25,10 +24,14 @@ module videosync(
 	
 	assign V_COUNT = {ACTIVE, DIV_LINE_HIGH, DIV_LINE_LOW};
 	
-	// The fix map is 16bit/tile in slow VRAM starting @ $7000
-	// (0)111xCCC CCCLLLLL
-	assign FIX_MAP_ADDR = {4'b1110, H_COUNT[8:3], V_COUNT[7:3]};
+	// D-latch clocked by H_COUNT[1] on the Alpha68k
+	always @(posedge H_COUNT[1])
+		TMS0 <= V_COUNT[0];
 	
+	// No blanking during 320 pixels
+	// Blanking for the remaining 64 pixels
+	assign CHBL = H_COUNT[8] & |{H_COUNT[7:6]};
+
 	// Do not reset CHBL between (NTSC):
 	// x 0000 0000 ~ x 0000 1111
 	// x 1111 0000 ~ x 1111 1111
@@ -65,8 +68,8 @@ module videosync(
 
 				if (FT_CNT == 7'd16)				// 15 ?
 				begin
-					if (!MASKING)
-						CHBL <= 1'b0;				// NTSC Good ?
+					//if (!MASKING)
+					//	CHBL <= 1'b0;				// NTSC Good ?
 				end
 			end
 			else
@@ -74,7 +77,7 @@ module videosync(
 			
 			// To check: this must match posedge of CLK_6MB
 			// H_COUNT is the pixel counter in SNKCLK
-			if (LSPC_DIV == 2'd3)
+			if (LSPC_DIV == 2'd1)
 			begin
 				if (H_COUNT == 9'd383)
 				begin
@@ -105,16 +108,13 @@ module videosync(
 				else
 					H_COUNT <= H_COUNT + 1'b1;
 
-				if (H_COUNT == 9'd375)
-					CHBL <= 1'b1;			// This is wrong ! See Alpha68k /E signal of J12, H12 and H9
+				//if (H_COUNT == 9'd375)
+				//	CHBL <= 1'b1;			// This is wrong ! See Alpha68k /E signal of J12, H12 and H9
 			end
 			
 			LSPC_DIV <= LSPC_DIV + 1'b1;
 		end
 	end
-	
-	// Certainly wrong:
-	//assign TMS0 = MAIN_CNT[11] | (MAIN_CNT[10] & MAIN_CNT[9]);
 	
 	// -------------------------------- Unreadable notes follow --------------------------------
 	// HSYNC = 0 28	0~1B		000000000	000011011
@@ -132,15 +132,5 @@ module videosync(
 	// 111~228:		00001101111 00011100100		1			0
 	// 229~1508:	00011100101	10111100100		1			1
 	// 1509~1535:	10111100101	10111111111		1			0
-	
-	// Probably wrong:
-	// 0~327: 	H
-	// 328~355: L
-	// 356~383: H
-	// F0 = (A)(C)(D'+F')(D'+E')(D+E+F)(D'+G');
-	
-	// Stuff happens 14px after HSYNC rises: VSYNC and nBNKB
-	// Not sure about this at all...
-	//assign HTRIG = (HSYNC == 42) ? 1 : 0;
 
 endmodule

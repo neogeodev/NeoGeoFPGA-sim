@@ -40,6 +40,8 @@ module neo_b1(
 	wire [3:0] FIX_COLOR;
 	wire [3:0] COLOR;
 	wire [7:0] PAL;
+	
+	wire RBA, RBB;
 
 	// Byte delays
 	reg [7:0] SPR_PAL_REG_A;
@@ -59,7 +61,7 @@ module neo_b1(
 			PAL_SWITCH <= 1'b1;	// Fix palette comes next
 	end
 
-	// Palette index latch + Fix palette pipeline
+	// Palette index latch
 	always @(posedge CLK_1MB)
 	begin
 		if (PAL_SWITCH)
@@ -68,7 +70,10 @@ module neo_b1(
 			FIX_PAL_REG_B <= FIX_PAL_REG_A;
 		end
 		else
+		begin
 			SPR_PAL_REG_A <= PBUS[23:16];
+			SPR_PAL_REG_B <= SPR_PAL_REG_A;
+		end
 	end
 	
 	// Fix data pipeline
@@ -86,13 +91,12 @@ module neo_b1(
 	assign PA_VIDEO = CHBL ? 12'h000 : {PAL, COLOR};
 	
 	// Connects to Alpha68k stuff
-	reg BFLIP;
-	wire J8_12;
 	
 	// This might be in LSPC, BFLIP = TMS0
-	always @(posedge SNKCLK_26)
-		BFLIP <= J8_12;	// Line number bit0 (SNKCLK_19)
+	//always @(posedge SNKCLK_26)
+	//	BFLIP <= J8_12;	// Line number bit0 (SNKCLK_19)
 	
+	assign BFLIP = TMS0;
 	assign nBFLIP = ~BFLIP;
 	
 	// BFLIP = 0 : B OUTPUT, A WRITE
@@ -109,12 +113,12 @@ module neo_b1(
 	assign CLK_OB_EA = CK[0];
 	assign CLK_OA_EB = CK[1];
 	// Some CK[] might be RBA and RBB !
+	assign RBA = CK[2];
+	assign RBB = CK[3];
 	
 	// Opposite ?
 	assign nLOAD_X_A = LD1;
 	assign nLOAD_X_B = LD2;
-	
-	wire RBA, RBB;
 	
 	// -------------------------------- Alpha68k logic and additions --------------------------------
 	
@@ -158,13 +162,13 @@ module neo_b1(
 	reg PAL_SWITCH;	// Good ?
 	
 	// G3 (374): nOE seems used !
-	always @(posedge nLATCH_X)
+	always @(posedge S1H1)	// nLATCH_X on Alpha68k
 	begin
 		SPRX <= PBUS[15:8];
 	end
 	
 	// G5:C
-	// assign PLUS_ONE = ~?;
+	assign PLUS_ONE = ~1'b1;	// TODO: Wrong !
 	
 	// Both of these output the exact same thing, something must be wrong
 	assign {P10_C4, P10_OUT} = SPRX[3:0] + PLUS_ONE;
@@ -173,8 +177,10 @@ module neo_b1(
 	assign N11_OUT = SPRX[7:4] + N10_C4;	// N11_C4 apparently not used
 	
 	// P6:C and P6:D
-	assign DIR_OB_EA = ~(nBFLIP & HFLIP);	// TODO: Check if really HFLIP
-	assign DIR_OA_EB = ~(BFLIP & HFLIP);	// TODO: Check if really HFLIP
+	// Render: Count up (X ->>>>)
+	// Output: ???
+	assign DIR_OB_EA = ~(nBFLIP & 1);	// TODO: Probably whole display h-flip
+	assign DIR_OA_EB = ~(BFLIP & 1);		// TODO: Probably whole display h-flip
 	
 	// LB address counters:
 	hc669_dual P13P12(CLK_OB_EA, nLOAD_X_A, DIR_OB_EA, {P11_OUT, P10_OUT}, LB_EVEN_B_ADDR);
@@ -183,26 +189,26 @@ module neo_b1(
 	hc669_dual L12M13(CLK_OA_EB, nLOAD_X_B, DIR_OA_EB, SPRX, LB_ODD_A_ADDR);	// ?
 	
 	// Sprite palette latch G6 (273):
-	always @(posedge 1'bz)	// TODO
+	/*always @(posedge PCK2)	// TODO: Wrong !
 	begin
 		// Is nMR used ?
-		//SPR_PAL_REG_A <= PBUS[23:16];	// SPR_PAL should be part of P_BUS
+		SPR_PAL_REG_A <= PBUS[23:16];	// SPR_PAL should be part of P_BUS
 	end
 	// Sprite palette latch G1 (273):
-	always @(posedge nLATCH_X)
+	always @(posedge PCK2)	// TODO: Wrong !
 	begin
 		// Is nMR used ?
 		SPR_PAL_REG_B <= SPR_PAL_REG_A;
-	end
+	end*/
 	
 	linebuffer LB1(nOE_P18P20, nWE_EVEN_A,
-						LB_EVEN_A_ADDR, {SPR_PAL_REG_B, GAD[1], GAD[0], GAD[3], GAD[2]}, );
+						LB_EVEN_A_ADDR, {SPR_PAL_REG_B, GAD[1], GAD[0], GAD[3], GAD[2]}, LB_EVEN_A_DATA);
 	linebuffer LB2(nOE_P19P21, nWE_EVEN_B,
-						LB_EVEN_B_ADDR, {SPR_PAL_REG_B, GAD[1], GAD[0], GAD[3], GAD[2]}, );
+						LB_EVEN_B_ADDR, {SPR_PAL_REG_B, GAD[1], GAD[0], GAD[3], GAD[2]}, LB_EVEN_B_DATA);
 	linebuffer LB3(nOE_M18N18, nWE_ODD_A,
-						LB_ODD_A_ADDR, {SPR_PAL_REG_B, GBD[1], GBD[0], GBD[3], GBD[2]}, );
+						LB_ODD_A_ADDR, {SPR_PAL_REG_B, GBD[1], GBD[0], GBD[3], GBD[2]}, LB_ODD_A_DATA);
 	linebuffer LB4(nOE_M19N19, nWE_ODD_B,
-						LB_ODD_B_ADDR, {SPR_PAL_REG_B, GBD[1], GBD[0], GBD[3], GBD[2]}, );
+						LB_ODD_B_ADDR, {SPR_PAL_REG_B, GBD[1], GBD[0], GBD[3], GBD[2]}, LB_ODD_B_DATA);
 	
 	// N4 and N7 ORs
 	assign nOE_P18P20 = RBA | nWE_EVEN_A;

@@ -5,13 +5,16 @@
 // furrtek, Charles MacDonald, Kyuusaku, freem and neogeodev contributors ~ 2016
 // https://github.com/neogeodev/NeoGeoFPGA-sim
 
+// Todo: PCK1/PCK2 order is inverted, or PBUS cycles are shifted by half the sequence ?
+//			Check when nVCS goes low (should be between PCK1 -then- PCK2), simulation gives the opposite
 // Todo: Palette RAM CPU access (see alpha68k PCB)
 // Todo: VPA for interrupt ACK (NEO-C1)
-// Todo: Check watchdog timing
+// Todo: HALT (NEO-B1)
 
 module neogeo(
 	input nRESET_BTN,		// VCCON on MVS
 	
+	// Player inputs
 	input [9:0] P1_IN,
 	input [9:0] P2_IN,
 	
@@ -19,7 +22,7 @@ module neogeo(
 	
 	// 68K CPU
 	inout [15:0] M68K_DATA,
-	output [23:1] M68K_ADDR,	// [19:1] M68K_ADDR_OUT,
+	output [23:1] M68K_ADDR,	// Should only expose [19:1] to cartridge
 	output M68K_RW, nAS, nLDS, nUDS,
 	output [2:0] LED_LATCH,
 	output [7:0] LED_DATA,
@@ -34,7 +37,7 @@ module neogeo(
 	output nPORTWEL, nPORTWEU,
 	
 	// Cartridge PCM ROMs
-	input [7:0] SDRAD,			// ADPCM
+	input [7:0] SDRAD,
 	output [9:8] SDRA_L,
 	output [23:20] SDRA_U,
 	output SDRMPX, nSDROE,
@@ -43,12 +46,12 @@ module neogeo(
 	output SDPMPX, nSDPOE,
 	
 	// Cartridge Z80 ROMs
-	output nSDROM, nSDMRD,		// Z80
+	output nSDROM, nSDMRD,
 	output [15:0] SDA,
 	inout [7:0] SDD,
 	
 	// Cartridge/onboard gfx ROMs
-	inout [23:0] PBUS,			// Gfx
+	inout [23:0] PBUS,
 	output nVCS,
 	output S2H1, CA4,
 	output PCK1B, PCK2B,
@@ -71,30 +74,25 @@ module neogeo(
 	// Serial video output
 	//output VIDEO_R_SER, VIDEO_G_SER, VIDEO_B_SER, VIDEO_CLK_SER, VIDEO_LAT_SER,
 	
-	// I2S interface
+	// I2S audio output
 	//output I2S_MCLK, I2S_BICK, I2S_SDTI, I2S_LRCK
 );
 
 	parameter SYSTEM_MODE = 1'b1;		// MVS
 	
 	
-	
 	wire [7:0] FIXD;
 	wire [7:0] FIXD_SFIX;
+	wire [15:0] G;				// SFIX address bus
 	
 	wire [23:0] CDA;
-	
-	//wire [23:1] M68K_ADDR;
-	
-	//assign M68K_ADDR_OUT = M68K_ADDR[19:1];
+	wire [2:0] BNK;
 	
 	wire [11:0] PA;			// Palette RAM address
 	wire [15:0] PC;			// Palette RAM data
 	
 	wire [3:0] WE;				// LSPC/B1
 	wire [3:0] CK;				// LSPC/B1
-	
-	wire [2:0] BNK;
 	
 	wire [5:0] nSLOT;
 	
@@ -113,9 +111,7 @@ module neogeo(
 	assign nBITWD0 = |{nBITW0, M68K_ADDR[6:5]};
 	assign nCOUNTOUT = |{nBITW0, ~M68K_ADDR[6:5]};
 	
-	wire [15:0] G;				// SFIX address bus
-	
-	// DEBUG: removed 68k
+	// DEBUG: Disabled 68k
 	//cpu_68k M68KCPU(CLK_68KCLK, 1'b0, IPL1, IPL0, nDTACK, M68K_ADDR, M68K_DATA, nLDS, nUDS, nAS, M68K_RW);
 	assign M68K_ADDR = 24'h000000;
 	assign M68K_DATA = 16'hzzzz;
@@ -137,7 +133,7 @@ module neogeo(
 				nSDZ80W, nSDZ80CLR, nSDROM, nSDMRD, nSDMWR, SDRD0, SDRD1, n2610CS, n2610RD, n2610WR, nZRAMCS,
 				BNK, P1_OUT, P2_OUT);
 	
-	// Fix to prevent TV80 from going nuts because the data bus is open on port reads for ZMC
+	// Fix to prevent TV80 from going nuts because the data bus is open on port reads for NEO-ZMC
 	assign SDD = (SDRD0 & SDRD1) ? 8'bzzzzzzzz : 8'b00000000;
 	
 	neo_e0 E0(M68K_ADDR[23:1], BNK[2:0], nSROMOEU, nSROMOEL, nSROMOE,

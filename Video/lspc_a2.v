@@ -12,13 +12,13 @@ module lspc_a2(
 	inout [15:0] M68K_DATA,
 	input nLSPOE, nLSPWE,
 	input DOTA, DOTB,
-	output reg CA4,
+	output CA4,
 	output S2H1,
 	output S1H1,
 	output reg LOAD,
-	output H, EVEN1, EVEN2,	// For ZMC2
+	output H, EVEN1, EVEN2,			// For ZMC2
 	output IPL0, IPL1,
-	output TMS0,						// Also called SCH and CHG
+	output TMS0,						// Also called SCH or CHG
 	output LD1_, LD2_,				// Buffer address load
 	output PCK1, PCK2,
 	output [3:0] WE,
@@ -69,7 +69,7 @@ module lspc_a2(
 	wire [11:0] FIX_TILE_NB;
 	wire [3:0] FIX_ATTR_PAL;
 	
-	// Timer stuff
+	// Pixel timer stuff
 	wire [2:0] TIMER_MODE;
 	wire [31:0] TIMER_LOAD;
 	wire [15:0] REG_LSPCMODE;
@@ -121,13 +121,20 @@ module lspc_a2(
 	
 	always @(posedge CLK_24M)	// negedge ?
 	begin
-		if (CPU_WRITE_REQ)
-			CPU_WRITE <= 1'b1;	// Set
+		if (!nRESETP)
+		begin
+			CPU_WRITE <= 1'b1;
+		end
+		else
+		begin
+			if (CPU_WRITE_REQ)
+				CPU_WRITE <= 1'b1;	// Set
 
-		if (CPU_WRITE_ACK_PULSE)
-			CPU_WRITE <= 1'b0;	// Reset
-		
-		CPU_WRITE_ACK_PREV <= CPU_WRITE_ACK;
+			if (CPU_WRITE_ACK_PULSE)
+				CPU_WRITE <= 1'b0;	// Reset
+			
+			CPU_WRITE_ACK_PREV <= CPU_WRITE_ACK;
+		end
 	end
 
 	// CPU VRAM read buffer switch between slow and fast VRAM depending on last access
@@ -143,10 +150,13 @@ module lspc_a2(
 	
 	// Graphics ROM addressing ================================================
 	
-	always @(negedge CLK_6MB)
-		CA4 <= ~H_COUNT[1];
-	// CA4 should change depending on sprite V-flip attribute
-	assign S2H1 = ~CA4;
+	//always @(negedge CLK_6MB)
+	//begin
+	assign S1H1 = H_COUNT[0];
+	assign S2H1 = H_COUNT[1];
+	//end
+	// TODO: CA4 should change depending on sprite V-flip attribute
+	assign CA4 = ~S2H1;
 	
 	// CA4	''''|______|''''
 	// PCK1	____|'|_________
@@ -164,6 +174,11 @@ module lspc_a2(
 	assign FIX_A4 = H_COUNT[2];		// Seems good, matches Alpha68k
 	assign PBUS_S_ADDR = {FIX_A4, V_COUNT[2:0], FIX_TILE_NB};
 	assign PBUS_C_ADDR = {SPR_TILE_NB_AA[19:16], SPR_TILE_LINE, SPR_TILE_NB_AA[15:0]};
+
+	// The fix map is 16bits/tile in slow VRAM starting @ $7000
+	// Organized as 32 lines * 64 columns
+	// (0)111xCCC CCCLLLLL
+	assign FIX_MAP_ADDR = {4'b1110, H_COUNT[8:3], V_COUNT[7:3]};
 	
 	// Alpha68k stuff:
 	
@@ -194,7 +209,7 @@ module lspc_a2(
 	assign RD_A = nBFLIP ? 1'b0 : CLK_LB_READ_CLEAR;
 	assign RD_B = nBFLIP ? CLK_LB_READ_CLEAR : 1'b0;
 	assign CK[0] = nBFLIP ? nCLK_12M : CLK_LB_READ_CLEAR;	// CLK_EVEN_B
-	assign CK[1] = CK[1];	// ?
+	assign CK[1] = CK[0];	// ?
 	assign CK[2] = nBFLIP ? CLK_LB_READ_CLEAR : nCLK_12M;	// CLK_EVEN_A
 	assign CK[3] = CK[2];	// ?
 
@@ -221,10 +236,11 @@ module lspc_a2(
 	assign WE[3] = nBFLIP ? nWE_LB_CLEAR : nEVEN_WE;	// nWE_EVEN_B
 	
 	// J13:D - LOAD signal for ZMC2
-	//assign LOAD = CLK_6M & H_COUNT[0];
-	// This seems to be different from the Alpha68k, 0.5mclk difference
+	// This seems to be different from the Alpha68k, 0.5mclk difference ?
+	// Or is it (useful) propagation delay ?
+	//assign LOAD = CLK_6MB & H_COUNT[0];
 	always @(posedge CLK_24M)
-		LOAD <= CLK_6MB & ~H_COUNT[0];
+		LOAD <= CLK_6MB & H_COUNT[0];
 	
 	assign IRQ_S3 = VBLANK;		// Timing to check
 	
@@ -247,7 +263,7 @@ module lspc_a2(
 	
 	irq IRQ(IRQ_S1, IRQ_R1, IRQ_S2, IRQ_R2, IRQ_S3, IRQ_R3, IPL0, IPL1);		// Probably uses nRESETP
 	
-	videosync VS(CLK_24M, nRESETP, V_COUNT, H_COUNT, TMS0, VBLANK, nVSYNC, HSYNC, nBNKB, CHBL, FIX_MAP_ADDR);
+	videosync VS(CLK_24M, nRESETP, V_COUNT, H_COUNT, TMS0, VBLANK, nVSYNC, HSYNC, nBNKB, CHBL);
 
 	odd_clk ODDCLK(CLK_24M, nRESETP, CLK_8M, CLK_4M, CLK_4MB);
 	
@@ -272,8 +288,8 @@ module lspc_a2(
 					CPU_VRAM_ZONE, CPU_WRITE, CPU_WRITE_ACK_FAST);
 	
 	// This needs L0_ADDR
-	p_cycle PCY(nRESET, CLK_24M, PBUS_S_ADDR, FIX_ATTR_PAL, PBUS_C_ADDR, SPR_TILE_PAL, SPR_XPOS[8:1], L0_ROM_ADDR,
-					S1H1, nVCS, L0_ROM_DATA, {PBUS_IO, PBUS_OUT});
+	p_cycle PCY(nRESET, CLK_24M, PBUS_S_ADDR, FIX_ATTR_PAL, PBUS_C_ADDR, SPR_TILE_PAL, SPR_XPOS[8:1],
+					L0_ROM_ADDR, nVCS, L0_ROM_DATA, {PBUS_IO, PBUS_OUT});
 	
 	autoanim AA(nRESET, VBLANK, AA_SPEED, SPR_TILE_NB, AA_DISABLE, SPR_ATTR_AA, SPR_TILE_NB_AA, AA_COUNT);
 	

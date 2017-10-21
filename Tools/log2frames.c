@@ -6,7 +6,7 @@
 
 // This tool outputs a sequence of .bmp images from a .txt video simulation output
 // Part of the NeoGeo FPGA project
-// Last mod: furrtek 08/2017
+// Last mod: furrtek 10/2017
 
 #define PIXELS_PER_LINE 384
 #define LINES_PER_FRAME 264
@@ -53,7 +53,7 @@ infoheader_t bmp_info = {
 };
 
 unsigned int frame = 0;
-unsigned long int pixels[LINES_PER_FRAME][PIXELS_PER_LINE];
+unsigned long int pixels[LINES_PER_FRAME][PIXELS_PER_LINE] = { 0x7F };
 
 void save_bitmap() {
 	unsigned char filename[256];
@@ -82,7 +82,7 @@ void save_bitmap() {
 	fwrite(&bmp_size, 1, sizeof(bmp_size), file_out);
 	fclose(file_out);
 	
-	// Fill with grey
+	// Clear with grey
 	memset(pixels, 0x7F, 4 * LINES_PER_FRAME * PIXELS_PER_LINE);
 }
 
@@ -90,7 +90,7 @@ int main(int argc, char *argv[]) {
 	unsigned int line = 0;
 	unsigned short int pixel;
 	unsigned long int ng_color;
-	char rd[5];
+	char rd[8];
 	FILE * file_in;
 	int res;
 	unsigned long int in_size;
@@ -107,17 +107,23 @@ int main(int argc, char *argv[]) {
 	rewind(file_in);
 	
 	for (;;) {
-		res = fscanf(file_in, "%x ", &ng_color);
-		if (!res) {
-			// Not a color
-			res = fread(rd, 1, 6, file_in);
-			if (res != 6) {
-				//printf("Couldn't read from input file !\n");
-				printf("Saving partial frame (%u lines) - File position: %u\n", line, ftell(file_in));
-				save_bitmap();
-				break;
-			} else {
-				if (rd[0] == 'Y') {
+		// TODO: Read 6+1 chars, see if there are any X's or Y's
+		// If so: New line or unknown color
+		// If not: sscanf the string to convert from hex to color value
+		
+		res = fread(rd, 1, 7, file_in);
+		
+		if (res != 7) {
+			
+			printf("Saving partial frame (%u lines) - File position: %u\n", line, ftell(file_in));
+			save_bitmap();
+			break;
+			
+		} else {
+			
+			if (strpbrk(rd, "XxYy")) {
+				// Not a color
+				if (strpbrk(rd, "Yy")) {
 					// End of raster line marker
 					if (line < LINES_PER_FRAME - 1) {
 						line++;
@@ -128,14 +134,16 @@ int main(int argc, char *argv[]) {
 						line = 0;
 					}
 					pixel = 0;
-				} else if ((rd[0] == 'x') || (rd[0] == 'X')) {
-					// Undefined pixel: full green
+				} else {
+					// Unknown color: full green
 					pixels[line][pixel++] = 0x00FF00;
 				}
+			} else {
+				// Normal color
+				res = sscanf(rd, "%x ", &ng_color);
+				pixels[line][pixel++] = ng_color;
 			}
-		} else {
-			// Normal color
-			pixels[line][pixel++] = ng_color;
+			
 		}
 		
 		if (ftell(file_in) == in_size) {
@@ -154,3 +162,4 @@ int main(int argc, char *argv[]) {
 
 	return 0;
 }
+

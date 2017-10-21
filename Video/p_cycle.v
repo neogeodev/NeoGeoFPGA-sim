@@ -12,7 +12,6 @@ module p_cycle(
 	input [7:0] SPR_XPOS,
 	input [15:0] L0_ROM_ADDR,
 	
-	output S1H1,
 	output nVCS,
 	output reg [7:0] L0_DATA,
 	
@@ -28,27 +27,25 @@ module p_cycle(
 	always @(posedge CLK_24M)
 	begin
 		if (!nRESET)
-			P_CYCLE_P <= 4;
+			P_CYCLE_P <= 0;
 		else
 			P_CYCLE_P <= P_CYCLE_P + 1'b1;
 	end
 	always @(negedge CLK_24M)
 	begin
 		if (!nRESET)
-			P_CYCLE_N <= 4;
+			P_CYCLE_N <= 0;
 		else
 			P_CYCLE_N <= P_CYCLE_N + 1'b1;
 	end
 	
-	assign S1H1 = P_CYCLE_P[3];	// To test
-	
 	// Simplified P bus data, for now
-	assign PBUS = ((P_CYCLE_P == 4'd8) || (P_CYCLE_N == 4'd7)) ? {8'bzzzzzzzz, S_ROM_ADDR} :		// FT
-						((P_CYCLE_P >= 4'd9) && (P_CYCLE_P <= 4'd13)) ? {8'bzzzzzzzz, SPR_XPOS, 8'h00}:	// X
-						((P_CYCLE_P == 4'd14) || (P_CYCLE_P == 4'd14)) ? {4'h0, FIX_PAL, 16'h0000} :	// FP
-						((P_CYCLE_P == 4'd0) || (P_CYCLE_N == 4'd15)) ? C_ROM_ADDR :						// ST
-						((P_CYCLE_P >= 4'd1) && (P_CYCLE_P <= 4'd5)) ? {8'bzzzzzzzz, L0_ROM_ADDR} :	// L0
-						((P_CYCLE_P == 4'd6) || (P_CYCLE_N == 4'd6)) ? {SPR_PAL, 16'h0000} :				// SP
+	assign PBUS = ((P_CYCLE_P == 4'd8) || (P_CYCLE_N == 4'd7)) ? {8'bzzzzzzzz, S_ROM_ADDR} :		// FT OK
+						((P_CYCLE_P >= 4'd9) && (P_CYCLE_P <= 4'd13)) ? {8'bzzzzzzzz, SPR_XPOS, 8'h00}:	// X OK
+						((P_CYCLE_P == 4'd14) || (P_CYCLE_N == 4'd14)) ? {4'h0, FIX_PAL, 16'h0000} :	// FP OK
+						((P_CYCLE_P == 4'd0) || (P_CYCLE_N == 4'd15)) ? C_ROM_ADDR :						// ST OK
+						((P_CYCLE_P >= 4'd1) && (P_CYCLE_P <= 4'd5)) ? {8'bzzzzzzzz, L0_ROM_ADDR} :	// L0 OK
+						((P_CYCLE_P == 4'd6) || (P_CYCLE_N == 4'd6)) ? {SPR_PAL, 16'h0000} :				// SP OK
 						24'bxxxxxxxxxxxxxxxxxxxxxxxx;	// Shouldn't happen
 						
 	assign nVCS = ((P_CYCLE_P >= 4'd1) && (P_CYCLE_P <= 4'd5)) ? 1'b0 : 1'b1;

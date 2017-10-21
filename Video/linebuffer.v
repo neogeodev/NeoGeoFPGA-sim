@@ -8,6 +8,8 @@ module linebuffer(
 	output [11:0] DATA_OUT
 );
 
+	wire [11:0] DATA_IN_PU;		// Pull-Ups added
+
 	reg [11:0] LB_RAM[0:255];	// TODO: Add a check, should never go over 191
 
 	// Read
@@ -15,10 +17,10 @@ module linebuffer(
 	assign DATA = nWE ? DATA_OUT : 8'bzzzzzzzz;
 
 	// Write
-	assign DATA_IN = nOE_TO_WRITE ? 12'b111111111111 : DATA;
+	assign DATA_IN_PU = nOE_TO_WRITE ? 12'b111111111111 : DATA_IN;
 	always @(*)
 		if (!nWE)
-			#10 LB_RAM[ADDRESS] <= DATA_IN;
+			#10 LB_RAM[ADDRESS] <= DATA_IN_PU;
 	
 	// nOE_TO_WRITE = 0 and nWE = 1 should NEVER happen !
 	always @(*)

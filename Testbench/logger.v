@@ -78,7 +78,7 @@ module logger(
 		end
 		else
 		begin
-			$fwrite(f_video, "YYYYY ");
+			$fwrite(f_video, "YYYYYY ");
 			// $display("Line %d rendered", sim_line);
 			if (sim_line == 263)
 			begin

@@ -33,7 +33,7 @@ module clocks(
 	
 	assign CLK_12M = CLK_DIV[0];
 	assign CLK_6MB = ~CLK_DIV[1];
-	assign CLK_3M = ~CLK_DIV[2];
+	assign CLK_3M = CLK_DIV[2];
 	
 	// MV4 C4:B
 	always @(posedge CLK_12M)

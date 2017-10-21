@@ -4,22 +4,6 @@
 // SIMULATION ONLY
 // TB = Test Board
 
-// TODO TB: delegate some stuff to CPLD (clock divider for cartridge and SROM, SRAM and WRAM control...)
-
-// Current status (27/09/2017):
-// Fix rendering OK, blanking wrong, fast VRAM CPU access OK
-
-// Status (05/09/2017):
-// Video RAM error in fast VRAM because of modifications in cycle sequence
-
-// Status (09/07/2017):
-// Runs up to game entry point (after >200ms. Long because there are 2 resets, the first is after BRAM init.)
-// Slow VRAM cycle should be OK (sync and timing, no sprites)
-// Fix data path is OK
-// Fast VRAM cycle is only good enough for CPU access but wrong timing and not used by LSPC
-// P cycle is OK but needs to be simplified
-// Sprite stuff needs some name cleanup
-
 module testbench_1();
 	reg nRESET_BTN;			// AES reset button
 	reg [9:0] P1_IN;			// Joypad inputs
