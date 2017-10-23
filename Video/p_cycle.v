@@ -50,17 +50,17 @@ module p_cycle(
 						
 	assign nVCS = ((P_CYCLE_P >= 4'd9) && (P_CYCLE_P <= 4'd13)) ? 1'b0 : 1'b1;
 	
-	always @(posedge CLK_24M)
+	/*always @(posedge CLK_24M)
 	begin
-		/*case (CYCLE_P)
+		case (CYCLE_P)
 			0: {PBUS_U, PBUS_L} <= C_ADDR_OUT;		// Sprite ROM address - Is CA4 latched here or free-running ?
 			3: {PBUS_U, PBUS_L} <= {8'bzzzzzzzz, L0_ROM_ADDR};	// L0 ROM address
 			13: {PBUS_U, PBUS_L} <= {SPR_PAL, SPR_XPOS, 8'b00000000};	// Sprite palette and X position
 			16: {PBUS_U, PBUS_L} <= {8'bzzzzzzzz, S_ROM_ADDR};	// Fix ROM address - Is S2H1 latched here or free-running ?
 			19: {PBUS_U, PBUS_L} <= 24'hFF0000;		// FF0000 ? Maybe PBUS_U is z ?
 			29: {PBUS_U, PBUS_L} <= {4'b0000, FIX_PAL, 16'b0000000000000000};	// Fix palette
-		endcase*/
-	end
+		endcase
+	end*/
 
 endmodule
 

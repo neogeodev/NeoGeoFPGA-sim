@@ -49,12 +49,12 @@ module lspc_a2(
 	wire [15:0] REG_VRAMMOD;
 	
 	// Sprites stuff
-	reg [3:0] SPR_PIXELCNT;			// Sprite render pixel counter for H-shrink
-	wire [11:0] SPR_ATTR_SHRINK;
+	//reg [3:0] SPR_PIXELCNT;		// TODO: Sprite render pixel counter for H-shrink
+	//wire WR_PIXEL;					// TODO
+	wire [11:0] SPR_ATTR_SHRINK;	// TODO
 	wire [1:0] SPR_ATTR_AA;			// Auto-animation config bits
 	wire [7:0] AA_SPEED;
 	wire [2:0] AA_COUNT;				// Auto-animation tile #
-	wire WR_PIXEL;
 	wire [8:0] SPR_NB;
 	wire [4:0] SPR_TILE_IDX;
 	wire [1:0] SPR_TILE_FLIP;
@@ -63,7 +63,6 @@ module lspc_a2(
 	wire [7:0] SPR_TILE_PAL;
 	wire [3:0] SPR_TILE_LINE;
 	wire [8:0] SPR_XPOS;
-	
 	wire [7:0] XPOS;
 	
 	// Fix stuff
@@ -78,22 +77,21 @@ module lspc_a2(
 	
 	wire [15:0] PBUS_S_ADDR;	// PBUS address for fix ROM
 	wire [23:0] PBUS_C_ADDR;	// PBUS address for sprite ROMs
-	wire [15:0] L0_ROM_ADDR;
-	wire [7:0] L0_ROM_DATA;
+	wire [15:0] L0_ROM_ADDR;	// TODO
+	wire [7:0] L0_ROM_DATA;		// TODO
 	
 	reg CA4_Q;
 	reg S2H1_Q;
 	
 	wire K2_1;
 	wire K8_6;
-	reg BFLIP;
 	wire nBFLIP;
-	wire SELJ5;
 	wire CLK_12M;
-	reg nJ8A_Q;
 	wire nCLK_12M;
 	wire nLATCH_X;
+	
 	reg [3:0] CLKDIV_LSPC;
+	reg BFLIP;
 	
 	// M8 - Seems to be free-running on Alpha68k ? /MR and /LOAD aren't used
 	assign RESETP = ~nRESETP;
@@ -157,19 +155,16 @@ module lspc_a2(
 	
 	// Graphics ROM addressing ================================================
 	
-	//always @(negedge CLK_6MB)
-	//begin
 	assign S1H1 = H_COUNT[0];
 	assign S2H1 = H_COUNT[1];
-	//end
-	// TODO: CA4 should change depending on sprite V-flip attribute
-	assign CA4 = ~S2H1;
+	// TODO: CA4 should change depending on sprite V-flip attribute (invert)
+	assign CA4 = S2H1;
 	
-	// CA4	''''|______|''''
+	// S2H1	____|''''''|____
 	// PCK1	____|'|_________
 	always @(negedge CLK_24M)
-		CA4_Q <= CA4;
-	assign PCK1 = (CA4_Q & !CA4);
+		CA4_Q <= S2H1;
+	assign PCK1 = (!CA4_Q & S2H1);
 
 	// 2H1	''''|______|''''
 	// PCK2	____|'|_________
@@ -186,8 +181,6 @@ module lspc_a2(
 	// Organized as 32 lines * 64 columns
 	// (0)111xCCC CCCLLLLL
 	assign FIX_MAP_ADDR = {4'b1110, H_COUNT[8:3], V_COUNT[7:3]};
-	
-	// Alpha68k stuff:
 	
 	// Can be inverted by the MCU, apparently not used (cab config ?)
 	assign K2_1 = V_COUNT[0];
@@ -218,22 +211,22 @@ module lspc_a2(
 	// CK and WE for the same buffer pair on the NeoGeo are interleaved, not synchronous
 	
 	// M12
-	assign RD_A = nBFLIP ? 1'b0 : CLK_LB_READ_CLEAR;
-	assign RD_B = nBFLIP ? CLK_LB_READ_CLEAR : 1'b0;
+	//assign RD_A = nBFLIP ? 1'b0 : CLK_LB_READ_CLEAR;
+	//assign RD_B = nBFLIP ? CLK_LB_READ_CLEAR : 1'b0;
 	assign CK[0] = BFLIP ? nCLK_12M : nODD_WE_CLEAR;	//CLK_LB_READ_CLEAR;	// CLK_EVEN_B
 	assign CK[1] = BFLIP ? nCLK_12M : nEVEN_WE_CLEAR;	// ?
 	assign CK[2] = BFLIP ? nODD_WE_CLEAR : nCLK_12M;	// CLK_EVEN_A
 	assign CK[3] = BFLIP ? nEVEN_WE_CLEAR : nCLK_12M;	// ?
 
 	// J8:A
-	always @(posedge H_COUNT[1])
-		nJ8A_Q <= ~SS1;	//~SNKCLK20
+	//always @(posedge H_COUNT[1])
+	//	nJ8A_Q <= ~SS1;	//~SNKCLK20
 
 	// K5:A
-	assign SW_LB_READ_CLEAR = ~SNKCLK22 & nJ8A_Q;
+	//assign SW_LB_READ_CLEAR = ~SNKCLK22 & nJ8A_Q;
 	
 	// J5
-	assign CLK_LB_READ_CLEAR = SW_LB_READ_CLEAR ? nCLK_12M : H_COUNT[0];
+	//assign CLK_LB_READ_CLEAR = SW_LB_READ_CLEAR ? nCLK_12M : H_COUNT[0];
 	assign WE_LB_CLEAR = CLK_6MB & CLK_12M;	//SW_LB_READ_CLEAR ? nCLK_12M : 1'b1;
 	assign nODD_WE_CLEAR = ~(H_COUNT[0] & WE_LB_CLEAR);
 	assign nEVEN_WE_CLEAR = ~(~H_COUNT[0] & WE_LB_CLEAR);
@@ -245,9 +238,9 @@ module lspc_a2(
 	
 	// N6 - WE signals to B1 (order might be wrong)
 	assign WE[0] = BFLIP ? nODD_WE : nODD_WE_CLEAR;		// nWE_ODD_A
-	assign WE[1] = BFLIP ? nEVEN_WE : nEVEN_WE_CLEAR;		// nWE_EVEN_A
+	assign WE[1] = BFLIP ? nEVEN_WE : nEVEN_WE_CLEAR;	// nWE_EVEN_A
 	assign WE[2] = BFLIP ? nODD_WE_CLEAR : nODD_WE;		// nWE_ODD_B
-	assign WE[3] = BFLIP ? nEVEN_WE_CLEAR : nEVEN_WE;		// nWE_EVEN_B
+	assign WE[3] = BFLIP ? nEVEN_WE_CLEAR : nEVEN_WE;	// nWE_EVEN_B
 	
 	// J13:D - LOAD signal for ZMC2
 	// This seems to be different from the Alpha68k, 0.5mclk difference ?
@@ -258,9 +251,8 @@ module lspc_a2(
 	
 	assign IRQ_S3 = VBLANK;		// Timing to check
 	
-	// TESTING
 	// Probably using nRESETP
-	snkclk SCLK(CLK_6MB, nRESET, , , , , , , , , , SNKCLK20, SNKCLK22, , , , , , );
+	//snkclk SCLK(CLK_6MB, nRESET, , , , , , , , , , SNKCLK20, SNKCLK22, , , , , , );
 	
 	lspc_regs REGS(nRESET, CLK_24M, M68K_ADDR, M68K_DATA, nLSPOE, nLSPWE, PCK1, AA_COUNT, V_COUNT[7:0],
 					VIDEO_MODE, REG_LSPCMODE,
@@ -311,6 +303,6 @@ module lspc_a2(
 	
 	autoanim AA(nRESET, VBLANK, AA_SPEED, SPR_TILE_NB, AA_DISABLE, SPR_ATTR_AA, SPR_TILE_NB_AA, AA_COUNT);
 	
-	hshrink HSHRINK(SPR_ATTR_SHRINK[11:8], SPR_PIXELCNT, WR_PIXEL);
+	//hshrink HSHRINK(SPR_ATTR_SHRINK[11:8], SPR_PIXELCNT, WR_PIXEL);
 	
 endmodule

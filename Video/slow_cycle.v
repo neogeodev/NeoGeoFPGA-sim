@@ -112,14 +112,6 @@ module slow_cycle(
 		end
 	end
 	
-	//always @(posedge PCK2)
-	//begin
-	//end
-	
-	//always @(posedge PCK1)
-	//begin
-	//end
-	
 	// SPR_TILEIDX   /------- --xxxxx! [4:0]
 	// SPR_NB        /xxxxxxx xx-----! [8:0]
 	assign SPR_MAP_ADDR_L = {SPR_NB, SPR_TILE_IDX, CYCLE_SLOW[0]};
