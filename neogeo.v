@@ -5,8 +5,6 @@
 // furrtek, Charles MacDonald, Kyuusaku, freem and neogeodev contributors ~ 2016
 // https://github.com/neogeodev/NeoGeoFPGA-sim
 
-// Todo: PCK1/PCK2 order is inverted, or PBUS cycles are shifted by half the sequence ?
-//			Check when nVCS goes low (should be between PCK1 -then- PCK2), simulation gives the opposite
 // Todo: Palette RAM CPU access (see alpha68k PCB)
 // Todo: VPA for interrupt ACK (NEO-C1)
 // Todo: HALT (NEO-B1)

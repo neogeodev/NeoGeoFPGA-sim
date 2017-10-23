@@ -40,6 +40,7 @@ module fast_cycle(
 	reg [8:0] PARSE_COUNTER;	// Sprite number
 	reg [8:0] PARSE_LATCH_A;	// Sprite number
 	reg [8:0] PARSE_LATCH_B;	// Sprite number
+	wire [8:0] PARSE_LATCH_MUX;
 	
 	wire [10:0] PARSE_READ_ADDR;
 	wire [10:0] PARSE_WRITE_ADDR;
@@ -50,7 +51,7 @@ module fast_cycle(
 	wire [10:0] RENDER_ADDR;
 	
 	wire [7:0] Y_ADDED;
-	wire [8:0] RENDER_LINE;
+	wire [3:0] RENDER_LINE;
 	
 	wire [10:0] C;		// Fast VRAM address
 	wire [15:0] F;		// Fast VRAM data
@@ -78,7 +79,7 @@ module fast_cycle(
 	
 	// Fast VRAM address generator
 	assign PARSE_WRITE_ADDR = {3'd6, ~BFLIP, LIST_WRITE_COUNTER};	// $600+ or $680+
-	assign PARSE_READ_ADDR = {2'd2, PARSE_COUNTER};				// $200~$3FF
+	assign PARSE_READ_ADDR = {2'd1, PARSE_COUNTER};				// $200~$3FF
 	assign RENDER_ADDR = {3'd6, BFLIP, LIST_READ_COUNTER};	// $600+ or $680+
 	assign SCB2_ADDR = {2'd0, RENDER_IDX};		// $000~$1FF (shrinking values)
 	assign SCB3_ADDR = {2'd1, RENDER_IDX};		// $200~$3FF (Y, sticky bit and height)
@@ -93,21 +94,24 @@ module fast_cycle(
 					((CYCLE_FAST >= 5'd10) && (CYCLE_FAST <= 5'd12)) ? SCB4_ADDR :		// SCB4 (TODO)
 					((CYCLE_FAST >= 5'd13) && (CYCLE_FAST <= 5'd15)) ? CPU_ADDR_FAST : // CPU
 					PARSE_ADDR;		// 5x parse (TODO)
-
+	
 	assign F = nCWE ? 16'bzzzzzzzzzzzzzzzz :
 					((CYCLE_FAST >= 5'd13) && (CYCLE_FAST <= 5'd15)) ? CPU_WRDATA :	// CPU
 					{7'd0, PARSE_LATCH_MUX};
 	
-	assign PARSE_LATCH_MUX = PARSE_MODE[0] ? PARSE_LATCH_A : PARSE_LATCH_B;
+	assign PARSE_LATCH_MUX = PARSE_MODE[0] ? PARSE_LATCH_B : PARSE_LATCH_A;
 	
-	assign nCWE = ((CYCLE_FAST >= 5'd13) && (CYCLE_FAST <= 5'd15)) ? nCWE_CPU : nCWE_LIST;
+	assign nCWE = ((CYCLE_FAST >= 5'd13) && (CYCLE_FAST <= 5'd15)) ? nCWE_CPU : 
+						((CYCLE_FAST >= 5'd16) && (CYCLE_FAST <= 5'd31)) ? nCWE_LIST : 
+						1'b1;
 	
 	assign nCLK_24M = ~CLK_24M;
 	
+	// Sprite line comparator
 	assign {Y_CARRY, Y_ADDED} = F[14:7] + V_COUNT[7:0] + 1'b1;	// F[14:7] is SPRITE_Y[7:0]
-	assign SIG1 = Y_CARRY ^ F[15];										// F[15] is SPRITE_Y[8]
+	assign SIG1 = Y_CARRY;	// ^ F[15];										// F[15] is SPRITE_Y[8]
 	
-	assign RENDER_LINE = F[14:7] + V_COUNT[7:0];
+	assign RENDER_LINE = Y_ADDED[3:0];	// Alpha68k: this is synchronized to 1.5M_RAW
 	
 	always @(posedge CLK_24M or posedge nCLK_24M)		// Use P bus cycle counter ?
 	begin
@@ -115,14 +119,19 @@ module fast_cycle(
 		begin
 			CYCLE_FAST <= 5'd0;
 			PARSE_MODE <= 2'd0;
-			LIST_WRITE_COUNTER <= 7'd0;
-			LIST_READ_COUNTER <= 7'd0;
-			PARSE_COUNTER <= 9'd0;
 			nCWE_LIST <= 1'b1;
 		end
 		else
 		begin
 			CYCLE_FAST <= CYCLE_FAST + 1'b1;
+			
+			// Reset sprite parsing counters each line, probably not related to CHBL
+			if (CHBL)
+			begin
+				LIST_WRITE_COUNTER <= 7'd0;
+				LIST_READ_COUNTER <= 7'd0;
+				PARSE_COUNTER <= 9'd0;
+			end
 			
 				case (CYCLE_FAST)
 					5'd14:
@@ -230,8 +239,8 @@ module fast_cycle(
 						// End of SCB3 read cycle
 						ATTR_STICKY <= F[6];
 						ATTR_SIZE <= F[5:0];
-						TILE_IDX <= RENDER_LINE[8:4];
-						TILE_LINE <= RENDER_LINE[3:0];
+						TILE_IDX <= {~Y_CARRY, Y_ADDED[7:4]};	// Tilemap index
+						TILE_LINE <= RENDER_LINE;
 					end
 					5'd11:
 					begin

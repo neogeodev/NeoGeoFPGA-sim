@@ -18,7 +18,7 @@ module palram_u(
 	end
 
 	assign #100 DATA_OUT = RAMDATA[ADDR];
-	assign DATA = (!nCE && !nOE && nWE) ? RAMDATA[ADDR] : 8'bzzzzzzzz;
+	assign DATA = (!nCE && !nOE && nWE) ? DATA_OUT : 8'bzzzzzzzz;
 
 	always @(nCE or nWE)
 		if (!nCE && !nWE)

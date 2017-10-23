@@ -41,6 +41,8 @@ module neo_b1(
 	wire [3:0] COLOR;
 	wire [7:0] PAL;
 	
+	wire [1:0] MUX_BA;
+	
 	wire RBA, RBB;
 
 	// Byte delays
@@ -87,7 +89,7 @@ module neo_b1(
 	assign FIX_COLOR = CLK_1MB ? FIXD_REG_C[3:0] : FIXD_REG_C[7:4];
 	assign FIX_OPAQUE = |{FIX_COLOR};
 	assign COLOR = FIX_OPAQUE ? FIX_COLOR : SPR_COLOR;
-	assign PAL = FIX_OPAQUE ? {4'b0000, FIX_PAL_REG_B} : SPR_PAL_REG_B;
+	assign PAL = FIX_OPAQUE ? {4'b0000, FIX_PAL_REG_B} : SPR_PAL;
 	assign PA_VIDEO = CHBL ? 12'h000 : {PAL, COLOR};
 	
 	// Connects to Alpha68k stuff
@@ -102,16 +104,14 @@ module neo_b1(
 	// BFLIP = 0 : B OUTPUT, A WRITE
 	// BFLIP = 1 : A OUTPUT, B WRITE
 	
-	assign nLATCH_X_A = LD1;
-	assign nLATCH_X_B = LD2;
 	assign nWE_ODD_A = WE[0];
-	assign nWE_ODD_B = WE[1];
-	assign nWE_EVEN_A = WE[2];
+	assign nWE_EVEN_A = WE[1];
+	assign nWE_ODD_B = WE[2];
 	assign nWE_EVEN_B = WE[3];
 	
 	// ?
-	assign CLK_OB_EA = CK[0];
-	assign CLK_OA_EB = CK[1];
+	//assign CLK_OB_EA = CK[0];
+	//assign CLK_OA_EB = CK[1];
 	// Some CK[] might be RBA and RBB !
 	assign RBA = CK[2];
 	assign RBB = CK[3];
@@ -164,7 +164,8 @@ module neo_b1(
 	// G3 (374): nOE seems used !
 	always @(posedge S1H1)	// nLATCH_X on Alpha68k
 	begin
-		SPRX <= PBUS[15:8];
+		if (PAL_SWITCH)
+			SPRX <= PBUS[15:8];
 	end
 	
 	// G5:C
@@ -179,14 +180,14 @@ module neo_b1(
 	// P6:C and P6:D
 	// Render: Count up (X ->>>>)
 	// Output: ???
-	assign DIR_OB_EA = ~(nBFLIP & 1);	// TODO: Probably whole display h-flip
-	assign DIR_OA_EB = ~(BFLIP & 1);		// TODO: Probably whole display h-flip
+	assign DIR_OB_EA = 1;	//~(nBFLIP & 1);		// TODO: Probably whole display h-flip
+	assign DIR_OA_EB = 1;	//~(BFLIP & 1);		// TODO: Probably whole display h-flip
 	
 	// LB address counters:
-	hc669_dual P13P12(CLK_OB_EA, nLOAD_X_A, DIR_OB_EA, {P11_OUT, P10_OUT}, LB_EVEN_B_ADDR);
-	hc669_dual N13N12(CLK_OA_EB, nLOAD_X_B, DIR_OA_EB, {N11_OUT, N10_OUT}, LB_EVEN_A_ADDR);
-	hc669_dual K12L13(CLK_OB_EA, nLOAD_X_A, DIR_OB_EA, SPRX, LB_ODD_B_ADDR);	// ?
-	hc669_dual L12M13(CLK_OA_EB, nLOAD_X_B, DIR_OA_EB, SPRX, LB_ODD_A_ADDR);	// ?
+	hc669_dual P13P12(CK[3], nLOAD_X_B, DIR_OB_EA, {P11_OUT, P10_OUT}, LB_EVEN_B_ADDR);
+	hc669_dual N13N12(CK[1], nLOAD_X_A, DIR_OA_EB, {N11_OUT, N10_OUT}, LB_EVEN_A_ADDR);
+	hc669_dual K12L13(CK[2], nLOAD_X_B, DIR_OB_EA, SPRX, LB_ODD_B_ADDR);	// ?
+	hc669_dual L12M13(CK[0], nLOAD_X_A, DIR_OA_EB, SPRX, LB_ODD_A_ADDR);	// ?
 	
 	// Sprite palette latch G6 (273):
 	/*always @(posedge PCK2)	// TODO: Wrong !
@@ -221,19 +222,21 @@ module neo_b1(
 	// N6 is in LSPC
 	// P6 is in LSPC
 	
+	// Maybe SS* instead of BFLIP
+	// Maybe S1H1 instead of BFLIP
 	assign MUX_BA = {BFLIP, CLK_1MB};
 	
 	// K15 & L15 Sprite color bits mux
-	assign SPR_COLOR = (MUX_BA == 2'b00) ? LB_EVEN_B_DATA[3:0] :
-								(MUX_BA == 2'b01) ? LB_ODD_B_DATA[3:0] :
-								(MUX_BA == 2'b10) ? LB_EVEN_A_DATA[3:0] :
-								LB_ODD_A_DATA[3:0];
+	assign SPR_COLOR = (MUX_BA == 2'b00) ? LB_ODD_A_DATA[3:0] :
+								(MUX_BA == 2'b01) ? LB_EVEN_A_DATA[3:0] :
+								(MUX_BA == 2'b10) ? LB_ODD_B_DATA[3:0] :
+								LB_EVEN_B_DATA[3:0];
 								
 	// N15, P15, K13, M15 Sprite palette bits mux
-	assign SPR_PAL = (MUX_BA == 2'b00) ? LB_EVEN_B_DATA[11:4] :
-							(MUX_BA == 2'b01) ? LB_ODD_B_DATA[11:4] :
-							(MUX_BA == 2'b10) ? LB_EVEN_A_DATA[11:4] :
-							LB_ODD_A_DATA[11:4];
+	assign SPR_PAL = (MUX_BA == 2'b00) ? LB_ODD_A_DATA[11:4] :
+							(MUX_BA == 2'b01) ? LB_EVEN_A_DATA[11:4] :
+							(MUX_BA == 2'b10) ? LB_ODD_B_DATA[11:4] :
+							LB_EVEN_B_DATA[11:4];
 	
 	//assign PA = CHBL ? 12'h000 : {PAL, COLOR};
 	
