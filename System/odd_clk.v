@@ -1,6 +1,6 @@
 `timescale 1ns/1ns
 
-module odd_clk(
+module lspc2_clk(
 	input CLK_24M,
 	input nRESETP,
 	output CLK_8M,

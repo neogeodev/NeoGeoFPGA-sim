@@ -1,47 +1,23 @@
 `timescale 1ns/1ns
 
 module autoanim(
-	input nRESET,
-	input VBLANK,
+	input CLK,
+	input RESETP,
 	input [7:0] AA_SPEED,
-	input [19:0] SPR_TILE_NB,
-	input AA_DISABLE,
-	input [1:0] AA_ATTR,
-	output [19:0] SPR_TILE_NB_AA,
-	output reg [2:0] AA_COUNT			// Output used for REG_LSPCMODE read
+	output [2:0] AA_COUNT
 );
 
-	reg [7:0] AA_TIMER;
-	wire [2:0] TILE_NB_MUX;
+	wire [3:0] D151_Q;
 
-	assign SPR_TILE_NB_AA = {SPR_TILE_NB[19:3], TILE_NB_MUX};
-
-	assign TILE_NB_MUX = AA_DISABLE ? SPR_TILE_NB[2:0] :						// nnn	AA disabled
-								AA_ATTR[1] ? AA_COUNT :									// AAA	3-bit AA
-								AA_ATTR[0] ? {SPR_TILE_NB[2], AA_COUNT[1:0]} :	// nAA	2-bit AA
-								SPR_TILE_NB[2:0];											// nnn	Tile attribute: no AA
+	// Used for test mode
+	assign E95A_OUT = ~|{E117_CO, 1'b0};
+	assign E149_OUT = ~^{CLK, 1'b0};
 	
-	// Todo: Is is really nRESET ?
-	// Todo: posedge VBLANK ?
-	// Verified: Always runs
-	// Verified: Reload only happens when AA_TIMER underflows
-	always @(negedge nRESET or posedge VBLANK)
-	begin
-		if (nRESET)
-		begin
-			AA_COUNT <= 3'd0;
-			AA_TIMER <= 8'd0;
-		end
-		else
-		begin
-			if (AA_TIMER)
-				AA_TIMER <= AA_TIMER - 1'b1;
-			else
-			begin
-				AA_TIMER <= AA_SPEED;		// Reload
-				AA_COUNT <= AA_COUNT + 1'b1;
-			end
-		end
-	end
+	C43 B91(E149_OUT, ~AA_SPEED[3:0], E95A_OUT, 1'b1, 1'b1, 1'b1, , B91_CO);
+	C43 E117(E149_OUT, ~AA_SPEED[7:4], E95A_OUT, 1'b1, B91_CO, 1'b1, , E117_CO);
+	
+	C43 D151(E149_OUT, 4'b0000, 1'b1, 1'b1, E117_CO, RESETP, D151_Q, );
+	
+	assign AA_COUNT = D151_Q[2:0];
 
 endmodule

@@ -4,7 +4,7 @@ module FD4(
 	input CK,
 	input D,
 	input PR, CL,
-	output reg Q,
+	output reg Q = 1'b0,
 	output nQ
 );
 
