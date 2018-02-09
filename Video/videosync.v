@@ -1,136 +1,89 @@
 `timescale 1ns/1ns
 
 module videosync(
-	input CLK_24M,
-	input nRESETP,
-	output [8:0] V_COUNT,				// 0~263
-	output reg [8:0] H_COUNT = 9'd0,	// 0~383
-	output reg TMS0,
-	output VBLANK,
-	output reg nVSYNC,
-	output reg HSYNC,
-	output nBNKB,
+	input CLK_24MB,
+	input LSPC_1_5M,
+	input Q53_CO,
+	input RESETP,
+	input VMODE,
+	output [8:0] PIXELC,
+	output [8:0] RASTERC,
+	output SYNC,
+	output BNK,
+	output BNKB,
 	output CHBL
 );
-
-	wire MASKING;
-	reg [3:0] FOURTEEN_CNT = 4'd0;
-	reg [1:0] LSPC_DIV = 2'd0;
-	reg [7:0] FT_CNT = 8'd0;
-	reg ACTIVE = 1'b0;
 	
-	reg [2:0] DIV_LINE_LOW = 3'd0;
-	reg [4:0] DIV_LINE_HIGH = 5'd0;
+	wire [3:0] S122_REG;
+	wire [3:0] R15_REG;
+	wire [3:0] T116_REG;
 	
-	assign V_COUNT = {ACTIVE, DIV_LINE_HIGH, DIV_LINE_LOW};
+	FDPCell H287(J22_OUT, H287_nQ, 1'b1, RESETP, , H287_nQ);		// H287_Q is used
 	
-	// D-latch clocked by H_COUNT[1] on the Alpha68k
-	always @(posedge H_COUNT[1])
-		TMS0 <= V_COUNT[0];
+	assign I237A_OUT = ~H287_nQ;
+	assign H293A_OUT = ~H287_nQ;
 	
-	// No blanking during 320 pixels
-	// Blanking for the remaining 64 pixels
-	assign CHBL = H_COUNT[8] & |{H_COUNT[7:6]};
-
-	// Do not reset CHBL between (NTSC):
-	// x 0000 0000 ~ x 0000 1111
-	// x 1111 0000 ~ x 1111 1111
-	assign MASKING = ~|{V_COUNT[7:4]} | &{V_COUNT[7:4]};
+	// Pixel counter
 	
-	assign nBNKB = |{DIV_LINE_HIGH[4:1]} & ~&{DIV_LINE_HIGH[4:1]};
+	// Used for test mode
+	assign P40A_OUT = P50_CO | 1'b0;
 	
-	assign VBLANK = ~|{V_COUNT[7:3]};
+	C43 P50(CLK_24MB, 4'b1110, RESETP, Q53_CO, 1'b1, 1'b1, {P50_QD, P50_QC, P50_QB, P50_QA}, P50_CO);
+	C43 P15(CLK_24MB, {3'b101, ~RESETP}, P13B_OUT, Q53_CO, P40A_OUT, 1'b1, {P15_QD, P15_QC, P15_QB, P15_QA}, P15_CO);
 
-	// Video sync must always run (even during reset) since nBNKB is the watchdog clock
-	always @(negedge CLK_24M)
-	begin
-		if (!nRESETP)
-		begin
-			H_COUNT <= 9'd0;
-			DIV_LINE_LOW <= 3'd0;
-			DIV_LINE_HIGH <= 5'd0;
-			FOURTEEN_CNT <= 4'd0;
-			LSPC_DIV <= 0;
-			ACTIVE <= 1'b1;
-		end
-		else
-		begin
-			if (FOURTEEN_CNT == 4'd14)
-			begin
-				FOURTEEN_CNT <= 4'd0;
-				FT_CNT <= FT_CNT + 1'b1;
-				HSYNC <= |{FT_CNT[7:3]};		// Good ?	HSYNC low (112mclk, 0~28px)
-				if (FT_CNT == 7'd12)				// 11 ?
-				begin
-					nVSYNC <= V_COUNT[8];		// Good ?
-					//nBNKB <= ~MASKING;
-				end
-
-				if (FT_CNT == 7'd16)				// 15 ?
-				begin
-					//if (!MASKING)
-					//	CHBL <= 1'b0;				// NTSC Good ?
-				end
-			end
-			else
-				FOURTEEN_CNT <= FOURTEEN_CNT + 1'b1;
-			
-			// To check: this must match posedge of CLK_6MB
-			// H_COUNT is the pixel counter in SNKCLK
-			if (LSPC_DIV == 2'd1)
-			begin
-				if (H_COUNT == 9'd383)
-				begin
-					H_COUNT <= 9'd0;
-					
-					FOURTEEN_CNT <= 4'd0;		// Force reset each new line
-					FT_CNT <= 7'd0;
-
-					if (DIV_LINE_LOW == 3'b111)
-					begin
-						DIV_LINE_LOW <= 3'd0;
-						if (DIV_LINE_HIGH == 5'b11111)
-						begin
-							if (!ACTIVE)	// Must start at 1
-							begin
-								DIV_LINE_HIGH <= 5'd0;
-								//DIV_HSYNC <= 5'd5;		// Value on reset ?
-							end
-							ACTIVE <= ~ACTIVE;
-						end
-						else
-							DIV_LINE_HIGH <= DIV_LINE_HIGH + 1'b1;
-					end
-					else
-						DIV_LINE_LOW <= DIV_LINE_LOW + 1'b1;
-
-				end
-				else
-					H_COUNT <= H_COUNT + 1'b1;
-
-				//if (H_COUNT == 9'd375)
-				//	CHBL <= 1'b1;			// This is wrong ! See Alpha68k /E signal of J12, H12 and H9
-			end
-			
-			LSPC_DIV <= LSPC_DIV + 1'b1;
-		end
-	end
+	assign P39B_OUT = P15_CO & Q53_CO;
+	assign P13B_OUT = ~|{P39B_OUT, ~RESETP};
 	
-	// -------------------------------- Unreadable notes follow --------------------------------
-	// HSYNC = 0 28	0~1B		000000000	000011011
-	// HSYNC = 1 356	1C~17F	000011100	101111111
-	// HSYNC = 1 		29
-	// HSYNC = (2&3&4)|5|6|7|8
-	// VSYNC = 1 F8~FF
-	// CHBL = 0			38~177	000111000	101110111
-	//                              |0
-	//			    118     1280     27  111
-	// nHSYNC  |''''''''''''''''''''|_____|''''''''''''''''''''|______
-	// nHBLANK ______|'''''''''''|______________|'''''''''''|_________
-	//													nHSYNC	nHBLANK
-	// 0~110:		00000000000 00001101110		0			0
-	// 111~228:		00001101111 00011100100		1			0
-	// 229~1508:	00011100101	10111100100		1			1
-	// 1509~1535:	10111100101	10111111111		1			0
+	
+	
+	// Raster counter
+	
+	// Used for test mode
+	assign J22_OUT = P15_QC ^ 1'b0;
+	assign H284A_OUT = I269_CO | 1'b0;
+	
+	C43 I269(J22_OUT, {~VMODE, 3'b100}, ~J268_CO, H293A_OUT, H293A_OUT, RESETP, RASTERC[4:1], I269_CO);
+	C43 J268(J22_OUT, {3'b011, ~VMODE}, ~J268_CO, H284A_OUT, H284A_OUT, RESETP, RASTERC[8:5], J268_CO);
+	assign RASTERC[0] = 1'b0;
+	
+	
+	
+	// H277B H269B H275A 
+	assign MATCH_PAL = ~|{RASTERC[4:3]} | RASTERC[5] | RASTERC[8];
+	
+	FDM H272(RASTERC[2], MATCH_PAL, H272_Q, );
+	FDM I238(I237A_OUT, H272_Q, BLANK_PAL, );
+	
+	// J259A
+	assign MATCH_NTSC = ~&{RASTERC[7:5]};
+	
+	// J251
+	FD4 J251(~RASTERC[4], MATCH_NTSC, 1'b1, RESETP, BLANK_NTSC, );
+	
+	// J240A: T2E
+	assign VSYNC = VMODE ? BLANK_PAL : RASTERC[8];
+	assign BNK = ~(VMODE ? RASTERC[8] : BLANK_NTSC);
+	
+	// K15B
+	assign BNKB = ~BNK;
+	
+	assign S136A_OUT = ~LSPC_1_5M;
+	
+	// P13A
+	assign P13A_OUT = P15_QA & ~P15_QC;
+	
+	FS1 R15(S136A_OUT, P13A_OUT, R15_REG);
+	FS1 T116(S136A_OUT, ~R15_REG[3], T116_REG);
+	FS1 S122(S136A_OUT, ~T116_REG[3], S122_REG);
+	FD2 S116(S136A_OUT, S122_REG[3], S116_Q, );
+	
+	// S131A
+	assign HSYNC = ~&{S116_Q, ~T116_REG[1]};
+	
+	// M149
+	assign SYNC = ~^{HSYNC, VSYNC};
+	
+	// L40A
+	assign CHBL = ~&{BNKB, R15_REG[3]};
 
 endmodule

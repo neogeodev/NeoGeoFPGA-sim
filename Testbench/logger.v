@@ -70,7 +70,7 @@ module logger(
 	
 	always @(posedge CLK_6MB)
 	begin
-		if (neogeo.LSPC.H_COUNT < 383)
+		if (neogeo.LSPC2.VS.PIXELC < 383)
 		begin
 			// Write each pixel
 			// 0RRRRRRR 0GGGGGGG 0BBBBBBB

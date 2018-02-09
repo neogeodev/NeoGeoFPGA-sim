@@ -1,12 +1,13 @@
 name:RESETP;	wave:l.H.............................;
 group:Clocks,6;
 name:24M(MCLK);	wave:lhlhlhlhlhlhlhlhlhlhlhlhlhlhlhlh;
-name:12M;	wave:h.l.h.l.h.l.h.l.h.l.h.l.h.l.h.l.;
-name:68KCLKB;	wave:h.l.h.l.h.l.h.l.h.l.h.l.h.l.h.l.;
-name:68KCLK;	wave:l.h.l.h.l.h.l.h.l.h.l.h.l.h.l.h.;
+name:68KCLK;	wave:l.h.l.h.l.h.l.h.l.h.l.h.l.h.l.h.;	OK
+name:68KCLKB;	wave:h.l.h.l.h.l.h.l.h.l.h.l.h.l.h.l.;	OK
+name:1MB;	wave:h...l.......h.......l.......h...;	OK
+name:12M;	wave:h.l.h.l.h.l.h.l.h.l.h.l.h.l.h.l.;	OK
+
 name:8M;	wave:hl..h..l..h..l..h..l..h..l..h..l;
 name:6MB;	wave:l.H...l...H...l...H...l...H...l.;
 name:4M;	wave:lh.....l.....h.....l.....h.....l;
 name:4MB;	wave:hl.....h.....l.....h.....l.....h;
-name:1MB;	wave:h...l.......h.......l.......h...;
 groupend;

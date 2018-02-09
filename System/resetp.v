@@ -1,22 +1,17 @@
 `timescale 1ns/1ns
 
 module resetp(
-	input CLK_24M,
-	input nRESET,
-	output nRESETP
+	input CLK_24MB,
+	input RESET,
+	output RESETP
 );
 
 	// nRESET  ""|_________|""""
 	// nRESETP """"""""""""|_|""
 	
-	reg nRESET_Q;
+	FDM O52(CLK_24MB, RESET, O52_Q, );
+	FDM O49(CLK_24MB, O52_Q, , O49_nQ);
 	
-	// Edge detection
-	always @(negedge CLK_24M)
-	begin
-		nRESET_Q <= nRESET;
-	end
-	
-	assign nRESETP = ~(!nRESET_Q & nRESET);
+	assign RESETP = ~&{O49_nQ, O52_Q};
 	
 endmodule

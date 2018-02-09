@@ -30,7 +30,6 @@ module fast_cycle(
 	// Fast VRAM is 35ns, so at least 1mclk needed between address set and data valid
 	
 	reg ATTR_STICKY;
-	reg [5:0] ATTR_SIZE;		// 4+1 ?
 
 	reg [4:0] CYCLE_FAST;	// 32 cycles of CLK_24M, 10 states
 	
@@ -50,8 +49,7 @@ module fast_cycle(
 	wire [10:0] SCB4_ADDR;
 	wire [10:0] RENDER_ADDR;
 	
-	wire [7:0] Y_ADDED;
-	wire [3:0] RENDER_LINE;
+	wire [8:0] Y_ADDED;
 	
 	wire [10:0] C;		// Fast VRAM address
 	wire [15:0] F;		// Fast VRAM data
@@ -108,10 +106,8 @@ module fast_cycle(
 	assign nCLK_24M = ~CLK_24M;
 	
 	// Sprite line comparator
-	assign {Y_CARRY, Y_ADDED} = F[14:7] + V_COUNT[7:0] + 1'b1;	// F[14:7] is SPRITE_Y[7:0]
-	assign SIG1 = Y_CARRY;	// ^ F[15];										// F[15] is SPRITE_Y[8]
-	
-	assign RENDER_LINE = Y_ADDED[3:0];	// Alpha68k: this is synchronized to 1.5M_RAW
+	assign Y_ADDED = (F[15:7] + V_COUNT + 1'b1) ^ 9'b100000000;	// F[15:7] is SPRITE_Y
+	assign Y_MATCH = Y_ADDED[8:4] < F[4:0];
 	
 	always @(posedge CLK_24M or posedge nCLK_24M)		// Use P bus cycle counter ?
 	begin
@@ -170,7 +166,7 @@ module fast_cycle(
 						case (PARSE_MODE)
 							2'b00:
 							begin
-								if (SIG1)
+								if (Y_MATCH)
 								begin
 									PARSE_LATCH_A <= PARSE_COUNTER;
 									PARSE_MODE <= 2'b01;
@@ -179,7 +175,7 @@ module fast_cycle(
 							
 							2'b01:
 							begin
-								if (SIG1)
+								if (Y_MATCH)
 								begin
 									PARSE_LATCH_B <= PARSE_COUNTER;
 									PARSE_MODE <= 2'b10;
@@ -201,28 +197,6 @@ module fast_cycle(
 							end
 						endcase
 						
-						// For a 1-tile-high sprite:
-						// How does height affect match ?
-						// HEIGHT = 1        0 0001			8BIT CARRY		SIG1 (CARRY ^ SPRITE_Y[8])
-						// 496 + 0 = 496		1 1111 0000		0					1
-						// 496 + 1 = 497		1 1111 0001		0					1
-						// 496 + 2 = 498		1 1111 0010		0					1
-						// 496 + 3 = 499		1 1111 0011		0					1
-						// 496 + 4 = 500		1 1111 0100		0					1
-						// 496 + 5 = 501		1 1111 0101		0					1
-						// 496 + 6 = 502		1 1111 0110		0					1
-						// 496 + 7 = 503		1 1111 0111		0					1
-						// 496 + 8 = 504		1 1111 1000		0					1
-						// 496 + 9 = 505		1 1111 1001		0					1
-						// 496 + 10 = 506		1 1111 1010		0					1
-						// 496 + 11 = 507		1 1111 1011		0					1
-						// 496 + 12 = 508		1 1111 1100		0					1
-						// 496 + 13 = 509		1 1111 1101		0					1
-						// 496 + 14 = 510		1 1111 1110		0					1
-						// 496 + 15 = 511		1 1111 1111		0					1
-						// 496 + 16 = 512		1 0000 0000		1					0
-						// 496 + 17 = 513		1 0000 0001		1					0
-						// 496 + 18 = 514		1 0000 0010		1					0
 					end
 					5'd02:
 					begin
@@ -238,9 +212,8 @@ module fast_cycle(
 					begin
 						// End of SCB3 read cycle
 						ATTR_STICKY <= F[6];
-						ATTR_SIZE <= F[5:0];
-						TILE_IDX <= {~Y_CARRY, Y_ADDED[7:4]};	// Tilemap index
-						TILE_LINE <= RENDER_LINE;
+						TILE_IDX <= Y_ADDED[8:4];	// Tilemap index
+						TILE_LINE <= Y_ADDED[3:0];	// Alpha68k: this is synchronized to 1.5M_RAW
 					end
 					5'd11:
 					begin

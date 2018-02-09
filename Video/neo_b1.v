@@ -170,10 +170,8 @@ module neo_b1(
 	hc669_dual L12M13(CK[0], nLOAD_X_A, DIR_OA_EB, X_LOAD_VALUE, LB_ODD_A_ADDR);	// ?
 	
 	// Maybe SPR_PAL_REG_A is enough delay ?
-	// Not 3210
-	// Not 0123
-	assign LB_EVEN_DATA_IN = {SPR_PAL_REG_B, GAD[2], GAD[3], GAD[0], GAD[1]};
-	assign LB_ODD_DATA_IN = {SPR_PAL_REG_B, GBD[2], GBD[3], GBD[0], GBD[1]};
+	assign LB_EVEN_DATA_IN = {SPR_PAL_REG_A, GAD[2], GAD[3], GAD[0], GAD[1]};
+	assign LB_ODD_DATA_IN = {SPR_PAL_REG_A, GBD[2], GBD[3], GBD[0], GBD[1]};
 	
 	// Switch between pixel (render) or backdrop (clear)
 	assign LB_EVEN_A_DATA_IN = BFLIP ? 12'b111111111111 : LB_EVEN_DATA_IN;
