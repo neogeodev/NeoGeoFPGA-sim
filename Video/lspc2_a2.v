@@ -48,6 +48,8 @@ module lspc2_a2(
 	wire [15:0] REG_VRAMMOD;
 	wire [15:0] REG_LSPCMODE;
 	
+	wire [2:0] TIMER_MODE;
+	
 	
 	
 	
@@ -68,10 +70,6 @@ module lspc2_a2(
 	wire [14:0] FIX_MAP_ADDR;
 	wire [11:0] FIX_TILE_NB;
 	wire [3:0] FIX_ATTR_PAL;
-	
-	// Pixel timer stuff
-	wire [2:0] TIMER_MODE;
-	wire [31:0] TIMER_LOAD;
 	
 	
 	
@@ -174,10 +172,47 @@ module lspc2_a2(
 	FDSCell F47(~WR_VRAM_ADDR, M68K_DATA[15:12], VRAM_ADDR_RAW[15:12]);
 	
 	
+	// CPU write to REG_VRAMRW
+	
+	FDSCell E154(~WR_VRAM_RW, M68K_DATA[3:0], E154_Q);
+	FDSCell D121(~WR_VRAM_RW, M68K_DATA[7:4], D121_Q);
+	FDSCell D131(~WR_VRAM_RW, M68K_DATA[11:8], D131_Q);
+	FDSCell F155(~WR_VRAM_RW, M68K_DATA[15:12], F155_Q);
+	
+	assign F58B_OUT = VRAM_ADDR_RAW[15] | VRAM_WRITE_REQ;
+	
+	FDPCell O98(T125A_OUT, M95B_1, 1'b1, RESETP, , O98_nQ);
+	assign F58A_OUT = ~VRAM_ADDR_RAW[15] | VRAM_WRITE_REQ;
+	FDPCell N93(O98_nQ, F58A_OUT, O98_Q, 1'b1, N93_Q, );
+	FDPCell Q106(~LSPC_1_5M, F58B_OUT, ~Q174A_OUT, 1'b1, Q106_Q, );
+	assign O108B_OUT = ~&{N93_Q, Q106_Q};
+	assign D112B_OUT = ~|{~WR_VRAM_ADDR, O108B_OUT};
+	
+	FDPCell D38(~WR_VRAM_RW, 1'b1, 1'b1, D32A_OUT, VRAM_WRITE_REQ, D38_nQ);
+	FDPCell D28(D112B_OUT, 1'b1, 1'b1, D38_nQ, D28_Q, );
+	
+	// Used for test mode
+	assign D32A_OUT = D28_Q & 1'b1;
+	
+	
 	// CPU write to REG_LSPCMODE
 	
+	FDPCell D34(WR_TIMER_STOP, M68K_DATA[0], 1'b1, RESETP, , D34_nQ);
+	FDRCell E61(WR_LSPC_MODE, M68K_DATA[6:3], RESET, {TIMER_MODE[1:0], TIMER_IRQ_EN, AA_DISABLE});
+	FDPCell E74(WR_LSPC_MODE, M68K_DATA[7], 1'b1, RESET, TIMER_MODE[2], );
 	FDSCell C87(WR_LSPC_MODE, M68K_DATA[11:8], AA_SPEED[3:0]);
 	FDSCell E105(WR_LSPC_MODE, M68K_DATA[15:12], AA_SPEED[7:4]);
+	
+	
+	// Clock divider in timing stuff
+	
+	FDPCell T69(LSPC_12M, LSPC_3M, 1'b1, RESETP, , T69_nQ);
+	assign T73A_OUT = LSPC_3M | T69_nQ;
+	FJD T140(CLK_24M, T134_nQ, 1'b1, T73A_OUT, T140_Q, );
+	FJD T134(CLK_24M, T140_Q, 1'b1, T73A_OUT, , T134_nQ);
+	
+	FD2 U129A(CLK_24M, T134_nQ, U129A_Q, );
+	assign T125A_OUT = T140_Q | U129A_Q;
 	
 	
 	/*lspc_regs REGS(RESET, CLK_24M, M68K_ADDR, M68K_DATA, nLSPOE, nLSPWE, PCK1, AA_COUNT, V_COUNT[7:0],
@@ -188,12 +223,11 @@ module lspc2_a2(
 					AA_SPEED, AA_DISABLE,
 					IRQ_S1, IRQ_R1, IRQ_S2, IRQ_R2, IRQ_R3);*/
 	
-	//lspc_timer TIMER(RESET, CLK_6M_LSPC, VBLANK, VIDEO_MODE, TIMER_MODE, TIMER_INT_EN, TIMER_LOAD,
-	//						TIMER_PAL_STOP, V_COUNT);
+	lspc_timer TIMER(~LSPC_6M, M68K_DATA);
 	
 	resetp RSTP(CLK_24MB, RESET, RESETP);
 	
-	irq IRQ(WR_IRQ_ACK, M68K_DATA[2:0], BNK, LSPC_6M, IPL0, IPL1);
+	irq IRQ(WR_IRQ_ACK, M68K_DATA[2:0], RESET, 1'b0, BNK, LSPC_6M, IPL0, IPL1);
 	
 	videosync VS(CLK_24MB, LSPC_1_5M, Q53_CO, RESETP, VMODE, , RASTERC, SYNC, BNK, BNKB, CHBL);
 
@@ -227,6 +261,6 @@ module lspc2_a2(
 	
 	autoanim AA(RASTERC[8], RESETP, AA_SPEED, AA_COUNT);
 	
-	hshrink HSH(HSHRINK, , , , );
+	hshrink HSH(, , , , );
 	
 endmodule

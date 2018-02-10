@@ -110,13 +110,13 @@ module neogeo(
 	assign nCOUNTOUT = |{nBITW0, ~M68K_ADDR[6:5]};
 	
 	// DEBUG: Disabled 68k
-	//cpu_68k M68KCPU(CLK_68KCLK, 1'b0, IPL1, IPL0, nDTACK, M68K_ADDR, M68K_DATA, nLDS, nUDS, nAS, M68K_RW);
-	assign M68K_ADDR = 24'h000000;
+	cpu_68k M68KCPU(CLK_68KCLK, nRESET, IPL1, IPL0, nDTACK, M68K_ADDR, M68K_DATA, nLDS, nUDS, nAS, M68K_RW);
+	/*assign M68K_ADDR = 24'h000000;
 	assign M68K_DATA = 16'hzzzz;
 	assign nLDS = 1'b1;
 	assign nUDS = 1'b1;
 	assign nAS = 1'b1;
-	assign M68K_RW = 1'b1;
+	assign M68K_RW = 1'b1;*/
 	
 	cpu_z80 Z80CPU(CLK_4M, nRESET, SDD, SDA, nIORQ, nMREQ, nSDRD, nSDWR, nZ80INT, nZ80NMI);
 	
@@ -185,7 +185,7 @@ module neogeo(
 						VIDEO_R_SER, VIDEO_G_SER, VIDEO_B_SER, VIDEO_CLK_SER, VIDEO_LAT_SER);*/
 						
 	// Sim only
-	logger LOGGER(CLK_6MB, nBNKB, SHADOW, COUNTER1, COUNTER2, LOCKOUT1, LOCKOUT2);
+	//logger LOGGER(CLK_6MB, nBNKB, SHADOW, COUNTER1, COUNTER2, LOCKOUT1, LOCKOUT2);
 	
 	// nSRAMCS comes from analog battery backup circuit
 	assign nSRAMCS = 1'b0;

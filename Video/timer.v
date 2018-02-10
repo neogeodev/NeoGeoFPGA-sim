@@ -1,52 +1,54 @@
 `timescale 1ns/1ns
 
 module lspc_timer(
-	input nRESET,
-	input CLK,
-	input VBLANK,
-	input VIDEO_MODE,
-	input [2:0] TIMER_MODE,
-	input TIMER_INT_EN,
-	input [31:0] TIMER_LOAD,
-	input TIMER_PAL_STOP,
-	input [8:0] VCOUNT
+	input TIMER_CLK,
+	input [15:0] M68K_DATA,
+	input WR_TIMER_HIGH,
+	input WR_TIMER_LOW,
+	input VMODE,
+	input TIMER_STOP,
+	input [8:0] RASTERC
 );
 	
-	reg [31:0] TIMER;		// Pixel timer
+	FDSCell K58(WR_TIMER_HIGH, M68K_DATA[3:0], K58_Q);
+	FDSCell K48(WR_TIMER_HIGH, M68K_DATA[7:4], K48_Q);
+	FDSCell G50(WR_TIMER_HIGH, M68K_DATA[11:8], G50_Q);
+	FDSCell K31(WR_TIMER_HIGH, M68K_DATA[15:12], K31_Q);
 	
-	//					PAL	PALSTOP	NTSC		From			To
-	// F8 ~ FF		0		0			0			011111000	011111111
-	// 100 ~ 10F	1		0			1			100000000	100001111
-	// 110 ~ 1EF	1		1			1			100010000	111101111
-	// 1F0 ~ 1FF	1		0			1			111110000	111111111
-	assign STOP_EN = VIDEO_MODE & TIMER_PAL_STOP;
-	assign STOP_TOP = ~|{VCOUNT[7:4]};	//	x0000xxxx
-	assign STOP_BOT = &{VCOUNT[7:4]};	//	x1111xxxx
-	assign STOP = STOP_EN & STOP_TOP & STOP_BOT;
-	assign RUN = VCOUNT[8] & ~STOP;		// CHECK: Only run during active display ?
-
-	always @(negedge CLK or negedge nRESET)		// posedge ? pixel clock
-	begin
-		if (!nRESET)
-		begin
-			TIMER <= 32'd0;
-		end
-		else
-		begin
-			if (TIMER_MODE[1] & VBLANK)
-				TIMER <= TIMER_LOAD;		// Vblank mode
-			
-			if (RUN)
-			begin
-				if (TIMER)
-					TIMER <= TIMER - 1'b1;
-				else
-				begin
-					//if (TIMER_INT_EN) nIRQS[1] <= 1'b0;				// IRQ2 plz
-					if (TIMER_MODE[2]) TIMER <= TIMER_LOAD;		// Repeat mode
-				end
-			end
-		end
-	end
+	C43 N50(TIMER_CLK, ~K58_Q, O58A_OUT, L106A_OUT, L76_OUT, ~N90B_OUT, , N50_CO);
+	C43 M18(TIMER_CLK, ~K48_Q, O58A_OUT, L106A_OUT, N50_CO, ~N90B_OUT, , M18_CO);
+	
+	// Used for test mode
+	assign K29_OUT = M18_CO ^ 1'b0;
+	
+	C43 L51(TIMER_CLK, ~G50_Q, O58A_OUT, L106A_OUT, K29_OUT, ~N90B_OUT, , L51_CO);
+	C43 L16(TIMER_CLK, ~K31_Q, O58A_OUT, L106A_OUT, L51_CO, ~N90B_OUT, , TIMER_CO);
+	
+	
+	
+	FDSCell K121(WR_TIMER_LOW, M68K_DATA[3:0], K121_Q);
+	FDSCell K87(WR_TIMER_LOW, M68K_DATA[7:4], K87_Q);
+	FDSCell K68(WR_TIMER_LOW, M68K_DATA[11:8], K68_Q);
+	FDSCell K104(WR_TIMER_LOW, M68K_DATA[15:12], K104_Q);
+	
+	C43 L127(TIMER_CLK, ~K121_Q, O58A_OUT, J69_nQ, J69_nQ, ~N90B_OUT, , L127_CO);
+	C43 M125(TIMER_CLK, ~K87_Q, O58A_OUT, L127_CO, J69_nQ, ~N90B_OUT, , M125_CO);
+	
+	// Used for test mode
+	assign M52_OUT = M125_CO ^ 1'b0;
+	
+	C43 M54(TIMER_CLK, ~K68_Q, O58A_OUT, L107A_OUT, M52_OUT, ~N90B_OUT, , M54_CO);
+	C43 L81(TIMER_CLK, ~K104_Q, O58A_OUT, L107A_OUT, M54_CO, ~N90B_OUT, , L81_CO);
+	
+	// Used for test mode
+	assign L76_OUT = L81_CO ^ 1'b0;
+	
+	
+	// Stop option
+	
+	assign J257A_OUT = ~|{RASTERC[5:4]};
+	assign I234_OUT = |{RASTERC[8], ~VMODE, TIMER_STOP};
+	assign J238B_OUT = ~|{J257A_OUT, I234_OUT};
+	FDM J69(LSPC_6M, J238B_OUT, , J69_nQ);
 
 endmodule

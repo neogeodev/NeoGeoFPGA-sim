@@ -129,7 +129,7 @@ module testbench_1();
 	always @(negedge nAS)
 	begin
 		// These addresses are only valid for the patched SP-S2.SP1 system ROM !
-		/*if ({M68K_ADDR, 1'b0} == 24'hC16ADA)
+		if ({M68K_ADDR, 1'b0} == 24'hC16ADA)
 		begin
 			if (NG.M68KCPU.REG_D6 == 15'h0000)
 				$display("0 WORK RAM ERROR !");
@@ -150,7 +150,7 @@ module testbench_1();
 			else if (NG.M68KCPU.REG_D6 == 15'h0008)
 				$display("8 Z80 ERROR !");
 			$stop;
-		end*/
+		end
 		
 		if ({M68K_ADDR, 1'b0} == 24'hC12038)
 		begin
