@@ -11,14 +11,18 @@ module videosync(
 	output SYNC,
 	output BNK,
 	output BNKB,
-	output CHBL
+	output CHBL,
+	output R15_QD,
+	output H287_Q
 );
 	
 	wire [3:0] S122_REG;
 	wire [3:0] R15_REG;
 	wire [3:0] T116_REG;
 	
-	FDPCell H287(J22_OUT, H287_nQ, 1'b1, RESETP, , H287_nQ);		// H287_Q is used
+	assign R15_QD = R15_REG[3];
+	
+	FDPCell H287(J22_OUT, H287_nQ, 1'b1, RESETP, H287_Q, H287_nQ);
 	
 	assign I237A_OUT = ~H287_nQ;
 	assign H293A_OUT = ~H287_nQ;
@@ -27,6 +31,8 @@ module videosync(
 	
 	// Used for test mode
 	assign P40A_OUT = P50_CO | 1'b0;
+	
+	assign PIXELC = {P15_QC, P15_QB, P15_QA, P50_QD, P50_QC, P50_QB, P50_QA, 2'b00};
 	
 	C43 P50(CLK_24MB, 4'b1110, RESETP, Q53_CO, 1'b1, 1'b1, {P50_QD, P50_QC, P50_QB, P50_QA}, P50_CO);
 	C43 P15(CLK_24MB, {3'b101, ~RESETP}, P13B_OUT, Q53_CO, P40A_OUT, 1'b1, {P15_QD, P15_QC, P15_QB, P15_QA}, P15_CO);
