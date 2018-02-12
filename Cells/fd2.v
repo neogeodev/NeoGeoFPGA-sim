@@ -3,7 +3,7 @@
 module FD2(
 	input CK,
 	input D,
-	output reg Q,
+	output reg Q = 1'b0,
 	output nQ
 );
 

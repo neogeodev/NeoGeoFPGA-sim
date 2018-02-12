@@ -44,10 +44,14 @@ module lspc2_a2(
 	wire [15:0] CPU_DATA_MUX;
 	wire [15:0] CPU_DATA_OUT;
 	wire [15:0] VRAM_ADDR_RAW;
-	wire [15:0] VRAM_READ_LOW;
-	wire [15:0] VRAM_READ_HIGH;
+	wire [15:0] VRAM_LOW_READ;
+	wire [15:0] VRAM_HIGH_READ;
 	wire [15:0] VRAM_ADDR_MUX;
 	wire [15:0] VRAM_ADDR_AUTOINC;
+	wire [15:0] VRAM_ADDR;
+	wire [15:0] VRAM_RW_FIRST;
+	wire [15:0] VRAM_WRITE;
+	wire VRAM_WRITE_REQ;			// Active low
 	
 	wire [15:0] REG_VRAMMOD;
 	wire [15:0] REG_LSPCMODE;
@@ -56,10 +60,34 @@ module lspc2_a2(
 	
 	wire [3:0] T31_P;
 	wire [3:0] U24_P;
-	wire [3:0] PIPE_A;
-	wire [3:0] PIPE_B;
-	wire [3:0] PIPE_C;
+	wire [3:0] O227_Q;
 	
+	wire [7:0] P_MUX_X_YSH;
+	wire [7:0] P_MUX_SPRLINE;
+	wire [23:0] P_OUT_MUX;
+	
+	wire [3:0] VSHRINK_INDEX;
+	wire [3:0] VSHRINK_LINE;
+	wire [8:0] XPOS;
+	wire [2:0] SPR_TILE_AA;
+	wire [3:0] G233_Q;
+	wire [7:0] SPR_Y_LOOKAHEAD;
+	wire [8:0] SPR_Y_ADD;
+	wire [7:0] SPR_TILE_A;		// This should be called SPR_Y_RENDER or something similar
+	wire [7:0] SPR_TILE_AB;		// This should be called SPR_Y_RENDER_LOOP or something similar
+	wire [8:0] SPR_Y_SHRINK;
+	wire [3:0] SPR_LINE;
+	wire [19:0] SPR_TILE;
+	wire [7:0] YSHRINK;
+	wire [8:0] SPR_Y;
+	wire [7:0] SPR_PAL;
+	wire [3:0] FIX_PAL;
+	wire [5:0] SPR_SIZE;
+	wire [11:0] FIX_TILE;
+	wire [3:0] HSHRINK;
+	wire [15:0] PIPE_C;
+	wire [3:0] SPR_TILEMAP;
+	wire [7:0] ACTIVE_RD;
 	
 	
 	assign S1H1 = LSPC_3M;
@@ -124,13 +152,13 @@ module lspc2_a2(
 	assign CPU_DATA_MUX = M68K_ADDR[2] ? 
 							CPU_READ ? REG_VRAMMOD : REG_LSPCMODE			// Maybe swapped
 							:
-							CPU_READ ? VRAM_READ_LOW : VRAM_READ_HIGH;	// Maybe swapped
+							CPU_READ ? VRAM_HIGH_READ : VRAM_LOW_READ;	// Order OK
 	
 	assign C22A_OUT = ~&{WR_VRAM_RW, WR_VRAM_ADDR};
 	FDM B18(C22A_OUT, M68K_ADDR[1], B18_Q, );
 	
 	// B138 A123 A68 A28
-	FDS16bit B138(~B18_Q, CPU_DATA_MUX, CPU_DATA_OUT);
+	FDS16bit B138(~LSPOE, CPU_DATA_MUX, CPU_DATA_OUT);
 	
 	// This is strange
 	assign M68K_DATA[1:0] = LSPOE ? 2'bzz : CPU_DATA_OUT[1:0];
@@ -160,7 +188,7 @@ module lspc2_a2(
 	// A112B A111A A109A A110B
 	// D110B D106B D108B D85A
 	// F10A F12A F26A F12B
-	assign VRAM_ADDR_MUX = B18_Q ? VRAM_ADDR_RAW : VRAM_ADDR_AUTOINC;	// Maybe swapped ?
+	assign VRAM_ADDR_MUX = B18_Q ? VRAM_ADDR_AUTOINC : VRAM_ADDR_RAW;
 	
 	// F14 D48 C105 C164
 	FDS16bit F14(D112B_OUT, VRAM_ADDR_MUX, VRAM_ADDR);
@@ -179,25 +207,30 @@ module lspc2_a2(
 	
 	assign F58B_OUT = VRAM_ADDR_RAW[15] | VRAM_WRITE_REQ;
 	
-	FDPCell Q106(~LSPC_1_5M, F58B_OUT, ~Q174A_OUT, 1'b1, Q106_Q, );
+	FDPCell Q106(~LSPC_1_5M, F58B_OUT, CLK_CPU_READ_LOW, 1'b1, Q106_Q, );
 	assign O108B_OUT = ~&{N93_Q, Q106_Q};
 	assign D112B_OUT = ~|{~WR_VRAM_ADDR, O108B_OUT};
 	
-	FDPCell D38(~WR_VRAM_RW, 1'b1, 1'b1, D32A_OUT, VRAM_WRITE_REQ, D38_nQ);
-	FDPCell D28(D112B_OUT, 1'b1, 1'b1, D38_nQ, D28_Q, );
+	FDPCell D38(~WR_VRAM_RW, 1'b1, 1'b1, D32A_OUT, D38_Q, VRAM_WRITE_REQ);
+	FDPCell D28(D112B_OUT, 1'b1, 1'b1, D38_Q, , D28_nQ);
 	
 	// Used for test mode
-	assign D32A_OUT = D28_Q & 1'b1;
+	assign D32A_OUT = D28_nQ & 1'b1;
+	
 	
 	
 	// CPU write to REG_LSPCMODE
 	
 	FDPCell D34(WR_TIMER_STOP, M68K_DATA[0], 1'b1, RESETP, , D34_nQ);
 	FDRCell E61(WR_LSPC_MODE, M68K_DATA[6:3], RESET, {TIMER_MODE[1:0], TIMER_IRQ_EN, AA_DISABLE});
-	FDPCell E74(WR_LSPC_MODE, M68K_DATA[7], 1'b1, RESET, TIMER_MODE[2], );
+	FDPCell E74(WR_LSPC_MODE, M68K_DATA[7], 1'b1, RESET, , TIMER_MODE[2]);
 	FDSCell C87(WR_LSPC_MODE, M68K_DATA[11:8], AA_SPEED[3:0]);
 	FDSCell E105(WR_LSPC_MODE, M68K_DATA[15:12], AA_SPEED[7:4]);
-	
+	// C184A
+	assign AUTOANIM3_EN = SPR_AA_3 & ~AA_DISABLE;
+	// B180B
+	assign AUTOANIM2_EN = AUTOANIM3_EN | C186A_OUT;
+	assign C186A_OUT = ~AA_DISABLE & SPR_AA_2;
 	
 	// Clock divider in timing stuff
 	
@@ -303,6 +336,86 @@ module lspc2_a2(
 	assign PIXEL_HPLUS = 5'd15 + {~J20A_OUT, PIXELC[6:4]} + PIXELC[3];
 	assign J20A_OUT = ~&{PIXELC[8:7]};
 	
+	
+	// Y-shrink stuff
+	assign SPR_LINE[0] = SPR_TILE_VFLIP ^ G233_Q[0];
+	assign SPR_LINE[1] = SPR_TILE_VFLIP ^ G233_Q[1];
+	assign SPR_LINE[2] = SPR_TILE_VFLIP ^ G233_Q[2];
+	assign SPR_LINE[3] = SPR_TILE_VFLIP ^ G233_Q[3];
+	FDSCell G233(P210A_OUT, O227_Q, G233_Q);
+	FDSCell O227(P222A_OUT, {S166_OUT, S164_OUT, S162_OUT, S168_OUT}, O227_Q);
+	assign S166_OUT = VSHRINK_LINE[3] ^ ~S186_OUT;
+	assign S164_OUT = VSHRINK_LINE[2] ^ ~S186_OUT;
+	assign S162_OUT = VSHRINK_LINE[1] ^ ~S186_OUT;
+	assign S168_OUT = VSHRINK_LINE[0] ^ ~S186_OUT;
+	assign S186_OUT = ~P235_OUT ^ R179_Q;
+	FDM R179(R95B_OUT, SPR_CONTINUOUS, R179_Q);
+	
+	FDSCell O175(P222A_OUT, {Q184_OUT, Q182_OUT, Q186_OUT, Q172_OUT}, SPR_TILEMAP);
+	assign Q184_OUT = VSHRINK_INDEX[3] ^ ~S186_OUT;
+	assign Q182_OUT = VSHRINK_INDEX[2] ^ ~S186_OUT;
+	assign Q186_OUT = VSHRINK_INDEX[1] ^ ~S186_OUT;
+	assign Q172_OUT = VSHRINK_INDEX[0] ^ ~S186_OUT;
+	
+	
+	
+	// P bus stuff
+	assign PBUS_IO = U51A_OUT ? P_OUT_MUX[23:16] : 8'bzzzzzzzz;
+	assign PBUS_OUT = P_OUT_MUX[15:0];
+	
+	FDSCell Q87(~R88_Q, PBUS_IO[23:20], VSHRINK_INDEX);
+	FDSCell S141(~R88_Q, PBUS_IO[19:16], VSHRINK_LINE);
+	assign VCS = ~R88_nQ;
+	FDM R88(CLK_24M, R94A_OUT, R88_Q, R88_nQ);
+	
+	FDM S183(T185B_OUT, S171_Q, S183_Q, );
+	FDM S171(U53_nQ, LSPC_1_5M, S171_Q, S171_nQ);
+	assign T185B_OUT = PCK1 | PCK2;
+	
+	assign XPOS = PIPE_C[8:0];
+	
+	// C250 A238A A232 A234A
+	// E271 E273A E268A D255
+	assign P_OUT_MUX[23:16] = ~S183_Q ? 
+										~S171_nQ ? {4'b0000, FIX_PAL} : {SPR_TILE[19:16], SPR_LINE}
+										:
+										~S171_nQ ? {8'b00000000} : {SPR_PAL};
+	
+	assign P_OUT_MUX[15:0] = ~S183_Q ?
+										~S171_nQ ? {8'b00000000, 8'b00000000} : {SPR_TILE[15:8], SPR_TILE[7:3], SPR_TILE_AA}
+										:
+										~S171_nQ ? {PIXELC[2], RASTERC[2:1], K260B_OUT, FIX_TILE[11:8], FIX_TILE[7:0]} : {P_MUX_X_YSH, P_MUX_SPRLINE};
+	
+	assign SPR_TILE_AA[2] = AUTOANIM3_EN ? AA_COUNT[2] : SPR_TILE[2];
+	assign SPR_TILE_AA[1] = AUTOANIM2_EN ? AA_COUNT[1] : SPR_TILE[1];
+	assign SPR_TILE_AA[0] = AUTOANIM2_EN ? AA_COUNT[0] : SPR_TILE[0];
+	
+	assign P_MUX_X_YSH = R88_nQ ? XPOS[8:1] : YSHRINK;		// Might be swapped
+	assign P_MUX_SPRLINE = SPR_CONTINUOUS ? SPR_TILE_A : SPR_TILE_AB;		// Might be swapped
+	
+	assign U51A_OUT = U53_Q & T53_Q;
+	FDM U53(CLK_24M, T53_Q, U53_Q, );
+	FDM T53(CLK_12M, T56A_OUT, T53_Q, );
+	
+	
+	// Y coordinate stuff
+	
+	// O268 O237
+	assign SPR_Y_LOOKAHEAD = {RASTERC[7:1], K260B_OUT} + 1'b1;
+	// P261 P237
+	assign SPR_Y_ADD = SPR_Y_LOOKAHEAD + SPR_Y[7:0];
+	// R216 R218 R238 R241
+	// R281 R283 Q289 Q291
+	assign SPR_TILE_A = SPR_Y_ADD ^ {8{!P235_OUT}};
+	assign P235_OUT = SPR_Y[8] ^ SPR_Y_ADD[8];
+	// Q237 R189
+	assign SPR_Y_SHRINK = SPR_TILE_A + YSHRINK;
+	// Q265 R151
+	assign SPR_TILE_AB = SPR_TILE_A + {YSHRINK[6:0], 1'b0};
+	
+	// R222A
+	assign SPR_CONTINUOUS = &{SPR_SIZE[0], SPR_SIZE[5], SPR_Y_SHRINK[8]};
+	
 	/*lspc_regs REGS(RESET, CLK_24M, M68K_ADDR, M68K_DATA, nLSPOE, nLSPWE, PCK1, AA_COUNT, V_COUNT[7:0],
 					VIDEO_MODE, REG_LSPCMODE,
 					CPU_VRAM_ZONE, CPU_WRITE_REQ, CPU_VRAM_ADDR, CPU_VRAM_WRITE_BUFFER,
@@ -311,11 +424,12 @@ module lspc2_a2(
 					AA_SPEED, AA_DISABLE,
 					IRQ_S1, IRQ_R1, IRQ_S2, IRQ_R2, IRQ_R3);*/
 	
-	lspc_timer TIMER(~LSPC_6M, M68K_DATA, WR_TIMER_HIGH, WR_TIMER_LOW, VMODE, TIMER_STOP, RASTERC);
+	lspc_timer TIMER(~LSPC_6M, M68K_DATA, WR_TIMER_HIGH, WR_TIMER_LOW, VMODE, TIMER_MODE, TIMER_STOP, RASTERC,
+							TIMER_IRQ_EN, D46A_OUT);
 	
 	resetp RSTP(CLK_24MB, RESET, RESETP);
 	
-	irq IRQ(WR_IRQ_ACK, M68K_DATA[2:0], RESET, 1'b0, BNK, LSPC_6M, IPL0, IPL1);
+	irq IRQ(WR_IRQ_ACK, M68K_DATA[2:0], RESET, D46A_OUT, BNK, LSPC_6M, IPL0, IPL1);
 	
 	videosync VS(CLK_24MB, LSPC_1_5M, Q53_CO, RESETP, VMODE, PIXELC, RASTERC, SYNC, BNK, BNKB, CHBL,
 						R15_QD, H287_Q);
@@ -323,15 +437,22 @@ module lspc2_a2(
 	lspc2_clk LSPCCLK(CLK_24M, RESETP, CLK_24MB, LSPC_12M, LSPC_8M, LSPC_6M, LSPC_4M, LSPC_3M, LSPC_1_5M,
 							Q53_CO);
 	
-	slow_cycle SCY();
-	fast_cycle FCY(N93_Q);
+	slow_cycle SCY(CLK_24M, CLK_24MB, LSPC_12M, LSPC_6M, LSPC_3M, RESETP, VRAM_ADDR[14:0], VRAM_WRITE,
+							RASTERC[7:3], PIXEL_HPLUS, ACTIVE_RD,
+							SPR_TILEMAP, SPR_TILE_VFLIP, SPR_TILE_HFLIP, SPR_AA_3, SPR_AA_2, FIX_TILE,
+							FIX_PAL, SPR_TILE, SPR_PAL, VRAM_LOW_READ, Q106_Q, R91_nQ, CLK_CPU_READ_LOW);
 	
-	// This needs L0_ADDR
+	fast_cycle FCY(CLK_24M, LSPC_12M, LSPC_1_5M, RESETP, VRAM_WRITE_REQ, VRAM_ADDR, VRAM_WRITE,
+							VRAM_ADDR_RAW, H287_Q, H287_nQ,
+							PIXELC, RASTERC, P50_CO, N93_Q, K260B_OUT, HSHRINK, PIPE_C, VRAM_HIGH_READ,
+							ACTIVE_RD, R91_nQ);
+	
+	
 	//p_cycle PCY(RESET, CLK_24M, PBUS_S_ADDR, FIX_ATTR_PAL, PBUS_C_ADDR, SPR_TILE_PAL, XPOS,
 	//				L0_ROM_ADDR, nVCS, L0_ROM_DATA, {PBUS_IO, PBUS_OUT});
 	
 	autoanim AA(RASTERC[8], RESETP, AA_SPEED, AA_COUNT);
 	
-	hshrink HSH(, , , HSHRINK_A, HSHRINK_B);
+	hshrink HSH(HSHRINK, U68A_Q, ~R56B_OUT, HSHRINK_A, HSHRINK_B);
 	
 endmodule

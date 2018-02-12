@@ -4,7 +4,7 @@ module LT4(
 	input nG,
 	input [3:0] D,
 	output reg [3:0] P = 4'd0,
-	output reg [3:0] N
+	output [3:0] N
 );
 
 	always @(*)

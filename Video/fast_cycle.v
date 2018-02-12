@@ -2,6 +2,8 @@
 
 module fast_cycle(
 	input CLK_24M,
+	input LSPC_12M,
+	input LSPC_1_5M,
 	input RESETP,
 	input VRAM_WRITE_REQ,
 	input [15:0] VRAM_ADDR,
@@ -12,7 +14,13 @@ module fast_cycle(
 	input [8:0] PIXELC,
 	input [8:0] RASTERC,
 	input P50_CO,
-	output N93_Q
+	output N93_Q,
+	output K260B_OUT,
+	output [3:0] HSHRINK,
+	output [15:0] PIPE_C,
+	output [15:0] VRAM_HIGH_READ,
+	output [7:0] ACTIVE_RD,
+	output R91_nQ
 );
 
 	wire [10:0] C;
@@ -24,7 +32,6 @@ module fast_cycle(
 	wire [3:0] E175_Q;
 	wire [8:0] SPR_Y;
 	wire [7:0] ACTIVE_RD_PRE;
-	wire [7:0] ACTIVE_RD;
 	wire [7:0] YSHRINK;
 	wire [3:0] J127_Q;
 	wire [8:0] ACTIVE_WR_D;
@@ -36,6 +43,12 @@ module fast_cycle(
 	wire [3:0] J151_Q;
 	wire [3:0] I151_Q;
 	wire [3:0] N98_Q;
+	wire [15:0] PIPE_A;
+	wire [15:0] PIPE_B;
+	wire [3:0] O141_Q;
+	wire [3:0] G152_Q;
+	wire [3:0] J87_Q;
+	wire [3:0] H198_Q;
 	
 	// CPU read
 	// L251 L269 L233 K249
@@ -90,7 +103,7 @@ module fast_cycle(
 	FDPCell N93(O98_nQ, F58A_OUT, O98_Q, 1'b1, N93_Q, );
 	assign F58A_OUT = ~VRAM_ADDR_RAW[15] | VRAM_WRITE_REQ;
 	FDM I148(H125A_OUT, F[8], I148_Q, );
-	FDM R103(O109A_OUT, T95A_OUT, R107A_OUT, S109A_OUT, R103_Q, );
+	FDPCell R103(O109A_OUT, T95A_OUT, R107A_OUT, S109A_OUT, R103_Q, );
 	assign T95A_OUT = T162B_OUT & T102_Q[0];
 	assign R107A_OUT = R109_Q | S111_nQ;
 	assign S109A_OUT = S111_Q & S107A_OUT;
@@ -112,6 +125,8 @@ module fast_cycle(
 	C43 H198(O110B_OUT, 4'b0000, 1'b1, 1'b1, 1'b1, ~H198_CO, H198_Q, H198_CO);
 	
 	FS3 N98(T125A_OUT, 4'b0000, R91_nQ, RESETP, N98_Q);
+	
+	FDM R91(LSPC_12M, LSPC_1_5M, R91_Q, R91_nQ);
 	
 	// Address mux
 	// I213 I218 G169A G164 G182A G194A G200 G205A I175A I182A
@@ -170,6 +185,8 @@ module fast_cycle(
 	FDS16bit P165(M95B_1, PIPE_A, PIPE_B);
 	// P155 P141 P104 N141
 	FDS16bit P155(M95B_1, PIPE_B, PIPE_C);
+	
+	assign HSHRINK = PIPE_C[12:9];
 	
 	vram_fast_u VRAMUU(C, F[15:8], 1'b0, 1'b0, nCWE);
 	vram_fast_l VRAMUL(C, F[7:0], 1'b0, 1'b0, nCWE);
