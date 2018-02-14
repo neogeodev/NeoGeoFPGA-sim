@@ -25,7 +25,13 @@ module slow_cycle(
 	output [15:0] VRAM_LOW_READ,
 	input Q106_Q,
 	input R91_nQ,
-	output CLK_CPU_READ_LOW
+	output CLK_CPU_READ_LOW,
+	output T160A_OUT,
+	output T160B_OUT,
+	input H124B_OUT,
+	input I148_Q,
+	output Q174B_OUT,
+	input D208B_OUT
 );
 
 	wire [14:0] B;
@@ -51,7 +57,7 @@ module slow_cycle(
 	
 	// Sprite map read even
 	// D233 D283 A249 C201
-	FDS16bit D233(~P201_QA, E, {D233_Q, D283_Q, SPR_TILE[19:16], SPR_AA_3, SPR_AA_2, SPR_TILE_VFLIP, SPR_TILE_HFLIP});
+	FDS16bit D233(D208B_OUT, E, {D233_Q, D283_Q, SPR_TILE[19:16], SPR_AA_3, SPR_AA_2, SPR_TILE_VFLIP, SPR_TILE_HFLIP});
 	FDSCell C233(~CLK_FIX_TILE, D233_Q, SPR_PAL[7:4]);
 	FDSCell D269(~CLK_FIX_TILE, D283_Q, SPR_PAL[3:0]);
 	
@@ -72,19 +78,21 @@ module slow_cycle(
 	assign B = ~N165_nQ ?
 					~N160_Q ? SPRMAP_ADDR : FIXMAP_ADDR
 					:
-					~N160_Q ? 15'd0 : VRAM_ADDR;
+					~N160_Q ? 15'd0 : VRAM_ADDR;	// VRAM ADDR is good
 	
 	assign FIXMAP_ADDR = {4'b1110, O62_nQ, PIXEL_HPLUS, ~PIXEL_H8, RASTERC[7:3]};
 	assign SPRMAP_ADDR = {H57_Q, ACTIVE_RD, O185_Q, SPR_TILEMAP, K166_Q};
 	
 	FDM O185(P222A_OUT, S182A_OUT, O185_Q);
-	FDM H57(N98_QA, I148_Q, H57_Q, );
+	FDM H57(H124B_OUT, I148_Q, H57_Q, );
 	FDM K166(CLK_24M, P210A_OUT, K166_Q, );
-	FDM N165(CLK_24M, ~Q162_Q[3], , N165_nQ);
+	FDM N165(CLK_24M, Q174B_OUT, , N165_nQ);
 	FDM N160(CLK_24M, N169A_OUT, N160_Q, );
 	
-	assign N169A_OUT = ~|{~Q162_Q[3], ~CLK_CPU_READ_LOW};
+	assign N169A_OUT = ~|{Q174B_OUT, ~CLK_CPU_READ_LOW};
 	FS1 Q162(LSPC_12M, R91_nQ, Q162_Q);
+	assign Q174B_OUT = ~Q162_Q[3];
+	
 	assign CLK_CPU_READ_LOW = Q162_Q[1];
 	assign T160B_OUT = ~|{T75_Q, ~Q162_Q[0]};
 	assign T160A_OUT = ~|{Q162_Q[0], T75_Q};

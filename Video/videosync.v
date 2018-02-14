@@ -13,7 +13,9 @@ module videosync(
 	output BNKB,
 	output CHBL,
 	output R15_QD,
-	output H287_Q
+	output H287_Q,
+	output H287_nQ,
+	output P50_CO
 );
 	
 	wire [3:0] S122_REG;
