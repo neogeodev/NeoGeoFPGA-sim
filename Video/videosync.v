@@ -1,3 +1,19 @@
+// NeoGeo logic definition (simulation only)
+// Copyright (C) 2018 Sean Gonsalves
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
 `timescale 1ns/1ns
 
 module videosync(
@@ -13,8 +29,8 @@ module videosync(
 	output BNKB,
 	output CHBL,
 	output R15_QD,
-	output H287_Q,
-	output H287_nQ,
+	output FLIP,
+	output nFLIP,
 	output P50_CO
 );
 	
@@ -25,9 +41,8 @@ module videosync(
 	assign R15_QD = R15_REG[3];
 	
 	FDPCell H287(J22_OUT, H287_nQ, 1'b1, RESETP, H287_Q, H287_nQ);
-	
-	assign I237A_OUT = ~H287_nQ;
-	assign H293A_OUT = ~H287_nQ;
+	assign nFLIP = ~H287_Q;
+	assign FLIP = ~H287_nQ;
 	
 	// Pixel counter
 	
@@ -50,17 +65,17 @@ module videosync(
 	assign J22_OUT = P15_QC ^ 1'b0;
 	assign H284A_OUT = I269_CO | 1'b0;
 	
-	C43 I269(J22_OUT, {~VMODE, 3'b100}, ~J268_CO, H293A_OUT, H293A_OUT, RESETP, RASTERC[4:1], I269_CO);
+	C43 I269(J22_OUT, {~VMODE, 3'b100}, ~J268_CO, FLIP, FLIP, RESETP, RASTERC[4:1], I269_CO);
 	C43 J268(J22_OUT, {3'b011, ~VMODE}, ~J268_CO, H284A_OUT, H284A_OUT, RESETP, RASTERC[8:5], J268_CO);
-	assign RASTERC[0] = I237A_OUT;
+	assign RASTERC[0] = FLIP;
 	
 	
 	
-	// H277B H269B H275A 
-	assign MATCH_PAL = ~|{RASTERC[4:3]} | RASTERC[5] | RASTERC[8];
+	// H277B H269B H275A
+	assign MATCH_PAL = ~&{RASTERC[4:3]} | RASTERC[5] | RASTERC[8];
 	
 	FDM H272(RASTERC[2], MATCH_PAL, H272_Q, );
-	FDM I238(I237A_OUT, H272_Q, BLANK_PAL, );
+	FDM I238(FLIP, H272_Q, BLANK_PAL, );
 	
 	// J259A
 	assign MATCH_NTSC = ~&{RASTERC[7:5]};
