@@ -13,8 +13,11 @@ module vram_fast_u(
 	reg [7:0] RAMDATA[0:2047];
 	wire [7:0] DATA_OUT;
 	
+	integer k;
 	initial begin
-		$readmemh("data_fvram_u.txt", RAMDATA);
+		//$readmemh("data_fvram_u.txt", RAMDATA);
+		for (k = 0; k < 2047; k = k + 1)
+			RAMDATA[k] = 0;
 	end
 
 	assign #35 DATA_OUT = RAMDATA[ADDR];

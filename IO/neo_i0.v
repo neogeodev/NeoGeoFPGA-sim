@@ -20,7 +20,7 @@ module neo_i0(
 	// OR, AND gate and sync inverter are kept in neogeo.v
 	input nRESET,
 	input nCOUNTOUT,
-	input [2:0] M68K_ADDR,
+	input [3:1] M68K_ADDR,
 	input M68K_ADDR_7,
 	output reg COUNTER1,
 	output reg COUNTER2,
@@ -52,27 +52,27 @@ module neo_i0(
 			if (!nCOUNTOUT)
 			begin
 				// DEBUG
-				if ({M68K_ADDR[7], M68K_ADDR[2:1]} == 3'b000)
+				if ({M68K_ADDR_7, M68K_ADDR[3:1]} == 4'b0000)
 					$display("COIN COUNTER 1 RESET");
-				else if ({M68K_ADDR[7], M68K_ADDR[2:1]} == 3'b001)
+				else if ({M68K_ADDR_7, M68K_ADDR[3:1]} == 4'b0001)
 					$display("COIN COUNTER 2 RESET");
-				else if ({M68K_ADDR[7], M68K_ADDR[2:1]} == 3'b010)
+				else if ({M68K_ADDR_7, M68K_ADDR[3:1]} == 4'b0010)
 					$display("COIN LOCKOUT 1 RESET");
-				else if ({M68K_ADDR[7], M68K_ADDR[2:1]} == 3'b011)
+				else if ({M68K_ADDR_7, M68K_ADDR[3:1]} == 4'b0011)
 					$display("COIN LOCKOUT 2 RESET");
-				else if ({M68K_ADDR[7], M68K_ADDR[2:1]} == 3'b100)
+				else if ({M68K_ADDR_7, M68K_ADDR[3:1]} == 4'b1000)
 					$display("COIN COUNTER 1 SET");
-				else if ({M68K_ADDR[7], M68K_ADDR[2:1]} == 3'b101)
+				else if ({M68K_ADDR_7, M68K_ADDR[3:1]} == 4'b1001)
 					$display("COIN COUNTER 2 SET");
-				else if ({M68K_ADDR[7], M68K_ADDR[2:1]} == 3'b110)
+				else if ({M68K_ADDR_7, M68K_ADDR[3:1]} == 4'b1010)
 					$display("COIN LOCKOUT 1 SET");
-				else if ({M68K_ADDR[7], M68K_ADDR[2:1]} == 3'b111)
+				else if ({M68K_ADDR_7, M68K_ADDR[3:1]} == 4'b1011)
 					$display("COIN LOCKOUT 2 SET");
 				
-				if (M68K_ADDR[2:1] == 2'b00) COUNTER1 <= M68K_ADDR_7;
-				if (M68K_ADDR[2:1] == 2'b01) COUNTER2 <= M68K_ADDR_7;
-				if (M68K_ADDR[2:1] == 2'b10) LOCKOUT1 <= M68K_ADDR_7;
-				if (M68K_ADDR[2:1] == 2'b11) LOCKOUT2 <= M68K_ADDR_7;
+				if (M68K_ADDR[3:1] == 3'b000) COUNTER1 <= M68K_ADDR_7;
+				if (M68K_ADDR[3:1] == 3'b001) COUNTER2 <= M68K_ADDR_7;
+				if (M68K_ADDR[3:1] == 3'b010) LOCKOUT1 <= M68K_ADDR_7;
+				if (M68K_ADDR[3:1] == 3'b011) LOCKOUT2 <= M68K_ADDR_7;
 			end
 		end
 	end

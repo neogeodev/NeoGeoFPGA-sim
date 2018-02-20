@@ -8,7 +8,7 @@ module C43(
 	output CO
 );
 
-	always @(posedge CK)
+	always @(posedge CK or posedge ~nCL)
 	begin
 		if (!nL)
 			Q <= D;			// Load

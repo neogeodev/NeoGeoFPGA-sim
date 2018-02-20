@@ -81,7 +81,7 @@ module fast_cycle(
 	wire [3:0] N98_Q;
 	
 	// To check/fix:
-	assign N98_QA = N98_Q[0];
+	assign N98_QA = N98_Q[0];	// Might be good
 	assign N98_QB = N98_Q[1];
 	assign N98_QC = N98_Q[2];
 	assign N98_QD = N98_Q[3];
@@ -136,8 +136,8 @@ module fast_cycle(
 	assign T146A_OUT = ~|{T129A_nQ, T148_Q};
 	// O103A
 	assign VRAM_HIGH_ADDR_SB = ~&{WR_ACTIVE, O98_Q};
-	FDPCell O98(T125A_OUT, N98_QD, 1'b1, RESETP, O98_Q, CLK_CPU_READ_HIGH);
-	FDPCell N93(N98_QD, F58A_OUT, CLK_CPU_READ_HIGH, 1'b1, nCPU_WR_HIGH, );
+	FDPCell O98(T125A_OUT, N98_QC, 1'b1, RESETP, O98_Q, CLK_CPU_READ_HIGH);
+	FDPCell N93(N98_QC, F58A_OUT, CLK_CPU_READ_HIGH, 1'b1, nCPU_WR_HIGH, );
 	assign F58A_OUT = ~VRAM_ADDR_RAW[15] | VRAM_WRITE_REQ;
 	FDM I148(H125A_OUT, F[8], ACTIVE_RD_PRE8, );
 	assign H125A_OUT = CLK_ACTIVE_RD;
@@ -184,7 +184,7 @@ module fast_cycle(
 	assign H222A_OUT = H198_CO | 1'b0;
 	
 	FS3 N98(T125A_OUT, 4'b0000, R91_nQ, RESETP, N98_Q);
-	assign CLK_ACTIVE_RD = N98_QA;
+	assign CLK_ACTIVE_RD = ~K131B_OUT;
 	
 	FDM R91(LSPC_12M, LSPC_1_5M, R91_Q, R91_nQ);
 	
@@ -204,25 +204,27 @@ module fast_cycle(
 	// L110B_OUT  A
 	// ~VRAM_HIGH_ADDR_SB B
 	// M95B_OUT   C
+	// ABC:
 	assign C = 	L110B_OUT ?
 						~VRAM_HIGH_ADDR_SB ?
-							M95B_OUT ? D_BOT : B_BOT		// !A !B C - !A !B !C
+							M95B_OUT ? C_TOP : A_TOP		// 111 - 110
 						:
-							M95B_OUT ? A_BOT : C_BOT		// !A B C - !A B !C
+							M95B_OUT ? B_TOP : D_TOP		// 101 - 100
 					:
 						~VRAM_HIGH_ADDR_SB ?
-							M95B_OUT ? D_TOP : B_TOP		// A !B C - A !B !C
+							M95B_OUT ? C_BOT : A_BOT		// 011 - 010
 						:
-							M95B_OUT ? A_TOP : C_TOP;		// A B C - A B !C
+							M95B_OUT ? B_BOT : D_BOT;		// 001 - 000
 
 	
-	assign M95B_OUT = ~|{N98_QD, O98_Q};
+	assign K131B_OUT = ~N98_QA;
+	assign M95B_OUT = ~|{N98_QC, O98_Q};
 	assign L110B_OUT = ~|{L110A_OUT, O98_Q};
-	assign L110A_OUT = ~|{~N98_QA, N98_QC};
+	assign L110A_OUT = ~|{K131B_OUT, N98_QC};
 	assign I237A_OUT = FLIP;
 	assign K260B_OUT = FLIP;
 	assign H293B_OUT = nFLIP;
-	assign J36_OUT = N98_QA ^ N98_QC;
+	assign J36_OUT = N98_QC ^ N98_QD;
 	assign O55B_OUT = ~PIXELC[6];
 	assign P39A_OUT = ~PIXELC[7];
 	
@@ -237,7 +239,7 @@ module fast_cycle(
 	// Active list stuff
 	C43 H127(PARSE_INDEX_INC_CLK, 4'b0000, 1'b1, 1'b1, 1'b1, nNEW_LINE, PARSE_INDEX[3:0], H127_CO);
 	C43 I121(PARSE_INDEX_INC_CLK, 4'b0000, 1'b1, H125B_OUT, 1'b1, nNEW_LINE, PARSE_INDEX[7:4], I121_CO);
-	C43 J127(PARSE_INDEX_INC_CLK, 4'b0000, 1'b1, H125B_OUT, I121_CO, nNEW_LINE, J127_Q);
+	C43 J127(PARSE_INDEX_INC_CLK, 4'b0000, 1'b1, H125B_OUT, I121_CO, nNEW_LINE, J127_Q, );
 	assign PARSE_INDEX[8] = J127_Q[0];
 	
 	// Used for test mode
@@ -262,11 +264,11 @@ module fast_cycle(
 	
 	// Pipe for x position and h-shrink
 	// O159 P131 O87 N131
-	FDS16bit O159(N98_QD, {2'b00, SPR_CHAIN, O141_Q, F[15:7]}, PIPE_A);
+	FDS16bit O159(N98_QC, {2'b00, SPR_CHAIN, O141_Q, F[15:7]}, PIPE_A);
 	// P165 P121 P87 N121
-	FDS16bit P165(N98_QD, PIPE_A, PIPE_B);
+	FDS16bit P165(N98_QC, PIPE_A, PIPE_B);
 	// P155 P141 P104 N141
-	FDS16bit P155(N98_QD, PIPE_B, PIPE_C);
+	FDS16bit P155(N98_QC, PIPE_B, PIPE_C);
 	
 	assign HSHRINK = PIPE_C[12:9];
 	
