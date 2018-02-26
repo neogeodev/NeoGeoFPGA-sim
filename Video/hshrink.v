@@ -36,6 +36,7 @@ module hshrink(
 	
 	assign nSHRINK[3:0] = ~SHRINK[3:0];
 	
+	// Lookup
 	assign U193_P[0] = ~&{nSHRINK[3:2]};
 	assign U193_P[1] = ~&{nSHRINK[3:1]};
 	assign U193_P[2] = ~&{nSHRINK[3], ~&{SHRINK[2:1]}};
@@ -56,6 +57,7 @@ module hshrink(
 	assign U226_P[2] = ~|{nSHRINK[3], ~|{SHRINK[2:0]}};
 	assign U226_P[3] = ~|{~&{SHRINK[3:2]}, ~|{SHRINK[1:0]}};
 
+	// Shift registers
 	FS2 U193(CK, U193_P, 1'b1, ~L, U193_REG);
 	FS2 T196(CK, T196_P, U193_REG[3], ~L, T196_REG);
 	FS2 U243(CK, U243_P, 1'b1, ~L, U243_REG);

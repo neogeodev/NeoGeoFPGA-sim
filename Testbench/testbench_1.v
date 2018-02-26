@@ -147,7 +147,7 @@ module testbench_1();
 		// These addresses are only valid for the patched SP-S2.SP1 system ROM !
 		if ({M68K_ADDR, 1'b0} == 24'hC16ADA)
 		begin
-			if (NG.M68KCPU.REG_D6 == 15'h0000)
+/*			if (NG.M68KCPU.REG_D6 == 15'h0000)
 				$display("0 WORK RAM ERROR !");
 			else if (NG.M68KCPU.REG_D6 == 15'h0001)
 				$display("1 BACKUP RAM ERROR !");
@@ -164,7 +164,7 @@ module testbench_1();
 			else if (NG.M68KCPU.REG_D6 == 15'h0007)
 				$display("7 MEMORY CARD ERROR !");
 			else if (NG.M68KCPU.REG_D6 == 15'h0008)
-				$display("8 Z80 ERROR !");
+				$display("8 Z80 ERROR !");*/
 			$stop;
 		end
 		

@@ -15,9 +15,10 @@ module vram_fast_l(
 	
 	integer k;
 	initial begin
-		//$readmemh("data_fvram_l.txt", RAMDATA);
+		#200
 		for (k = 0; k < 2047; k = k + 1)
 			RAMDATA[k] = 0;
+		$readmemh("data_fvram_l.txt", RAMDATA);
 	end
 
 	assign #35 DATA_OUT = RAMDATA[ADDR];

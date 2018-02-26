@@ -27,6 +27,8 @@ module slow_cycle(
 	input RESETP,
 	input [14:0] VRAM_ADDR,
 	input [15:0] VRAM_WRITE,
+	input PIXEL_H8,
+	input PIXEL_H256,
 	input [7:3] RASTERC,
 	input [3:0] PIXEL_HPLUS,
 	input [7:0] ACTIVE_RD,
@@ -54,6 +56,8 @@ module slow_cycle(
 	wire [14:0] B;
 	wire [15:0] E;
 	wire [15:0] FIX_MAP_READ;
+	wire [14:0] FIXMAP_ADDR;
+	wire [14:0] SPRMAP_ADDR;
 	wire [3:0] D233_Q;
 	wire [3:0] D283_Q;
 	wire [3:0] Q162_Q;
@@ -116,7 +120,7 @@ module slow_cycle(
 	assign T64A_OUT = ~&{LSPC_12M, LSPC_6M, LSPC_3M};
 	FDM T75(CLK_24M, T64A_OUT, T75_Q, );
 	
-	FDPCell O62(PIXEL_H8, P49A_OUT, 1'b1, RESETP, O62_Q, O62_nQ);
+	FDPCell O62(PIXEL_H8, PIXEL_H256, 1'b1, RESETP, O62_Q, O62_nQ);
 	
 	
 	

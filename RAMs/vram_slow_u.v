@@ -13,8 +13,11 @@ module vram_slow_u(
 	reg [7:0] RAMDATA[0:32767];
 	wire [7:0] DATA_OUT;
 	
+	//integer k;
 	initial begin
-		$readmemh("data_svram_u.txt", RAMDATA);
+		//$readmemh("data_svram_u.txt", RAMDATA);
+		//for (k = 0; k < 32767; k = k + 1)
+		//	RAMDATA[k] = 0;
 	end
 
 	assign #120 DATA_OUT = RAMDATA[ADDR];

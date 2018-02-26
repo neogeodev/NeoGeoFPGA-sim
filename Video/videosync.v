@@ -18,6 +18,7 @@
 
 module videosync(
 	input CLK_24MB,
+	input LSPC_3M,
 	input LSPC_1_5M,
 	input Q53_CO,
 	input RESETP,
@@ -49,7 +50,7 @@ module videosync(
 	// Used for test mode
 	assign P40A_OUT = P50_CO | 1'b0;
 	
-	assign PIXELC = {P15_QC, P15_QB, P15_QA, P50_QD, P50_QC, P50_QB, P50_QA, 2'b00};
+	assign PIXELC = {P15_QC, P15_QB, P15_QA, P50_QD, P50_QC, P50_QB, P50_QA, LSPC_1_5M, LSPC_3M};
 	
 	C43 P50(CLK_24MB, 4'b1110, RESETP, Q53_CO, 1'b1, 1'b1, {P50_QD, P50_QC, P50_QB, P50_QA}, P50_CO);
 	C43 P15(CLK_24MB, {3'b101, ~RESETP}, P13B_OUT, Q53_CO, P40A_OUT, 1'b1, {P15_QD, P15_QC, P15_QB, P15_QA}, P15_CO);

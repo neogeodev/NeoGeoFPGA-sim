@@ -44,7 +44,11 @@ module fast_cycle(
 	input U129A_Q,
 	input T125A_OUT,
 	output CLK_ACTIVE_RD,
-	output ACTIVE_RD_PRE8
+	output ACTIVE_RD_PRE8,
+	output [8:0] SPR_Y,
+	output [7:0] YSHRINK,
+	output SPR_SIZE0,
+	output SPR_SIZE5
 );
 
 	wire [10:0] C;
@@ -54,9 +58,7 @@ module fast_cycle(
 	wire [15:0] F_OUT_MUX;
 	wire [3:0] J102_Q;
 	wire [3:0] E175_Q;
-	wire [8:0] SPR_Y;
 	wire [7:0] ACTIVE_RD_PRE;
-	wire [7:0] YSHRINK;
 	wire [3:0] J127_Q;
 	wire [8:0] PARSE_INDEX;
 	wire [3:0] T102_Q;
@@ -81,16 +83,16 @@ module fast_cycle(
 	wire [3:0] N98_Q;
 	
 	// To check/fix:
-	assign N98_QA = N98_Q[0];	// Might be good
+	assign N98_QA = N98_Q[0];
 	assign N98_QB = N98_Q[1];
-	assign N98_QC = N98_Q[2];
-	assign N98_QD = N98_Q[3];
+	assign N98_QC = N98_Q[3];	// Was 2 \__ ok
+	assign N98_QD = N98_Q[2];	// Was 3 /
 	
 	// CPU read
 	// L251 L269 L233 K249
 	FDS16bit L251(~CLK_CPU_READ_HIGH, F, VRAM_HIGH_READ);
 
-	// Y-parsing read
+	// Y parsing read
 	// N214 M214 M178 L190
 	FDS16bit N214(O109A_OUT, F, {PARSE_Y, PARSE_CHAIN, PARSE_SIZE});
 
@@ -118,22 +120,24 @@ module fast_cycle(
 	// E207B E207A E209B E209A
 	assign F_OUT_MUX = CLK_CPU_READ_HIGH ? VRAM_WRITE : {7'b0000000, J194_Q, J102_Q, E175_Q};	// Might be swapped 
 	
-	FDRCell E175(O109A_OUT, G152_Q, Q110A_OUT, E175_Q);
-	FDRCell J102(O109A_OUT, J87_Q, Q110A_OUT, J102_Q);
+	assign F = CWE ? 16'bzzzzzzzzzzzzzzzz : F_OUT_MUX;
+	
+	
+	assign O112B_OUT = O109A_OUT;		// 2x inverter
 	
 	FDSCell G152(PARSE_INDEX_INC_CLK, PARSE_INDEX[3:0], G152_Q);
 	FDSCell J87(PARSE_INDEX_INC_CLK, PARSE_INDEX[7:4], J87_Q);
 	
-	FDPCell J194(O112B_OUT, J231_Q, 1'b1, Q110A_OUT, J194_Q, );
-	assign O112B_OUT = O109A_OUT;		// 2x inverter
+	FDRCell E175(O109A_OUT, G152_Q, nPARSING_DONE, E175_Q);
+	FDRCell J102(O109A_OUT, J87_Q, nPARSING_DONE, J102_Q);
 	FDM J231(PARSE_INDEX_INC_CLK, PARSE_INDEX[8], J231_Q, );
+	FDPCell J194(O112B_OUT, J231_Q, 1'b1, nPARSING_DONE, J194_Q, );
 	
-	assign F = CWE ? 16'bzzzzzzzzzzzzzzzz : F_OUT_MUX;
 	
 	// CWE output
-	assign CWE = O107A_OUT | T146A_OUT;		// OK
 	assign O107A_OUT = VRAM_HIGH_ADDR_SB & nCPU_WR_HIGH;	// OK
 	assign T146A_OUT = ~|{T129A_nQ, T148_Q};
+	assign CWE = O107A_OUT | T146A_OUT;		// OK
 	// O103A
 	assign VRAM_HIGH_ADDR_SB = ~&{WR_ACTIVE, O98_Q};
 	FDPCell O98(T125A_OUT, N98_QC, 1'b1, RESETP, O98_Q, CLK_CPU_READ_HIGH);
@@ -143,16 +147,22 @@ module fast_cycle(
 	assign H125A_OUT = CLK_ACTIVE_RD;
 	
 	
-	assign T95A_OUT = IS_ACTIVE & T102_Q[0];
-	FDPCell R103(O109A_OUT, T95A_OUT, R107A_OUT, S109A_OUT, WR_ACTIVE, );
-	assign R107A_OUT = R109_Q | S111_nQ;
-	assign S109A_OUT = S111_Q & nNEW_LINE;
-	FDPCell R109(O109A_OUT, R113A_OUT, nNEW_LINE, 1'b1, R109_Q, );
-	assign Q110A_OUT = R109_Q;	// 2x inverter
-	FDPCell S111(O109A_OUT, S109B_OUT, nNEW_LINE, 1'b1, S111_Q, S111_nQ);
-	assign R113A_OUT = I145_OUT & R109_Q;
+	// Parsing end detection
 	assign I145_OUT = ~&{PARSE_INDEX[6:1], PARSE_INDEX[8]};
+	assign R113A_OUT = I145_OUT & nPARSING_DONE;
+	FDPCell R109(O109A_OUT, R113A_OUT, nNEW_LINE, 1'b1, nPARSING_DONE, );
+	
+	// Active list full detection
 	assign S109B_OUT = S111_Q & nACTIVE_FULL;
+	FDPCell S111(O109A_OUT, S109B_OUT, nNEW_LINE, 1'b1, S111_Q, S111_nQ);
+	assign S109A_OUT = S111_Q & nNEW_LINE;
+	
+	// Write to fast VRAM enable
+	assign T95A_OUT = IS_ACTIVE & T102_Q[0];
+	assign R107A_OUT = nPARSING_DONE | S111_nQ;
+	FDPCell R103(O109A_OUT, T95A_OUT, R107A_OUT, S109A_OUT, WR_ACTIVE, );
+	
+	
 	FD2 T129A(CLK_24M, T126B_OUT, , T129A_nQ);
 	assign T126B_OUT = ~&{T66_Q, T140_Q};
 	FDM T66(LSPC_12M, T58A_OUT, T66_Q, );
@@ -175,7 +185,8 @@ module fast_cycle(
 	assign T90A_OUT = ~&{T94_OUT, T92_OUT};
 	assign T94_OUT = ~&{T102_Q[1:0], O102B_OUT};
 	assign T92_OUT = ~&{T102_Q[2], ~T102_Q[1], T102_Q[0], VRAM_HIGH_ADDR_SB};
-	assign nACTIVE_FULL = ~|{ACTIVE_WR_ADDR[6:5]};
+	// J100B
+	assign nACTIVE_FULL = ~&{ACTIVE_WR_ADDR[6:5]};
 	C43 H198(O110B_OUT, 4'b0000, 1'b1, 1'b1, 1'b1, nNEW_LINE, ACTIVE_WR_ADDR[3:0], H198_CO);
 	C43 I189(O110B_OUT, 4'b0000, 1'b1, 1'b1, H222A_OUT, nNEW_LINE, ACTIVE_WR_ADDR[7:4], );
 	assign O110B_OUT = O109A_OUT | VRAM_HIGH_ADDR_SB;
@@ -197,14 +208,25 @@ module fast_cycle(
 	assign D_TOP = {N98_QD, J36_OUT, ACTIVE_RD_PRE8, ACTIVE_RD_PRE};
 	
 	assign A_BOT = {3'b110, I237A_OUT, ACTIVE_WR_ADDR[6:0]};
-	assign B_BOT = VRAM_ADDR;
-	assign C_BOT = VRAM_ADDR;
+	assign B_BOT = VRAM_ADDR[10:0];
+	assign C_BOT = VRAM_ADDR[10:0];
 	assign D_BOT = {2'b01, PARSE_INDEX};
 	
 	// L110B_OUT  A
 	// ~VRAM_HIGH_ADDR_SB B
 	// M95B_OUT   C
 	// ABC:
+	assign C = 	M95B_OUT ?
+						~VRAM_HIGH_ADDR_SB ?
+							L110B_OUT ? C_TOP : A_TOP		// 111 - 110
+						:
+							L110B_OUT ? B_TOP : D_TOP		// 101 - 100
+					:
+						~VRAM_HIGH_ADDR_SB ?
+							L110B_OUT ? C_BOT : A_BOT		// 011 - 010
+						:
+							L110B_OUT ? B_BOT : D_BOT;		// 001 - 000
+/*
 	assign C = 	L110B_OUT ?
 						~VRAM_HIGH_ADDR_SB ?
 							M95B_OUT ? C_TOP : A_TOP		// 111 - 110
@@ -215,7 +237,7 @@ module fast_cycle(
 							M95B_OUT ? C_BOT : A_BOT		// 011 - 010
 						:
 							M95B_OUT ? B_BOT : D_BOT;		// 001 - 000
-
+							*/
 	
 	assign K131B_OUT = ~N98_QA;
 	assign M95B_OUT = ~|{N98_QC, O98_Q};
@@ -224,31 +246,27 @@ module fast_cycle(
 	assign I237A_OUT = FLIP;
 	assign K260B_OUT = FLIP;
 	assign H293B_OUT = nFLIP;
-	assign J36_OUT = N98_QC ^ N98_QD;
+	assign J36_OUT = N98_QB ^ N98_QD;
+	
+	// Active list read counter
 	assign O55B_OUT = ~PIXELC[6];
-	assign P39A_OUT = ~PIXELC[7];
-	
-	C43 J151(CLK_ACTIVE_RD, 4'b0000, O55A_OUT, 1'b1, J176A_OUT, 1'b1, ACTIVE_RD_ADDR[7:4], );
-	C43 I151(CLK_ACTIVE_RD, 4'b0000, O55A_OUT, 1'b1, 1'b1, 1'b1, ACTIVE_RD_ADDR[3:0], I151_CO);
+	assign P39A_OUT = ~PIXELC[8];
 	assign O55A_OUT = ~&{O55B_OUT, P50_CO, P39A_OUT};
+	C43 I151(CLK_ACTIVE_RD, 4'b0000, O55A_OUT, 1'b1, 1'b1, 1'b1, ACTIVE_RD_ADDR[3:0], I151_CO);
+	assign J176A_OUT = I151_CO | 1'b0;	// Used for test mode
+	C43 J151(CLK_ACTIVE_RD, 4'b0000, O55A_OUT, 1'b1, J176A_OUT, 1'b1, ACTIVE_RD_ADDR[7:4], );
 	
-	// Used for test mode
-	assign J176A_OUT = I151_CO | 1'b0;
 	
-	
-	// Active list stuff
+	// Parsing counter
+	assign PARSE_INDEX_INC_CLK = O102B_OUT | O109A_OUT;	// O105B
 	C43 H127(PARSE_INDEX_INC_CLK, 4'b0000, 1'b1, 1'b1, 1'b1, nNEW_LINE, PARSE_INDEX[3:0], H127_CO);
+	assign H125B_OUT = H127_CO | 1'b0;	// Used for test mode
 	C43 I121(PARSE_INDEX_INC_CLK, 4'b0000, 1'b1, H125B_OUT, 1'b1, nNEW_LINE, PARSE_INDEX[7:4], I121_CO);
 	C43 J127(PARSE_INDEX_INC_CLK, 4'b0000, 1'b1, H125B_OUT, I121_CO, nNEW_LINE, J127_Q, );
 	assign PARSE_INDEX[8] = J127_Q[0];
 	
-	// Used for test mode
-	assign H125B_OUT = H127_CO | 1'b0;
-	
-	// O105B
-	assign PARSE_INDEX_INC_CLK = O102B_OUT | O109A_OUT;
-	assign O102B_OUT = WR_ACTIVE & O98_Q;
 	assign O109A_OUT = T125A_OUT | CLK_CPU_READ_HIGH;
+	assign O102B_OUT = WR_ACTIVE & O98_Q;
 	
 	
 	// Y parse matching
@@ -269,8 +287,8 @@ module fast_cycle(
 	FDS16bit P165(N98_QC, PIPE_A, PIPE_B);
 	// P155 P141 P104 N141
 	FDS16bit P155(N98_QC, PIPE_B, PIPE_C);
-	
 	assign HSHRINK = PIPE_C[12:9];
+	
 	
 	vram_fast_u VRAMUU(C, F[15:8], 1'b0, 1'b0, CWE);
 	vram_fast_l VRAMUL(C, F[7:0], 1'b0, 1'b0, CWE);

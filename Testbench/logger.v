@@ -47,7 +47,7 @@ module logger(
 		f_video = $fopen("log_video.txt", "w");
 		f_cab_io = $fopen("log_cab_io.txt", "w");
 		
-		#40000000	// Run for 40ms
+		#60000000	// Run for 60ms
 		
 		// Save backup RAM contents
 		f_ram = $fopen("raminit_sram_l.txt", "w");
@@ -86,17 +86,20 @@ module logger(
 	
 	always @(posedge CLK_6MB)
 	begin
-		if (neogeo.LSPC2.VS.PIXELC < 383)
-		begin
+		//if (neogeo.LSPC2.VS.PIXELC < 9'h1FF)
+		//begin
 			// Write each pixel
 			// 0RRRRRRR 0GGGGGGG 0BBBBBBB
 			$fwrite(f_video, "%06X ", {1'b0, LOG_VIDEO_R, 1'b0, LOG_VIDEO_G, 1'b0, LOG_VIDEO_B});
-		end
-		else
+		//end
+		//else
+		//begin
+		if (neogeo.LSPC2.VS.PIXELC == 9'h1FF)
 		begin
 			$fwrite(f_video, "YYYYYY ");
 			// $display("Line %d rendered", sim_line);
-			if (sim_line == 263)
+			//if (sim_line == 263)
+			if (neogeo.LSPC2.VS.RASTERC == 9'd263)
 			begin
 				sim_line = 0;
 				$display("Frame %d rendered", sim_frame);
