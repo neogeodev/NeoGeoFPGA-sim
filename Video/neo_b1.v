@@ -96,10 +96,9 @@ module neo_b1(
 	wire [1:0] MUX_BA;
 	wire [11:0] PA_VIDEO;
 	
-	wire HFLIP;			// TODO
 	wire nPA_OE;		// TODO
 	reg PAL_SWITCH;
-	reg [7:0] X_LOAD_VALUE;
+	wire [7:0] X_LOAD_VALUE;
 	
 	
 	// Note: nRESET is sync'd to frame start
@@ -134,6 +133,7 @@ module neo_b1(
 			PAL_SWITCH <= 1'b1;	// Fix palette comes next
 	end
 
+	/*
 	// Palettes latch from PBUS and delays
 	always @(posedge CLK_1MB)
 	begin
@@ -148,6 +148,19 @@ module neo_b1(
 			SPR_PAL_REG_B <= SPR_PAL_REG_A;
 		end
 	end
+	*/
+	
+	always @(posedge PCK1)
+	begin
+		FIX_PAL_REG_A <= PBUS[19:16];
+		FIX_PAL_REG_B <= FIX_PAL_REG_A;
+	end
+	
+	always @(posedge PCK2)
+	begin
+		SPR_PAL_REG_A <= PBUS[23:16];
+		SPR_PAL_REG_B <= SPR_PAL_REG_A;
+	end
 	
 	// Fix data delay
 	always @(posedge CLK_1MB)
@@ -158,11 +171,12 @@ module neo_b1(
 	end
 	
 	// G3 (374): nOE seems used !
-	always @(posedge S1H1)	// nLATCH_X on Alpha68k
+	/*always @(posedge S1H1)	// nLATCH_X on Alpha68k
 	begin
 		if (PAL_SWITCH)
 			X_LOAD_VALUE <= PBUS[15:8];
-	end
+	end*/
+	assign X_LOAD_VALUE = PBUS[15:8];
 	
 	// G5:C
 	assign PLUS_ONE = ~1'b1;	// TODO: Wrong !
@@ -180,10 +194,10 @@ module neo_b1(
 	assign DIR_OA_EB = 1;	//~(BFLIP & 1);		// TODO: Probably whole display h-flip
 	
 	// LB address counters:
-	hc669_dual P13P12(CK[3], nLOAD_X_B, DIR_OB_EA, {P11_OUT, P10_OUT}, LB_EVEN_B_ADDR);
+	hc669_dual L12M13(CK[0], nLOAD_X_A, DIR_OA_EB, X_LOAD_VALUE, LB_ODD_A_ADDR);	// ?
 	hc669_dual N13N12(CK[1], nLOAD_X_A, DIR_OA_EB, {N11_OUT, N10_OUT}, LB_EVEN_A_ADDR);
 	hc669_dual K12L13(CK[2], nLOAD_X_B, DIR_OB_EA, X_LOAD_VALUE, LB_ODD_B_ADDR);	// ?
-	hc669_dual L12M13(CK[0], nLOAD_X_A, DIR_OA_EB, X_LOAD_VALUE, LB_ODD_A_ADDR);	// ?
+	hc669_dual P13P12(CK[3], nLOAD_X_B, DIR_OB_EA, {P11_OUT, P10_OUT}, LB_EVEN_B_ADDR);
 	
 	// Maybe SPR_PAL_REG_A is enough delay ?
 	assign LB_EVEN_DATA_IN = {SPR_PAL_REG_A, GAD[2], GAD[3], GAD[0], GAD[1]};
@@ -196,8 +210,8 @@ module neo_b1(
 	assign LB_ODD_B_DATA_IN = BFLIP ? LB_ODD_DATA_IN : 12'b111111111111;
 	
 	linebuffer LB1(nWE_EVEN_A, LB_EVEN_A_ADDR, LB_EVEN_DATA_IN, LB_EVEN_A_DATA_OUT);
-	linebuffer LB2(nWE_EVEN_B, LB_EVEN_B_ADDR, LB_EVEN_DATA_IN, LB_EVEN_B_DATA_OUT);
-	linebuffer LB3(nWE_ODD_A, LB_ODD_A_ADDR, LB_ODD_DATA_IN, LB_ODD_A_DATA_OUT);
+	linebuffer LB2(nWE_ODD_A, LB_ODD_A_ADDR, LB_ODD_DATA_IN, LB_ODD_A_DATA_OUT);
+	linebuffer LB3(nWE_EVEN_B, LB_EVEN_B_ADDR, LB_EVEN_DATA_IN, LB_EVEN_B_DATA_OUT);
 	linebuffer LB4(nWE_ODD_B, LB_ODD_B_ADDR, LB_ODD_DATA_IN, LB_ODD_B_DATA_OUT);
 	
 	// N4 and N7 ORs
@@ -208,14 +222,14 @@ module neo_b1(
 	
 	// Maybe SS* instead of BFLIP
 	// Maybe S1H1 instead of BFLIP
-	assign MUX_BA = {BFLIP, CLK_1MB};
+	assign MUX_BA = {SS1, CLK_1MB};
 							
 	// K15, L15, N15, P15, K13, M15 Sprite color and palette muxes
 	assign {SPR_PAL, SPR_COLOR} = 
-							(MUX_BA == 2'b00) ? LB_ODD_A_DATA_OUT :
-							(MUX_BA == 2'b01) ? LB_EVEN_A_DATA_OUT :
-							(MUX_BA == 2'b10) ? LB_ODD_B_DATA_OUT :
-							LB_EVEN_B_DATA_OUT;
+							(MUX_BA == 2'b00) ? LB_EVEN_B_DATA_OUT :
+							(MUX_BA == 2'b01) ? LB_ODD_B_DATA_OUT :
+							(MUX_BA == 2'b10) ? LB_EVEN_A_DATA_OUT :
+							LB_ODD_A_DATA_OUT;
 	
 	// --------------------------------------------------------------------------------
 	

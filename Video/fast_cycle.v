@@ -48,7 +48,8 @@ module fast_cycle(
 	output [8:0] SPR_Y,
 	output [7:0] YSHRINK,
 	output SPR_SIZE0,
-	output SPR_SIZE5
+	output SPR_SIZE5,
+	output O159_QB
 );
 
 	wire [10:0] C;
@@ -178,14 +179,15 @@ module fast_cycle(
 	assign T90A_OUT = ~&{T94_OUT, T92_OUT};
 	assign T94_OUT = ~&{T102_Q[1:0], O102B_OUT};
 	assign T92_OUT = ~&{T102_Q[2], ~T102_Q[1], T102_Q[0], VRAM_HIGH_ADDR_SB};
-	// J100B
-	assign nACTIVE_FULL = ~&{ACTIVE_WR_ADDR[6:5]};
-	C43 H198(O110B_OUT, 4'b0000, 1'b1, 1'b1, 1'b1, nNEW_LINE, ACTIVE_WR_ADDR[3:0], H198_CO);
-	C43 I189(O110B_OUT, 4'b0000, 1'b1, 1'b1, H222A_OUT, nNEW_LINE, ACTIVE_WR_ADDR[7:4], );
-	assign O110B_OUT = O109A_OUT | VRAM_HIGH_ADDR_SB;
 	
+	
+	C43 H198(O110B_OUT, 4'b0000, 1'b1, 1'b1, 1'b1, nNEW_LINE, ACTIVE_WR_ADDR[3:0], H198_CO);
 	// Used for test mode
 	assign H222A_OUT = H198_CO | 1'b0;
+	C43 I189(O110B_OUT, 4'b0000, 1'b1, 1'b1, H222A_OUT, nNEW_LINE, ACTIVE_WR_ADDR[7:4], );
+	assign nACTIVE_FULL = ~&{ACTIVE_WR_ADDR[6:5]};	// J100B
+	assign O110B_OUT = O109A_OUT | VRAM_HIGH_ADDR_SB;
+	
 	
 	FS3 N98(T125A_OUT, 4'b0000, R91_nQ, RESETP, {N98_QD, N98_QC, N98_QB, N98_QA});
 	assign CLK_ACTIVE_RD = ~K131B_OUT;
@@ -241,13 +243,13 @@ module fast_cycle(
 	assign H293B_OUT = nFLIP;
 	assign J36_OUT = N98_QB ^ N98_QC;
 	
+	
 	// Active list read counter
-	assign O55B_OUT = ~PIXELC[6];
 	assign P39A_OUT = ~PIXELC[8];
-	assign O55A_OUT = ~&{O55B_OUT, P50_CO, P39A_OUT};
-	C43 I151(CLK_ACTIVE_RD, 4'b0000, O55A_OUT, 1'b1, 1'b1, 1'b1, ACTIVE_RD_ADDR[3:0], I151_CO);
+	assign nRELOAD_RD_ACTIVE = ~&{PIXELC[6], P50_CO, P39A_OUT};	// O55A
+	C43 I151(CLK_ACTIVE_RD, 4'b0000, nRELOAD_RD_ACTIVE, 1'b1, 1'b1, 1'b1, ACTIVE_RD_ADDR[3:0], I151_CO);
 	assign J176A_OUT = I151_CO | 1'b0;	// Used for test mode
-	C43 J151(CLK_ACTIVE_RD, 4'b0000, O55A_OUT, 1'b1, J176A_OUT, 1'b1, ACTIVE_RD_ADDR[7:4], );
+	C43 J151(CLK_ACTIVE_RD, 4'b0000, nRELOAD_RD_ACTIVE, 1'b1, J176A_OUT, 1'b1, ACTIVE_RD_ADDR[7:4], );
 	
 	
 	// Parsing counter
@@ -276,6 +278,7 @@ module fast_cycle(
 	// Pipe for x position and h-shrink
 	// O159 P131 O87 N131
 	FDS16bit O159(N98_QD, {2'b00, SPR_CHAIN, O141_Q, F[15:7]}, PIPE_A);
+	assign O159_QB = PIPE_A[13];
 	// P165 P121 P87 N121
 	FDS16bit P165(N98_QD, PIPE_A, PIPE_B);
 	// P155 P141 P104 N141

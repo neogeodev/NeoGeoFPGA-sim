@@ -50,12 +50,12 @@ module mvs_cha(
 	
 	assign CR = {C_EVEN_DATA, C_ODD_DATA};		// Other way around ?
 	
-	rom_c1 C1(C_ADDR[20:0], C_ODD_DATA, nPAIR0_CE);
-	rom_c2 C2(C_ADDR[20:0], C_EVEN_DATA, nPAIR0_CE);
-	rom_c3 C3(C_ADDR[20:0], C_ODD_DATA, nPAIR1_CE);
-	rom_c4 C4(C_ADDR[20:0], C_EVEN_DATA, nPAIR1_CE);
+	rom_c1 C1(C_ADDR, C_ODD_DATA, nPAIR0_CE);
+	rom_c2 C2(C_ADDR, C_EVEN_DATA, nPAIR0_CE);
+	rom_c3 C3(C_ADDR, C_ODD_DATA, nPAIR1_CE);
+	rom_c4 C4(C_ADDR, C_EVEN_DATA, nPAIR1_CE);
 	
-	rom_s1 S1(S_ADDR[16:0], FIXD);
+	rom_s1 S1(S_ADDR, FIXD);
 	
 	// Joyjoy doesn't use ZMC
 	//rom_m1 M1(SDA, SDD, nSDROM, nSDMRD);

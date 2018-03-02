@@ -3,12 +3,15 @@
 module FDM(
 	input CK,
 	input D,
-	output reg Q = 1'b0,
+	output reg Q,
 	output nQ
 );
 
+	initial
+		Q <= 1'b0;
+
 	always @(posedge CK)
-		Q <= D;
+		#2 Q <= D;
 	
 	assign nQ = ~Q;
 

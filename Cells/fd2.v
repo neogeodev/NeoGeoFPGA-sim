@@ -3,12 +3,15 @@
 module FD2(
 	input nCK,
 	input D,
-	output reg Q = 1'b0,
+	output reg Q,
 	output nQ
 );
 
+	initial
+		Q <= 1'b0;
+
 	always @(posedge ~nCK)	// negedge CK
-		Q <= D;
+		#2 Q <= D;
 	
 	assign nQ = ~Q;
 

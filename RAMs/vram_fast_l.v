@@ -15,9 +15,9 @@ module vram_fast_l(
 	
 	integer k;
 	initial begin
-		#200
 		for (k = 0; k < 2047; k = k + 1)
 			RAMDATA[k] = 0;
+		#50
 		$readmemh("data_fvram_l.txt", RAMDATA);
 	end
 
