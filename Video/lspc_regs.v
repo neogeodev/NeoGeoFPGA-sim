@@ -1,144 +1,140 @@
 `timescale 1ns/1ns
 
 module lspc_regs(
-	input nRESET,
-	input CLK_24M,
+	input RESET,
+	input RESETP,
 	
 	input [3:1] M68K_ADDR,
-	inout [15:0] M68K_DATA,
+	input [15:0] M68K_DATA,
 	
-	input nLSPOE,
-	input nLSPWE,
+	input LSPOE,
+	input LSPWE,
 	
-	input PCK1,
-	
+	input VMODE,
+	input [8:0] RASTERC,
 	input [2:0] AA_COUNT,
-	input [7:0] V_COUNT,
-	input VIDEO_MODE,
+	input [15:0] VRAM_LOW_READ,
+	input [15:0] VRAM_HIGH_READ,
 	
+	
+	output WR_VRAM_ADDR,
+	output WR_VRAM_RW,
+	output WR_TIMER_HIGH,
+	output WR_TIMER_LOW,
+	output WR_IRQ_ACK,
+	
+	output [15:0] REG_VRAMADDR,
+	output [15:0] REG_VRAMMOD,
+	output [15:0] REG_VRAMRW,
 	output [15:0] REG_LSPCMODE,
-	
-	output reg CPU_VRAM_ZONE,
-	output CPU_WRITE_REQ,
-	output reg [14:0] CPU_VRAM_ADDR,
-	output reg [15:0] CPU_VRAM_WRITE_BUFFER,
-	output RELOAD_REQ_SLOW,
-	output RELOAD_REQ_FAST,
-	
-	output reg [31:0] TIMER_LOAD,		// Timer reload value
-	output reg TIMER_PAL_STOP,			// Timer pause in top and bottom of display in PAL mode (LSPC2)
-	output reg [15:0] REG_VRAMMOD,
-	output reg [2:0] TIMER_MODE,		// Timer mode
-	output reg TIMER_IRQ_EN,			// Timer interrupt enable
-	output reg [7:0] AA_SPEED,			// Auto-animation speed
-	output reg AA_DISABLE,				// Auto-animation disable
-	
-	output reg IRQ_S1, IRQ_R1, IRQ_S2, IRQ_R2, IRQ_R3
+	output [15:0] CPU_DATA_OUT,
+	output [7:0] AA_SPEED,			// Auto-animation speed
+	output [2:0] TIMER_MODE,		// Timer mode
+	output TIMER_IRQ_EN,				// Timer interrupt enable
+	output AA_DISABLE,				// Auto-animation disable
+	output TIMER_STOP,
+	output nVRAM_WRITE_REQ
 );
+
+	reg [7:0] WR_DECODED;		// CPU address decoder output
+	wire [15:0] CPU_DATA_MUX;
 	
-	// Read
-	// Todo: See if 3'b000 is right (3'b111 ?)
-	assign REG_LSPCMODE = {V_COUNT, 3'b000, VIDEO_MODE, AA_COUNT};
-	
-	assign CPU_WRITE_REQ = ((M68K_ADDR[3:1] == 3'b001) && (!nLSPWE)) ? 1'b1 : 1'b0;
-	
-	// Write to $3C000C
-	always @(nLSPWE or nRESET)
+	// CPU address decode
+	// C27
+	always @(*)
 	begin
-		if (!nRESET)
+		if (~LSPWE)
 		begin
-			{IRQ_R3, IRQ_R2, IRQ_R1} <= 3'b111;		// Todo: Cold boot starts off with IRQ3
-			{IRQ_S2, IRQ_S1} <= 2'b00;
+			case (M68K_ADDR)
+				3'h0 : WR_DECODED <= 8'b11111110;
+				3'h1 : WR_DECODED <= 8'b11111101;
+				3'h2 : WR_DECODED <= 8'b11111011;
+				3'h3 : WR_DECODED <= 8'b11110111;
+				3'h4 : WR_DECODED <= 8'b11101111;
+				3'h5 : WR_DECODED <= 8'b11011111;
+				3'h6 : WR_DECODED <= 8'b10111111;
+				3'h7 : WR_DECODED <= 8'b01111111;
+			endcase
 		end
 		else
-		begin
-			// $3C000C: Interrupt ack
-			if ((!nLSPWE) && (M68K_ADDR[3:1] == 3'b110))
-				{IRQ_R3, IRQ_R2, IRQ_R1} <= M68K_DATA[2:0];
-			else
-				{IRQ_R3, IRQ_R2, IRQ_R1} <= 3'b000;
-		end
+			WR_DECODED <= 8'b11111111;
 	end
 	
-	assign RELOAD_REQ_SLOW = ((M68K_ADDR[3:1] == 3'b000) && !nLSPWE) ? ~M68K_DATA[15] : 1'b0;
-	assign RELOAD_REQ_FAST = ((M68K_ADDR[3:1] == 3'b000) && !nLSPWE) ? M68K_DATA[15] : 1'b0;
-	
-	always @(posedge CLK_24M or negedge nRESET)	// Is this really synchronous ?
+	always @(negedge LSPWE)
 	begin
-		if (!nRESET)
-		begin
-			// Something ?
-		end
-		else
-		begin
-			if (!nLSPWE)
-			begin
-				case (M68K_ADDR[3:1])
-					// $3C0000: Set address
-					3'b000 :
-					begin
-						// Read happens as soon as address is set (CPU access slot defaults to "read" all the time ?)
-						//$display("VRAM set address to 0x%H", M68K_DATA);	// DEBUG
-						{CPU_VRAM_ZONE, CPU_VRAM_ADDR} <= M68K_DATA;
-					end
-					// $3C0002: Write data
-					3'b001 :
-					begin
-						//$display("VRAM write data 0x%H @ 0x%H", M68K_DATA, {CPU_VRAM_ZONE, CPU_VRAM_ADDR});	// DEBUG
-						CPU_VRAM_WRITE_BUFFER <= M68K_DATA;
-						//CPU_VRAM_ADDRESS_BUFFER <= CPU_VRAM_ADDR;
-						//CPU_VRAM_ADDR <= CPU_VRAM_ADDR + REG_VRAMMOD[14:0];	// Todo: Wrong, sign is used and addr MSB is kept
-						//CPU_WRITE <= 1'b1;		// Operation: write
-					end
-					// $3C0004: Set modulo
-					3'b010 : 
-					begin
-						$display("VRAM set modulo to 0x%H", M68K_DATA);		// DEBUG
-						REG_VRAMMOD <= M68K_DATA;
-					end
-					// $3C0006: Set mode
-					3'b011 :
-					begin
-						$display("LSPC set timer mode to %b, timer irq to %b, AA disable to %b, AA speed to 0x%H",
-									M68K_DATA[7:5], M68K_DATA[4], M68K_DATA[3], M68K_DATA[15:8]);	// DEBUG
-						AA_SPEED <= M68K_DATA[15:8];
-						TIMER_MODE <= M68K_DATA[7:5];
-						TIMER_IRQ_EN <= M68K_DATA[4];
-						AA_DISABLE <= M68K_DATA[3];
-						// Todo: is [2:0] registered or NC ?
-					end
-					// $3C0008: Set timer reload MSB
-					3'b100 :
-					begin
-						$display("LSPC set timer reload MSB to 0x%H", M68K_DATA);	// DEBUG
-						TIMER_LOAD[31:16] <= M68K_DATA;
-					end
-					// $3C000A: Set timer reload LSB
-					3'b101 :
-					begin
-						$display("LSPC set timer reload LSB to 0x%H", M68K_DATA);	// DEBUG
-						TIMER_LOAD[15:0] <= M68K_DATA;
-						if (TIMER_MODE[0])
-						begin
-							$display("LSPC reloaded timer to 0x%H", {TIMER_LOAD[31:16], M68K_DATA});		// DEBUG
-							//TIMER <= {TIMER_LOAD[31:16], M68K_DATA};		// Relative mode
-						end
-					end
-					// $3C000C: Interrupt ack
-					3'b110 :
-					begin
-						$display("LSPC ack interrupt %d", M68K_DATA[2:0]);	// DEBUG
-						// Done in combi. logic above
-					end
-					// $3C000E: Timer fix for PAL mode
-					3'b111 :
-					begin
-						$display("LSPC set timer stop for PAL mode to %B", M68K_DATA[0]);	// DEBUG
-						TIMER_PAL_STOP <= M68K_DATA[0];
-					end
-				endcase
-			end
-		end
+		case (M68K_ADDR)
+			//3'h0 : Address set
+			//3'h1 : Data write
+			3'h2 : $display("VRAM set modulo to 0x%H", M68K_DATA);
+			3'h3 : $display("LSPC set timer mode to %b, timer irq to %b, AA disable to %b, AA speed to 0x%H", M68K_DATA[7:5], M68K_DATA[4], M68K_DATA[3], M68K_DATA[15:8]);
+			3'h4 : $display("LSPC set timer reload MSB to 0x%H", M68K_DATA);
+			3'h5 : $display("LSPC set timer reload LSB to 0x%H", M68K_DATA);
+			3'h6 : $display("LSPC ack interrupt %d", M68K_DATA[2:0]);
+			3'h7 : $display("LSPC set timer stop for PAL mode to %B", M68K_DATA[0]);
+		endcase
 	end
+	
+	assign WR_VRAM_ADDR = WR_DECODED[0];
+	assign WR_VRAM_RW = WR_DECODED[1];
+	assign WR_VRAM_MOD = WR_DECODED[2];
+	assign WR_LSPC_MODE = WR_DECODED[3];
+	assign WR_TIMER_HIGH = WR_DECODED[4];
+	assign WR_TIMER_LOW = WR_DECODED[5];
+	assign WR_IRQ_ACK = WR_DECODED[6];
+	assign WR_TIMER_STOP = WR_DECODED[7];
+	
+	
+	// CPU reads
+	assign REG_LSPCMODE = {RASTERC, 3'b0, VMODE, AA_COUNT};
+	
+	// Read:                CPU_READ_SW:
+	// $3C0000 REG_VRAMRW   REG_VRAMADDR_MSB
+	// $3C0002 REG_VRAMRW   REG_VRAMADDR_MSB
+	// $3C0004 REG_VRAMMOD  0
+	// $3C0006 REG_LSPCMODE 1
+	// C20A C22B C20B
+	assign CPU_READ_SW = ~|{~|{M68K_ADDR[1], ~M68K_ADDR[2]}, ~|{REG_VRAMADDR[15], M68K_ADDR[2]}};
+	
+	// CPU read data select
+	// F218A F221A F230 G252A
+	// K172 F235 F232 G250
+	// G274 G276A G267A H266A
+	// I250A I253 I255A H264
+	assign CPU_DATA_MUX = M68K_ADDR[2] ?
+							CPU_READ_SW ? REG_LSPCMODE : REG_VRAMMOD
+							:
+							CPU_READ_SW ? VRAM_HIGH_READ : VRAM_LOW_READ;
+	
+	// CPU read data latch
+	// B138 A123 A68 A28
+	FDS16bit B138(~LSPOE, CPU_DATA_MUX, CPU_DATA_OUT);
+
+
+	// CPU write to REG_VRAMRW
+	// F155 D131 D121 E154
+	FDS16bit F155(~WR_VRAM_RW, M68K_DATA, REG_VRAMRW);
+
+	// CPU VRAM write request flag handling
+	// Set by write to REG_VRAMRW, reset when write is done or write to REG_VRAMADDR
+	assign D32A_OUT = D28_nQ & 1'b1;	// Used for test mode
+	FDPCell D38(~WR_VRAM_RW, 1'b1, 1'b1, D32A_OUT, D38_Q, nVRAM_WRITE_REQ);
+	FDPCell D28(D112B_OUT, 1'b1, 1'b1, D38_Q, , D28_nQ);
+	
+	// CPU write to REG_VRAMMOD
+	// H105 G105 F81 G123
+	FDS16bit H105(~WR_VRAM_MOD, M68K_DATA, REG_VRAMMOD);
+	
+	// CPU write to REG_VRAMADDR
+	// F47 D87 A79 C123
+	FDS16bit F47(~WR_VRAM_ADDR, M68K_DATA, REG_VRAMADDR);
+
+	// CPU write to REG_LSPCMODE
+	FDSCell E105(WR_LSPC_MODE, M68K_DATA[15:12], AA_SPEED[7:4]);
+	FDSCell C87(WR_LSPC_MODE, M68K_DATA[11:8], AA_SPEED[3:0]);
+	FDPCell E74(WR_LSPC_MODE, M68K_DATA[7], 1'b1, RESET, TIMER_MODE[2], );
+	FDRCell E61(WR_LSPC_MODE, M68K_DATA[6:3], RESET, {TIMER_MODE[1:0], TIMER_IRQ_EN, AA_DISABLE});
+	
+	// CPU write to REG_TIMERSTOP
+	FDPCell D34(WR_TIMER_STOP, M68K_DATA[0], RESETP, 1'b1, , TIMER_STOP);
 
 endmodule

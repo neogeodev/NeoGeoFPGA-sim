@@ -47,7 +47,7 @@ module logger(
 		f_video = $fopen("log_video.txt", "w");
 		f_cab_io = $fopen("log_cab_io.txt", "w");
 		
-		#60000000	// Run for 60ms
+		#50000000	// Run for 50ms
 		
 		// Save backup RAM contents
 		f_ram = $fopen("raminit_sram_l.txt", "w");
@@ -68,6 +68,12 @@ module logger(
 		$fclose(f_video);
 		$fclose(f_cab_io);
 		$stop;
+	end
+	
+	always
+	begin
+		if ((neogeo.LSPC2.FCY.C == 16'h35C) && (neogeo.LSPC2.FCY.PARSE_MATCH == 1'b1))
+			$stop;
 	end
 	
 	// Simulates MV-ELA board

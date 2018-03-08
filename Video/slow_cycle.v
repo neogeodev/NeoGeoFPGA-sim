@@ -27,11 +27,13 @@ module slow_cycle(
 	input RESETP,
 	input [14:0] VRAM_ADDR,
 	input [15:0] VRAM_WRITE,
+	input REG_VRAMADDR_MSB,
 	input PIXEL_H8,
 	input PIXEL_H256,
 	input [7:3] RASTERC,
 	input [3:0] PIXEL_HPLUS,
 	input [7:0] ACTIVE_RD,
+	input nVRAM_WRITE_REQ,
 	input [3:0] SPR_TILEMAP,
 	output SPR_TILE_VFLIP,
 	output SPR_TILE_HFLIP,
@@ -41,7 +43,7 @@ module slow_cycle(
 	output [19:0] SPR_TILE,
 	output [7:0] SPR_PAL,
 	output [15:0] VRAM_LOW_READ,
-	input nCPU_WR_LOW,
+	output nCPU_WR_LOW,
 	input R91_nQ,
 	output CLK_CPU_READ_LOW,
 	output T160A_OUT,
@@ -125,6 +127,8 @@ module slow_cycle(
 	
 	FDPCell O62(PIXEL_H8, PIXEL_H256, 1'b1, RESETP, O62_Q, O62_nQ);
 	
+	assign F58B_OUT = REG_VRAMADDR_MSB | nVRAM_WRITE_REQ;
+	FDPCell Q106(~LSPC_1_5M, F58B_OUT, CLK_CPU_READ_LOW, 1'b1, nCPU_WR_LOW, );
 	
 	
 	vram_slow_u VRAMLU(B, E[15:8], 1'b0, BOE, BWE);

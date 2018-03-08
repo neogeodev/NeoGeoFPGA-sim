@@ -23,10 +23,10 @@ module fast_cycle(
 	input LSPC_3M,
 	input LSPC_1_5M,
 	input RESETP,
-	input VRAM_WRITE_REQ,
+	input nVRAM_WRITE_REQ,
 	input [15:0] VRAM_ADDR,
 	input [15:0] VRAM_WRITE,
-	input [15:0] VRAM_ADDR_RAW,	// Only bit 15 is needed ?
+	input REG_VRAMADDR_MSB,
 	input FLIP, nFLIP,
 	input [8:0] PIXELC,
 	input [8:0] RASTERC,
@@ -136,7 +136,8 @@ module fast_cycle(
 	assign VRAM_HIGH_ADDR_SB = ~&{WR_ACTIVE, O98_Q};
 	FDPCell O98(T125A_OUT, N98_QD, 1'b1, RESETP, O98_Q, CLK_CPU_READ_HIGH);
 	FDPCell N93(N98_QD, F58A_OUT, CLK_CPU_READ_HIGH, 1'b1, nCPU_WR_HIGH, );
-	assign F58A_OUT = ~VRAM_ADDR_RAW[15] | VRAM_WRITE_REQ;
+	
+	assign F58A_OUT = ~REG_VRAMADDR_MSB | nVRAM_WRITE_REQ;
 	FDM I148(H125A_OUT, F[8], ACTIVE_RD_PRE8, );
 	assign H125A_OUT = CLK_ACTIVE_RD;
 	
