@@ -267,10 +267,10 @@ module fast_cycle(
 	
 	// Y parse matching
 	// L200 O200
-	assign PARSE_LOOKAHEAD = 5'd2 + {RASTERC[7:1], K260B_OUT};
+	assign PARSE_LOOKAHEAD = 8'd2 + {RASTERC[7:1], K260B_OUT};
 	// M190 N190
 	assign PARSE_ADD_Y = PARSE_LOOKAHEAD + PARSE_Y[7:0];
-	assign N186_OUT = ~^{PARSE_ADD_Y[8], PARSE_Y};
+	assign N186_OUT = ~^{PARSE_ADD_Y[8], PARSE_Y[8]};
 	// K195 M151
 	assign PARSE_ADD_SIZE = {N186_OUT, ~PARSE_ADD_Y[7:4]} + PARSE_SIZE[4:0];
 	assign PARSE_MATCH = PARSE_ADD_SIZE[5];

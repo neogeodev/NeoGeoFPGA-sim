@@ -116,35 +116,26 @@ module lspc2_a2(
 	FD2 T168A(CLK_24M, T160A_OUT, PCK1, nPCK1);
 	FD2 T162A(CLK_24M, T160B_OUT, PCK2, );
 	FD2 U167(~PCK2, T172_Q, H, );
+	FDM T172(nPCK1, SPR_TILE_HFLIP, T172_Q, );
 	
 	// EVEN1, EVEN2
-	assign U105A_OUT = ~&{nHSHRINK_OUT_A, nHSHRINK_OUT_B, U74A_nQ};
-	assign U107_OUT = ~&{nHSHRINK_OUT_A, U74A_Q, HSHRINK_OUT_B};
-	assign U109_OUT = ~&{nHSHRINK_OUT_A, U74A_nQ, HSHRINK_OUT_A};
-	assign U112_OUT = ~&{U105A_OUT, U107_OUT, U109_OUT};
-	FD2 U144A(CLK_24M, U112_OUT, EVEN2, );
-	assign EVEN1 = U112_OUT;
+	assign U105A_OUT = ~&{nHSHRINK_OUT_A, nHSHRINK_OUT_B, nEVEN_ODD};
+	assign U107_OUT = ~&{nHSHRINK_OUT_A, EVEN_nODD, HSHRINK_OUT_B};
+	assign U109_OUT = ~&{nHSHRINK_OUT_A, nEVEN_ODD};
+	assign EVEN1 = ~&{U105A_OUT, U107_OUT, U109_OUT};
+	FD2 U144A(CLK_24M, EVEN1, EVEN2, );
 	
-	assign nHSHRINK_OUT_A = ~HSHRINK_OUT_A;
-	assign nHSHRINK_OUT_B = ~HSHRINK_OUT_B;
-	
-	assign R42A_OUT = ~&{R72B_OUT, S53A_OUT};
-	assign R73A_OUT = ~PIPE_C[0];
-	assign S58A_OUT = ~|{R73A_OUT, R42A_OUT};
-	assign U83_OUT = HSHRINK_OUT_A ^ HSHRINK_OUT_B;
-	assign U72_OUT = U83_OUT ^ U74A_nQ;
-	assign U57B_OUT = R42A_OUT & U72_OUT;
+	// Pixel parity select
+	assign nPARITY_INIT = ~&{nCHAINED, S53A_OUT};
+	assign nXPOS_ZERO = ~PIPE_C[0];
+	assign S58A_OUT = ~|{nXPOS_ZERO, nPARITY_INIT};
+	assign ONE_PIXEL = HSHRINK_OUT_A ^ HSHRINK_OUT_B;
+	assign U72_OUT = ONE_PIXEL ^ nEVEN_ODD;
+	assign U57B_OUT = nPARITY_INIT & U72_OUT;
 	assign U56A_OUT = ~|{S58A_OUT, U57B_OUT};
-	FDM T172(nPCK1, SPR_TILE_HFLIP, T172_Q, );
 	FD2 U68A(CLK_24MB, ~LSPC_12M, CK_HSHRINK_REG, U68A_nQ);
-	FD2 U74A(~U68A_nQ, U56A_OUT, U74A_Q, U74A_nQ);
-	
-	
+	FD2 U74A(~U68A_nQ, U56A_OUT, EVEN_nODD, nEVEN_ODD);
 
-	
-	
-	
-	
 
 	
 	// CPU VRAM address update select
@@ -286,10 +277,10 @@ module lspc2_a2(
 	
 	
 	// Pixel write pulse selection (odd/even)
-	assign U89A_OUT = ~&{nHSHRINK_OUT_B, U74A_nQ, HSHRINK_OUT_A};
-	assign U92A_OUT = ~&{nHSHRINK_OUT_A, U74A_nQ, HSHRINK_OUT_B};
-	assign U91_OUT = ~&{nHSHRINK_OUT_B, U74A_Q, HSHRINK_OUT_A};
-	assign U94_OUT = ~&{nHSHRINK_OUT_A, U74A_Q, HSHRINK_OUT_B};
+	assign U89A_OUT = ~&{nHSHRINK_OUT_B, nEVEN_ODD, HSHRINK_OUT_A};
+	assign U92A_OUT = ~&{nHSHRINK_OUT_A, nEVEN_ODD, HSHRINK_OUT_B};
+	assign U91_OUT = ~&{nHSHRINK_OUT_B, EVEN_nODD, HSHRINK_OUT_A};
+	assign U94_OUT = ~&{nHSHRINK_OUT_A, EVEN_nODD, HSHRINK_OUT_B};
 	// Enabled write pulses only if pixel is not skipped for h-shrink
 	assign U88B_OUT = HSHRINK_OUT_A | HSHRINK_OUT_B;
 	assign U85_OUT = &{U89A_OUT, U92A_OUT, U88B_OUT};
@@ -312,11 +303,11 @@ module lspc2_a2(
 	
 	// For LD1:
 	// Gate with chain bit (prevents address reload)
-	assign R72B_OUT = ~|{PIPE_C[13], R69_nQ};
+	assign nCHAINED = ~|{PIPE_C[13], R69_nQ};
 	// Gate reset LD pulse (once at start of line being shifted out)
 	assign R44B_OUT = ~&{R50_nQ, R53_Q};
 	// Gate rendering LD pulses
-	assign R48B_OUT = ~&{R72B_OUT, R50_Q};
+	assign R48B_OUT = ~&{nCHAINED, R50_Q};
 	// Merge
 	assign R42B_OUT = ~&{R44B_OUT, R48B_OUT};
 	// Sync
@@ -327,7 +318,7 @@ module lspc2_a2(
 	// Gate reset LD pulse (once at start of line being shifted out)
 	assign R44A_OUT = ~&{R53_Q, R50_Q};
 	// Gate rendering LD pulses
-	assign R46A_OUT = ~&{R50_nQ, R72B_OUT};
+	assign R46A_OUT = ~&{R50_nQ, nCHAINED};
 	// Merge
 	assign R46B_OUT = ~&{R44A_OUT, R46A_OUT};
 	// Sync

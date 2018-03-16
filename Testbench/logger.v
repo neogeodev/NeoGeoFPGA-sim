@@ -70,12 +70,6 @@ module logger(
 		$stop;
 	end
 	
-	always
-	begin
-		if ((neogeo.LSPC2.FCY.C == 16'h35C) && (neogeo.LSPC2.FCY.PARSE_MATCH == 1'b1))
-			$stop;
-	end
-	
 	// Simulates MV-ELA board
 	always @(negedge neogeo.LED_LATCH[0])
 		MARQUEE <= neogeo.LED_DATA[5:0];
@@ -92,6 +86,10 @@ module logger(
 	
 	always @(posedge CLK_6MB)
 	begin
+		// Stop at frame 1, raster #150
+		/*if ((neogeo.LSPC2.RASTERC == 9'h196) && (sim_frame == 1))
+			$stop;*/
+		
 		//if (neogeo.LSPC2.VS.PIXELC < 9'h1FF)
 		//begin
 			// Write each pixel
@@ -100,7 +98,7 @@ module logger(
 		//end
 		//else
 		//begin
-		if (neogeo.LSPC2.VS.PIXELC == 9'h1FF)
+		if (neogeo.LSPC2.VS.PIXELC == 9'h0C0)
 		begin
 			$fwrite(f_video, "YYYYYY ");
 			// $display("Line %d rendered", sim_line);
