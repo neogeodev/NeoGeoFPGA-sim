@@ -11,6 +11,8 @@ ROM initialization files aren't provided for obvious reasons. You can get them f
 
 The system's top file is neogeo.v, currently used testbench is testbench_1.v .
 
+Take a look in **LSPC2RE** for porn (main video chip's schematics). This was made possible by John McMaster.
+
 # Progress
 
 |Part|Progress|Notes|
