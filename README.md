@@ -1,23 +1,27 @@
 # NeoGeoFPGA-sim
-Simulation project for a SNK NeoGeo hardware definition. This does not go in a FPGA yet :)
+Simulation project for a SNK NeoGeo hardware definition. This does not go in a FPGA *yet* :)
 
-This is being made possible by neogeodev contributors and Patreon donators: **Alexis Bezverkhyy, Alexis Huet, Ange Albertini, Artemio Urbina, Arthur Lemoine, Blastar, Charly, Cyrille Jouineau, Jonathan Bayle, Laurent Lieben, Lewis Waddington, Mahen, Marshall H. (Retroactive), Maxime Mouflard, Valérianne Lagrange**.
+This is being made possible by neogeodev contributors and Patreon donators: **Alexis Bezverkhyy, Alexis Huet, Ange Albertini, Artemio Urbina, Arthur Lemoine, Blastar, Charly, Cyrille Jouineau, Jonathan Bayle, Laurent Lieben, Lewis Waddington, Mahen, Marshall H. (Retroactive), Maxime Mouflard, Valérianne Lagrange, ...**.
 
 ![Diagram](Doc/ngfpgad1.png)
 
 Green is what this project is all about. Yellow is simulation/testbench files. Grey are results from simulation.
 
-ROM initialization files aren't provided for obvious reasons. You can get them from any ROM download website and convert them with rom2verilog.c. I'm using joyjoy (Joy Joy Kid AKA Puzzled) for now since it's a small, simple game.
+ROM initialization files aren't provided for obvious reasons. You can get them from any ROM download website and convert them with tools/rom2verilog.c. I'm mostly using mslug (Metal Slug I) for now since it uses lots of moving sprites.
 
-Top file is neogeo.v, currently used testbench is testbench_1.v .
+The system's top file is neogeo.v, currently used testbench is testbench_1.v .
 
-# What's working
+# Progress
 
-* Both CPUs
-* IRQs
-* System ROM, P1 and M1 ROMs, all RAMs
-* Most of NEO-C1 and I/O chips
-* Some parts of LSPC and NEO-B1
+|Part|Progress|Notes|
+|----|-----|-----|
+|CPUs|100%|Using 68000 and Z80 open cores for now, wrappers are working|
+|IRQs|90%|Logic is there, timer IRQ needs precise testing|
+|ROMs|100%|System ROM, S1 and M1 are working|
+|RAMs|100%|Work RAM, Backup RAM, VRAM and memory card are working|
+|I/O|80%|Logic is there, no RTC for now, needs testing|
+|Video|95%|LSPC is pretty much done, NEO-B1 still has a few issues|
+|Audio|5%|Lots of work needed on YM2610, no audio output at all for now|
 
 # Cartridge model (MVS for now)
 
