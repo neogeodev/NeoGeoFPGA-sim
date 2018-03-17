@@ -53,13 +53,11 @@ module neo_b1(
 );
 
 	// Delay registers
-	reg [7:0] SPR_PAL_REG_A;
-	reg [7:0] SPR_PAL_REG_B;
-	reg [3:0] FIX_PAL_REG_A;
-	reg [3:0] FIX_PAL_REG_B;
-	reg [7:0] FIXD_REG_A;
-	reg [7:0] FIXD_REG_B;
-	reg [7:0] FIXD_REG_C;
+	reg [7:0] SPR_PAL_REG;
+	reg [3:0] FIX_PAL_REG;
+	reg [7:0] FIXD_REG;
+	//reg [7:0] FIXD_REG_B;
+	//reg [7:0] FIXD_REG_C;
 	
 	// +1 adders
 	wire [3:0] P10_OUT;
@@ -98,7 +96,8 @@ module neo_b1(
 	
 	wire nPA_OE;		// TODO
 	reg PAL_SWITCH;
-	wire [7:0] X_LOAD_VALUE;
+	wire [7:0] X_LOAD_VALUE_A;
+	wire [7:0] X_LOAD_VALUE_B;
 	
 	
 	// Note: nRESET is sync'd to frame start
@@ -110,13 +109,11 @@ module neo_b1(
 	assign BFLIP = TMS0;
 	assign nBFLIP = ~BFLIP;
 	
-	assign nWE_ODD_A = WE[0];
-	assign nWE_EVEN_A = WE[1];
-	assign nWE_ODD_B = WE[2];
-	assign nWE_EVEN_B = WE[3];
-	
-	assign nLOAD_X_A = LD1;
-	assign nLOAD_X_B = LD2;
+	// Order ?
+	assign nWE_EVEN_A = WE[0];
+	assign nWE_ODD_A = WE[1];
+	assign nWE_EVEN_B = WE[2];
+	assign nWE_ODD_B = WE[3];
 	
 	// Fix stuff checked on DE1 board
 	// When are palettes latched from the P BUS ?
@@ -132,97 +129,72 @@ module neo_b1(
 		else if (PCK2)
 			PAL_SWITCH <= 1'b1;	// Fix palette comes next
 	end
-
-	/*
-	// Palettes latch from PBUS and delays
-	always @(posedge CLK_1MB)
-	begin
-		if (PAL_SWITCH)
-		begin
-			FIX_PAL_REG_A <= PBUS[19:16];
-			FIX_PAL_REG_B <= FIX_PAL_REG_A;
-		end
-		else
-		begin
-			SPR_PAL_REG_A <= PBUS[23:16];
-			SPR_PAL_REG_B <= SPR_PAL_REG_A;
-		end
-	end
-	*/
 	
 	always @(posedge PCK1)
 	begin
-		FIX_PAL_REG_A <= PBUS[19:16];
-		FIX_PAL_REG_B <= FIX_PAL_REG_A;
+		FIX_PAL_REG <= PBUS[19:16];
 	end
 	
 	always @(posedge PCK2)
 	begin
-		SPR_PAL_REG_A <= PBUS[23:16];
-		SPR_PAL_REG_B <= SPR_PAL_REG_A;
+		SPR_PAL_REG <= PBUS[23:16];
 	end
 	
 	// Fix data delay
-	always @(posedge CLK_1MB)
+	always @(posedge ~S1H1)		// negedge
 	begin
-		FIXD_REG_A <= FIXD;
-		FIXD_REG_B <= FIXD_REG_A;
-		FIXD_REG_C <= FIXD_REG_B;
+		FIXD_REG <= FIXD;
 	end
 	
-	// G3 (374): nOE seems used !
-	/*always @(posedge S1H1)	// nLATCH_X on Alpha68k
-	begin
-		if (PAL_SWITCH)
-			X_LOAD_VALUE <= PBUS[15:8];
-	end*/
-	assign X_LOAD_VALUE = PBUS[15:8];
+	assign X_LOAD_VALUE_B = PBUS[15:8];
+	assign X_LOAD_VALUE_A = PBUS[7:0];
 	
 	// G5:C
-	assign PLUS_ONE = ~1'b1;	// TODO: Wrong !
+	assign PLUS_ONE = 1'b0;	// TODO: Wrong !
 	
+	/*
 	// Both of these output the exact same thing, something must be wrong
-	assign {P10_C4, P10_OUT} = X_LOAD_VALUE[3:0] + PLUS_ONE;
-	assign P11_OUT = X_LOAD_VALUE[7:4] + P10_C4;	// P11_C4 apparently not used
-	assign {N10_C4, N10_OUT} = X_LOAD_VALUE[3:0] + PLUS_ONE;
-	assign N11_OUT = X_LOAD_VALUE[7:4] + N10_C4;	// N11_C4 apparently not used
+	assign {P10_C4, P10_OUT} = X_LOAD_VALUE_B[3:0] + PLUS_ONE;
+	assign P11_OUT = X_LOAD_VALUE_B[7:4] + P10_C4;	// P11_C4 apparently not used
+	assign {N10_C4, N10_OUT} = X_LOAD_VALUE_B[3:0] + PLUS_ONE;
+	assign N11_OUT = X_LOAD_VALUE_B[7:4] + N10_C4;	// N11_C4 apparently not used
+	*/
 	
 	// P6:C and P6:D
 	// Render: Count up (X ->>>>)
 	// Output: ???
-	assign DIR_OB_EA = 1;	//~(nBFLIP & 1);		// TODO: Probably whole display h-flip
-	assign DIR_OA_EB = 1;	//~(BFLIP & 1);		// TODO: Probably whole display h-flip
+	//assign DIR_OB_EA = 1;	//~(nBFLIP & 1);		// TODO: Probably whole display h-flip
+	//assign DIR_OA_EB = 1;	//~(BFLIP & 1);		// TODO: Probably whole display h-flip
 	
 	// LB address counters:
-	hc669_dual L12M13(CK[0], nLOAD_X_A, DIR_OA_EB, X_LOAD_VALUE, LB_ODD_A_ADDR);	// ?
-	hc669_dual N13N12(CK[1], nLOAD_X_A, DIR_OA_EB, {N11_OUT, N10_OUT}, LB_EVEN_A_ADDR);
-	hc669_dual K12L13(CK[2], nLOAD_X_B, DIR_OB_EA, X_LOAD_VALUE, LB_ODD_B_ADDR);	// ?
-	hc669_dual P13P12(CK[3], nLOAD_X_B, DIR_OB_EA, {P11_OUT, P10_OUT}, LB_EVEN_B_ADDR);
+	hc669_dual L12M13(CK[0], LD1, 1'b1, X_LOAD_VALUE_A, LB_EVEN_A_ADDR);	// ?
+	hc669_dual N13N12(CK[1], LD1, 1'b1, X_LOAD_VALUE_B, LB_ODD_A_ADDR);
+	
+	hc669_dual K12L13(CK[2], LD2, 1'b1, X_LOAD_VALUE_A, LB_EVEN_B_ADDR);	// ?
+	hc669_dual P13P12(CK[3], LD2, 1'b1, X_LOAD_VALUE_B, LB_ODD_B_ADDR);
 	
 	// Maybe SPR_PAL_REG_A is enough delay ?
-	assign LB_EVEN_DATA_IN = {SPR_PAL_REG_A, GAD[2], GAD[3], GAD[0], GAD[1]};
-	assign LB_ODD_DATA_IN = {SPR_PAL_REG_A, GBD[2], GBD[3], GBD[0], GBD[1]};
+	assign LB_EVEN_DATA_IN = {SPR_PAL_REG, GAD[2], GAD[3], GAD[0], GAD[1]};
+	assign LB_ODD_DATA_IN = {SPR_PAL_REG, GBD[2], GBD[3], GBD[0], GBD[1]};
 	
 	// Switch between pixel (render) or backdrop (clear)
-	assign LB_EVEN_A_DATA_IN = BFLIP ? 12'b111111111111 : LB_EVEN_DATA_IN;
+	/*assign LB_EVEN_A_DATA_IN = BFLIP ? 12'b111111111111 : LB_EVEN_DATA_IN;
 	assign LB_EVEN_B_DATA_IN = BFLIP ? LB_EVEN_DATA_IN : 12'b111111111111;
 	assign LB_ODD_A_DATA_IN = BFLIP ? 12'b111111111111 : LB_ODD_DATA_IN;
-	assign LB_ODD_B_DATA_IN = BFLIP ? LB_ODD_DATA_IN : 12'b111111111111;
+	assign LB_ODD_B_DATA_IN = BFLIP ? LB_ODD_DATA_IN : 12'b111111111111;*/
 	
 	linebuffer LB1(nWE_EVEN_A, LB_EVEN_A_ADDR, LB_EVEN_DATA_IN, LB_EVEN_A_DATA_OUT);
 	linebuffer LB2(nWE_ODD_A, LB_ODD_A_ADDR, LB_ODD_DATA_IN, LB_ODD_A_DATA_OUT);
+	
 	linebuffer LB3(nWE_EVEN_B, LB_EVEN_B_ADDR, LB_EVEN_DATA_IN, LB_EVEN_B_DATA_OUT);
 	linebuffer LB4(nWE_ODD_B, LB_ODD_B_ADDR, LB_ODD_DATA_IN, LB_ODD_B_DATA_OUT);
 	
-	// N4 and N7 ORs
-	/*assign nOE_P18P20 = RBA | nWE_EVEN_A;
-	assign nOE_P19P21 = RBB | nWE_EVEN_B;
-	assign nOE_M18N18 = RBA | nWE_ODD_A;
-	assign nOE_M19N19 = RBB | nWE_ODD_B;*/
+	// SS1 high: output buffer A
+	// SS2 high: output buffer B
 	
 	// Maybe SS* instead of BFLIP
 	// Maybe S1H1 instead of BFLIP
-	assign MUX_BA = {SS1, CLK_1MB};
+	assign MUX_BA = {SS1, S1H1};
 							
 	// K15, L15, N15, P15, K13, M15 Sprite color and palette muxes
 	assign {SPR_PAL, SPR_COLOR} = 
@@ -246,10 +218,10 @@ module neo_b1(
 	assign nPAL_ACCESS = |{A23Z, ~A22Z, nAS};
 	
 	// Pixel mixing
-	assign FIX_COLOR = CLK_1MB ? FIXD_REG_C[3:0] : FIXD_REG_C[7:4];
+	assign FIX_COLOR = S1H1 ? FIXD_REG[7:4] : FIXD_REG[3:0];
 	assign FIX_OPAQUE = |{FIX_COLOR};
 	assign COLOR = FIX_OPAQUE ? FIX_COLOR : SPR_COLOR;
-	assign PAL = FIX_OPAQUE ? {4'b0000, FIX_PAL_REG_B} : SPR_PAL;
+	assign PAL = FIX_OPAQUE ? {4'b0000, FIX_PAL_REG} : SPR_PAL;
 	assign PA_VIDEO = CHBL ? 12'h000 : {PAL, COLOR};
 	
 	// Priority for palette address bus (PA):

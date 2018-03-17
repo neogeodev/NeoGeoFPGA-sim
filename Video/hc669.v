@@ -35,10 +35,10 @@ module hc669_dual(
 		else
 		begin
 			// Datasheet says UP is +1, opposite in Proteus model...
-			if (UP)
+			//if (UP)
 				CNT_REG <= CNT_REG + 1'b1;
-			else
-				CNT_REG <= CNT_REG - 1'b1;
+			//else
+			//	CNT_REG <= CNT_REG - 1'b1;
 		end
 	end
 

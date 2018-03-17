@@ -8,7 +8,7 @@ module rom_s1(
 );
 
 	reg [7:0] ROMDATA[0:131071];
-	wire [7:0] DATAOUT;
+	//wire [7:0] DATAOUT;
 	
 	initial begin
 		$readmemh("data_s1.txt", ROMDATA);

@@ -79,13 +79,14 @@ module lspc2_a2(
 	wire [3:0] U24_P;
 	wire [3:0] O227_Q;
 	
-	wire [7:0] P_MUX_X_YSH;
-	wire [7:0] P_MUX_SPRLINE;
+	wire [7:0] P_MUX_HIGH;
+	wire [7:0] P_MUX_LOW;
 	wire [23:0] P_OUT_MUX;
 	
 	wire [3:0] VSHRINK_INDEX;
 	wire [3:0] VSHRINK_LINE;
 	wire [8:0] XPOS;
+	wire [7:0] XPOS_ROUND_UP;
 	wire [2:0] SPR_TILE_AA;
 	wire [3:0] G233_Q;
 	wire [7:0] SPR_Y_LOOKAHEAD;
@@ -94,6 +95,7 @@ module lspc2_a2(
 	wire [7:0] SPR_TILE_AB;		// This should be called SPR_Y_RENDER_LOOP or something similar
 	wire [8:0] SPR_Y_SHRINK;
 	wire [3:0] SPR_LINE;
+	wire [7:0] SPR_LINE_MUX;
 	wire [19:0] SPR_TILE;
 	wire [7:0] YSHRINK;
 	wire [8:0] SPR_Y;
@@ -121,15 +123,15 @@ module lspc2_a2(
 	// EVEN1, EVEN2
 	assign U105A_OUT = ~&{nHSHRINK_OUT_A, nHSHRINK_OUT_B, nEVEN_ODD};
 	assign U107_OUT = ~&{nHSHRINK_OUT_A, EVEN_nODD, HSHRINK_OUT_B};
-	assign U109_OUT = ~&{nHSHRINK_OUT_A, nEVEN_ODD};
+	assign U109_OUT = ~&{HSHRINK_OUT_A, nEVEN_ODD};
 	assign EVEN1 = ~&{U105A_OUT, U107_OUT, U109_OUT};
 	FD2 U144A(CLK_24M, EVEN1, EVEN2, );
 	
 	// Pixel parity select
-	assign nPARITY_INIT = ~&{nCHAINED, S53A_OUT};
+	assign nPARITY_INIT = ~&{nCHAINED, S53A_OUT};	// R42A
 	assign nXPOS_ZERO = ~PIPE_C[0];
 	assign S58A_OUT = ~|{nXPOS_ZERO, nPARITY_INIT};
-	assign ONE_PIXEL = HSHRINK_OUT_A ^ HSHRINK_OUT_B;
+	assign ONE_PIXEL = HSHRINK_OUT_A ^ HSHRINK_OUT_B;	// U83
 	assign U72_OUT = ONE_PIXEL ^ nEVEN_ODD;
 	assign U57B_OUT = nPARITY_INIT & U72_OUT;
 	assign U56A_OUT = ~|{S58A_OUT, U57B_OUT};
@@ -184,7 +186,7 @@ module lspc2_a2(
 	assign M68K_DATA[15:10] = B74_OUT ? 6'bzzzzzz : CPU_DATA_OUT[15:10];	// t+3
 	
 	
-	// Auto-animation select
+	// Auto-animation bit enables
 	// C184A
 	assign AUTOANIM3_EN = SPR_AA_3 & ~AA_DISABLE;
 	assign C186A_OUT = SPR_AA_2 & ~AA_DISABLE;
@@ -216,9 +218,9 @@ module lspc2_a2(
 	// NEO-B1 control signals
 	
 	// Latch for CK1/2 and WE1/2
-	LT4 T31(LSPC_12M, {T38A_OUT, T28_OUT, T29A_OUT, T20B_OUT}, T31_P, );
+	LT4 T31(LSPC_12M, {T28_OUT, T38A_OUT, T20B_OUT, T29A_OUT}, T31_P, );
 	// Latch for CK3/4 and WE3/4
-	LT4 U24(LSPC_12M, {U37B_OUT, U21B_OUT, U35A_OUT, U31A_OUT}, U24_P, );
+	LT4 U24(LSPC_12M, {U21B_OUT, U37B_OUT, U31A_OUT, U35A_OUT}, U24_P, );
 	
 	// CKs and WEs can only be low when LSPC_12M is high
 	assign WE1 = ~&{T31_P[1], LSPC_12M};
@@ -234,7 +236,7 @@ module lspc2_a2(
 	assign WE = {WE4, WE3, WE2, WE1};
 	assign CK = {CK4, CK3, CK2, CK1};
 	
-	// Most of the following NAND gates are probably making 2:1 muxes like on the Alpha68k
+	// Most of the following NAND gates are making 2:1 muxes like on the Alpha68k
 	
 	// For buffer A:
 	// Clearing write pulses gates
@@ -402,12 +404,20 @@ module lspc2_a2(
 	assign SPR_TILE_AA[2] = AUTOANIM3_EN ? AA_COUNT[2] : SPR_TILE[2];
 	assign SPR_TILE_AA[1:0] = AUTOANIM2_EN ? AA_COUNT[1:0] : SPR_TILE[1:0];
 	
+	assign XPOS_ROUND_UP = XPOS[8:1] + XPOS[0];
+	
 	// K143A K145A K147A K149A
 	// Q111A Q113B Q113A Q111B
-	assign P_MUX_X_YSH = R88_Q ? XPOS[8:1] : YSHRINK;
+	assign P_MUX_HIGH = R88_Q ? XPOS[8:1] : YSHRINK;
+	
+	// R185A R185B R183A R183B
+	// R277A R277B R275A R275B
+	assign SPR_LINE_MUX = SPR_CONTINUOUS ? ~SPR_TILE_AB : SPR_TILE_A;		// Might be swapped
+	
 	// R149A R149B R147A R147B
 	// Q149A Q120A Q121B Q149B
-	assign P_MUX_SPRLINE = SPR_CONTINUOUS ? SPR_TILE_A : SPR_TILE_AB;		// Might be swapped
+	assign P_MUX_LOW = R88_Q ? XPOS_ROUND_UP : SPR_LINE_MUX;		// Might be swapped
+	
 	
 	// Output mux
 	// C250 A238A A232 A234A
@@ -429,7 +439,7 @@ module lspc2_a2(
 	// B197A B130A B128 B148A
 	assign P_OUT_MUX[15:0] = ~S183_Q ?
 										~S171_nQ ?
-											{P_MUX_X_YSH, P_MUX_SPRLINE}
+											{P_MUX_HIGH, P_MUX_LOW}
 											:
 											{SPR_TILE[15:8], SPR_TILE[7:3], SPR_TILE_AA}
 										:
@@ -442,20 +452,19 @@ module lspc2_a2(
 	assign PBUS_OUT = P_OUT_MUX[15:0];
 	
 	
-	// Y coordinate stuff
-	
+	// Y position stuff
 	// O268 O237
 	assign SPR_Y_LOOKAHEAD = {RASTERC[7:1], FLIP} + 1'b1;
 	// P261 P237
 	assign SPR_Y_ADD = SPR_Y_LOOKAHEAD + SPR_Y[7:0];
 	// R216 R218 R238 R241
 	// R281 R283 Q289 Q291
-	assign SPR_TILE_A = SPR_Y_ADD ^ {8{!P235_OUT}};
+	assign SPR_TILE_A = SPR_Y_ADD[7:0] ^ {8{!P235_OUT}};
 	assign P235_OUT = ~(SPR_Y[8] ^ SPR_Y_ADD[8]);
 	// Q237 R189
-	assign SPR_Y_SHRINK = SPR_TILE_A + YSHRINK;
+	assign SPR_Y_SHRINK = SPR_TILE_A + ~YSHRINK;
 	// Q265 R151
-	assign SPR_TILE_AB = SPR_TILE_A + {YSHRINK[6:0], 1'b0};
+	assign SPR_TILE_AB = SPR_TILE_A + {~YSHRINK[6:0], 1'b0};
 	
 	// Special #33 height detection
 	// R222A

@@ -98,7 +98,7 @@ module logger(
 		//end
 		//else
 		//begin
-		if (neogeo.LSPC2.VS.PIXELC == 9'h0C0)
+		if (neogeo.LSPC2.VS.PIXELC == 9'h0F0)
 		begin
 			$fwrite(f_video, "YYYYYY ");
 			// $display("Line %d rendered", sim_line);
