@@ -27,8 +27,8 @@ module neo_b1(
 	
 	input [23:0] PBUS,		// Used to retrieve X position, SPR palette # and FIX palette # from LSPC
 	input [7:0] FIXD,			// 2 fix pixels
-	input PCK1,					// What for ?
-	input PCK2,					// What for ?
+	input PCK1,
+	input PCK2,
 	input CHBL,					// Force PA to zeros
 	input BNKB,					// For Watchdog and PA
 	input [3:0] GAD, GBD,	// 2 sprite pixels
@@ -36,8 +36,8 @@ module neo_b1(
 	input [3:0] CK,			// LB address counter clocks
 	input TMS0,					// LB flip, watchdog ?
 	input LD1, LD2,			// Load X positions
-	input SS1, SS2,			// Buffer pair select for output ?
-	input S1H1,					// 3MHz 2px Even/odd pixel selection ?
+	input SS1, SS2,			// Buffer select for output
+	input S1H1,					// 3MHz 2px Even/odd pixel selection
 	
 	input A23Z, A22Z,
 	output [11:0] PA,			// Palette address bus
@@ -56,15 +56,6 @@ module neo_b1(
 	reg [7:0] SPR_PAL_REG;
 	reg [3:0] FIX_PAL_REG;
 	reg [7:0] FIXD_REG;
-	//reg [7:0] FIXD_REG_B;
-	//reg [7:0] FIXD_REG_C;
-	
-	// +1 adders
-	wire [3:0] P10_OUT;
-	wire [3:0] N10_OUT;
-	wire [3:0] P11_OUT;
-	wire [3:0] N11_OUT;
-	wire PLUS_ONE;
 	
 	// Line buffers address and data
 	wire [7:0] LB_EVEN_A_ADDR;
@@ -84,6 +75,9 @@ module neo_b1(
 	wire [11:0] LB_ODD_A_DATA_OUT;
 	wire [11:0] LB_EVEN_B_DATA_OUT;
 	wire [11:0] LB_ODD_B_DATA_OUT;
+	
+	wire [7:0] X_LOAD_VALUE_A;
+	wire [7:0] X_LOAD_VALUE_B;
 
 	// Pixel mixing
 	wire [3:0] SPR_COLOR;
@@ -94,10 +88,7 @@ module neo_b1(
 	wire [1:0] MUX_BA;
 	wire [11:0] PA_VIDEO;
 	
-	wire nPA_OE;		// TODO
 	reg PAL_SWITCH;
-	wire [7:0] X_LOAD_VALUE_A;
-	wire [7:0] X_LOAD_VALUE_B;
 	
 	
 	// Note: nRESET is sync'd to frame start
@@ -107,9 +98,7 @@ module neo_b1(
 
 	// Just renaming
 	assign BFLIP = TMS0;
-	assign nBFLIP = ~BFLIP;
 	
-	// Order ?
 	assign nWE_EVEN_A = WE[0];
 	assign nWE_ODD_A = WE[1];
 	assign nWE_EVEN_B = WE[2];
@@ -146,48 +135,33 @@ module neo_b1(
 		FIXD_REG <= FIXD;
 	end
 	
-	assign X_LOAD_VALUE_B = PBUS[15:8];
 	assign X_LOAD_VALUE_A = PBUS[7:0];
+	assign X_LOAD_VALUE_B = PBUS[15:8];
 	
-	// G5:C
-	assign PLUS_ONE = 1'b0;	// TODO: Wrong !
-	
-	/*
-	// Both of these output the exact same thing, something must be wrong
-	assign {P10_C4, P10_OUT} = X_LOAD_VALUE_B[3:0] + PLUS_ONE;
-	assign P11_OUT = X_LOAD_VALUE_B[7:4] + P10_C4;	// P11_C4 apparently not used
-	assign {N10_C4, N10_OUT} = X_LOAD_VALUE_B[3:0] + PLUS_ONE;
-	assign N11_OUT = X_LOAD_VALUE_B[7:4] + N10_C4;	// N11_C4 apparently not used
-	*/
-	
-	// P6:C and P6:D
-	// Render: Count up (X ->>>>)
-	// Output: ???
 	//assign DIR_OB_EA = 1;	//~(nBFLIP & 1);		// TODO: Probably whole display h-flip
 	//assign DIR_OA_EB = 1;	//~(BFLIP & 1);		// TODO: Probably whole display h-flip
 	
 	// LB address counters:
-	hc669_dual L12M13(CK[0], LD1, 1'b1, X_LOAD_VALUE_A, LB_EVEN_A_ADDR);	// ?
+	hc669_dual L12M13(CK[0], LD1, 1'b1, X_LOAD_VALUE_A, LB_EVEN_A_ADDR);
 	hc669_dual N13N12(CK[1], LD1, 1'b1, X_LOAD_VALUE_B, LB_ODD_A_ADDR);
 	
-	hc669_dual K12L13(CK[2], LD2, 1'b1, X_LOAD_VALUE_A, LB_EVEN_B_ADDR);	// ?
+	hc669_dual K12L13(CK[2], LD2, 1'b1, X_LOAD_VALUE_A, LB_EVEN_B_ADDR);
 	hc669_dual P13P12(CK[3], LD2, 1'b1, X_LOAD_VALUE_B, LB_ODD_B_ADDR);
 	
-	// Maybe SPR_PAL_REG_A is enough delay ?
 	assign LB_EVEN_DATA_IN = {SPR_PAL_REG, GAD[2], GAD[3], GAD[0], GAD[1]};
 	assign LB_ODD_DATA_IN = {SPR_PAL_REG, GBD[2], GBD[3], GBD[0], GBD[1]};
 	
 	// Switch between pixel (render) or backdrop (clear)
-	/*assign LB_EVEN_A_DATA_IN = BFLIP ? 12'b111111111111 : LB_EVEN_DATA_IN;
-	assign LB_EVEN_B_DATA_IN = BFLIP ? LB_EVEN_DATA_IN : 12'b111111111111;
-	assign LB_ODD_A_DATA_IN = BFLIP ? 12'b111111111111 : LB_ODD_DATA_IN;
-	assign LB_ODD_B_DATA_IN = BFLIP ? LB_ODD_DATA_IN : 12'b111111111111;*/
+	assign LB_EVEN_A_DATA_IN = BFLIP ? LB_EVEN_DATA_IN : 12'b111111111111;
+	assign LB_ODD_A_DATA_IN = BFLIP ? LB_ODD_DATA_IN : 12'b111111111111;
+	assign LB_EVEN_B_DATA_IN = BFLIP ? 12'b111111111111 : LB_EVEN_DATA_IN;
+	assign LB_ODD_B_DATA_IN = BFLIP ? 12'b111111111111 : LB_ODD_DATA_IN;
 	
-	linebuffer LB1(nWE_EVEN_A, LB_EVEN_A_ADDR, LB_EVEN_DATA_IN, LB_EVEN_A_DATA_OUT);
-	linebuffer LB2(nWE_ODD_A, LB_ODD_A_ADDR, LB_ODD_DATA_IN, LB_ODD_A_DATA_OUT);
+	linebuffer LB1(nWE_EVEN_A, LB_EVEN_A_ADDR, LB_EVEN_A_DATA_IN, LB_EVEN_A_DATA_OUT);
+	linebuffer LB2(nWE_ODD_A, LB_ODD_A_ADDR, LB_ODD_A_DATA_IN, LB_ODD_A_DATA_OUT);
 	
-	linebuffer LB3(nWE_EVEN_B, LB_EVEN_B_ADDR, LB_EVEN_DATA_IN, LB_EVEN_B_DATA_OUT);
-	linebuffer LB4(nWE_ODD_B, LB_ODD_B_ADDR, LB_ODD_DATA_IN, LB_ODD_B_DATA_OUT);
+	linebuffer LB3(nWE_EVEN_B, LB_EVEN_B_ADDR, LB_EVEN_B_DATA_IN, LB_EVEN_B_DATA_OUT);
+	linebuffer LB4(nWE_ODD_B, LB_ODD_B_ADDR, LB_ODD_B_DATA_IN, LB_ODD_B_DATA_OUT);
 	
 	// SS1 high: output buffer A
 	// SS2 high: output buffer B
@@ -202,17 +176,7 @@ module neo_b1(
 							(MUX_BA == 2'b01) ? LB_ODD_B_DATA_OUT :
 							(MUX_BA == 2'b10) ? LB_EVEN_A_DATA_OUT :
 							LB_ODD_A_DATA_OUT;
-	
-	// --------------------------------------------------------------------------------
-	
-	// H10 & H11 Palette RAM address latches
-	// nOE is used, certainly to gate outputs during CPU access
-	/*assign PA_VIDEO = nPA_OE ? 12'bzzzzzzzzzzzz : PA_VIDEO_REG;
-	always @(posedge CLK_PA)
-	begin
-		PA_VIDEO_REG <= {PAL, COLOR};
-	end*/
-	
+
 	// $400000~$7FFFFF why not use nPAL ?
 	// Not sure about inclusion of nAS
 	assign nPAL_ACCESS = |{A23Z, ~A22Z, nAS};

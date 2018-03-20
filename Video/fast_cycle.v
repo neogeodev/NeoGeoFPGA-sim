@@ -71,7 +71,9 @@ module fast_cycle(
 	wire [15:0] PIPE_B;
 	wire [3:0] O141_Q;
 	wire [3:0] G152_Q;
+	wire [3:0] G152_Q_DELAYED;
 	wire [3:0] J87_Q;
+	wire [3:0] J87_Q_DELAYED;
 	wire [7:0] ACTIVE_WR_ADDR;	// Bit 7 unused
 	wire [10:0] A_TOP;
 	wire [10:0] B_TOP;
@@ -120,12 +122,15 @@ module fast_cycle(
 	assign O112B_OUT = O109A_OUT;		// 2x inverter
 	
 	FDSCell G152(PARSE_INDEX_INC_CLK, PARSE_INDEX[3:0], G152_Q);
+	assign #5 G152_Q_DELAYED = G152_Q;	// 4x BD3
 	FDSCell J87(PARSE_INDEX_INC_CLK, PARSE_INDEX[7:4], J87_Q);
+	assign #5 J87_Q_DELAYED = J87_Q;		// 4x BD3
 	
-	FDRCell E175(O109A_OUT, G152_Q, nPARSING_DONE, E175_Q);
-	FDRCell J102(O109A_OUT, J87_Q, nPARSING_DONE, J102_Q);
+	FDRCell E175(O109A_OUT, G152_Q_DELAYED, nPARSING_DONE, E175_Q);
+	FDRCell J102(O109A_OUT, J87_Q_DELAYED, nPARSING_DONE, J102_Q);
 	FDM J231(PARSE_INDEX_INC_CLK, PARSE_INDEX[8], J231_Q, );
-	FDPCell J194(O112B_OUT, J231_Q, 1'b1, nPARSING_DONE, J194_Q, );
+	BD3 J235A(J231_Q, J231_Q_DELAYED);
+	FDPCell J194(O112B_OUT, J231_Q_DELAYED, 1'b1, nPARSING_DONE, J194_Q, );
 	
 	
 	// CWE output
@@ -134,7 +139,8 @@ module fast_cycle(
 	assign CWE = O107A_OUT | T146A_OUT;		// OK
 	// O103A
 	assign VRAM_HIGH_ADDR_SB = ~&{WR_ACTIVE, O98_Q};
-	FDPCell O98(T125A_OUT, N98_QD, 1'b1, RESETP, O98_Q, CLK_CPU_READ_HIGH);
+	BD3 O84A(N98_QD, N98_QD_DELAYED);
+	FDPCell O98(T125A_OUT, N98_QD_DELAYED, 1'b1, RESETP, O98_Q, CLK_CPU_READ_HIGH);
 	FDPCell N93(N98_QD, F58A_OUT, CLK_CPU_READ_HIGH, 1'b1, nCPU_WR_HIGH, );
 	
 	assign F58A_OUT = ~REG_VRAMADDR_MSB | nVRAM_WRITE_REQ;
@@ -165,7 +171,8 @@ module fast_cycle(
 	assign P49A_OUT = PIXELC[8];
 	FDM S67(LSPC_3M, P49A_OUT, , S67_nQ);
 	assign S70B_OUT = ~&{S67_nQ, P49A_OUT};
-	FDM S74(LSPC_6M, S70B_OUT, S74_Q, );
+	BD3 S71A(S70B_OUT, S71A_OUT);
+	FDM S74(LSPC_6M, S71A_OUT, S74_Q, );
 	// S107A Used for test mode
 	assign nNEW_LINE = 1'b1 & S74_Q;
 	
@@ -176,7 +183,8 @@ module fast_cycle(
 	assign IS_ACTIVE = PARSE_CHAIN ? T90A_OUT : M176A_OUT;
 	
 	assign M176A_OUT = PARSE_MATCH | PARSE_SIZE[5];
-	FDRCell T102(O109A_OUT, {1'b0, T102_Q[1], T102_Q[0], VRAM_HIGH_ADDR_SB}, nNEW_LINE, T102_Q);
+	BD3 S105(VRAM_HIGH_ADDR_SB, S105_OUT);
+	FDRCell T102(O109A_OUT, {1'b0, T102_Q[1], T102_Q[0], S105_OUT}, nNEW_LINE, T102_Q);
 	assign T90A_OUT = ~&{T94_OUT, T92_OUT};
 	assign T94_OUT = ~&{T102_Q[1:0], O102B_OUT};
 	assign T92_OUT = ~&{T102_Q[2], ~T102_Q[1], T102_Q[0], VRAM_HIGH_ADDR_SB};
@@ -246,7 +254,7 @@ module fast_cycle(
 	
 	
 	// Active list read counter
-	assign P39A_OUT = ~PIXELC[8];
+	assign #1 P39A_OUT = ~PIXELC[8];
 	assign nRELOAD_RD_ACTIVE = ~&{PIXELC[6], P50_CO, P39A_OUT};	// O55A
 	C43 I151(CLK_ACTIVE_RD, 4'b0000, nRELOAD_RD_ACTIVE, 1'b1, 1'b1, 1'b1, ACTIVE_RD_ADDR[3:0], I151_CO);
 	assign J176A_OUT = I151_CO | 1'b0;	// Used for test mode

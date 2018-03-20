@@ -7,6 +7,6 @@ module FS1(
 );
 
 	always @(posedge ~CK)	// negedge CK
-		Q <= {Q[2:0], ~SD};
+		#1 Q <= {Q[2:0], ~SD};
 
 endmodule

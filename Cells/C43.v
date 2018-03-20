@@ -15,9 +15,11 @@ module C43(
 		else if (!nCL)
 			Q <= 4'd0;		// Clear
 		else if (EN & CI)
-			Q <= Q + 1'b1;	// Count
+			#1 Q <= Q + 1'b1;	// Count
+		else
+			Q <= Q;
 	end
 	
-	assign CO = &{Q[3:0], CI};
+	assign #3 CO = &{Q[3:0], CI};
 
 endmodule

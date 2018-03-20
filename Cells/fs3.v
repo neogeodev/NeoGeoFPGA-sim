@@ -12,7 +12,7 @@ module FS3(
 		if (!nL)
 			Q <= P;					// Load
 		else
-			Q <= {Q[2:0], SD};	// Shift
+			#1 Q <= {Q[2:0], SD};	// Shift
 	end
 
 endmodule

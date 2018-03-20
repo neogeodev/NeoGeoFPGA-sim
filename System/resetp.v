@@ -22,8 +22,8 @@ module resetp(
 	output RESETP
 );
 
-	// nRESET  ""|_________|""""
-	// nRESETP """"""""""""|_|""
+	// nRESET  ""|_________|""""""
+	// nRESETP """"""""""""""|_|""
 	
 	FDM O52(CLK_24MB, RESET, O52_Q, );
 	FDM O49(CLK_24MB, O52_Q, , O49_nQ);

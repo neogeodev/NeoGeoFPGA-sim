@@ -112,19 +112,21 @@ module lspc2_a2(
 	
 	assign S1H1 = LSPC_3M;
 	assign S2H1 = LSPC_1_5M;
-	assign CA4 = T172_Q ^ LSPC_1_5M;
 	
 	// PCK1, PCK2, H
 	FD2 T168A(CLK_24M, T160A_OUT, PCK1, nPCK1);
 	FD2 T162A(CLK_24M, T160B_OUT, PCK2, );
 	FD2 U167(~PCK2, T172_Q, H, );
 	FDM T172(nPCK1, SPR_TILE_HFLIP, T172_Q, );
+	assign CA4 = T172_Q ^ LSPC_1_5M;
 	
 	// EVEN1, EVEN2
 	assign U105A_OUT = ~&{nHSHRINK_OUT_A, nHSHRINK_OUT_B, nEVEN_ODD};
 	assign U107_OUT = ~&{nHSHRINK_OUT_A, EVEN_nODD, HSHRINK_OUT_B};
 	assign U109_OUT = ~&{HSHRINK_OUT_A, nEVEN_ODD};
-	assign EVEN1 = ~&{U105A_OUT, U107_OUT, U109_OUT};
+	assign U112_OUT = ~&{U105A_OUT, U107_OUT, U109_OUT};
+	//assign #13 EVEN1 = U112_OUT;	// BD5 U162
+	assign EVEN1 = U112_OUT;
 	FD2 U144A(CLK_24M, EVEN1, EVEN2, );
 	
 	// Pixel parity select
@@ -207,7 +209,8 @@ module lspc2_a2(
 	FJD T134(CLK_24M, T140_Q, 1'b1, T73A_OUT, , T134_nQ);
 	FD2 U129A(CLK_24M, T134_nQ, U129A_Q, U129A_nQ);
 	assign T125A_OUT = U129A_nQ | T140_Q;
-	FS1 P201(LSPC_12M, Q174B_OUT, P201_Q);
+	BD3 P198A(Q174B_OUT, P198A_OUT);
+	FS1 P201(LSPC_12M, P198A_OUT, P201_Q);
 	assign P219A_OUT = ~|{O159_QB, ~P201_Q[0]};
 	assign P222A_OUT = ~&{P219A_OUT, ~P201_Q[1]};
 	assign CLK_SPR_TILE = P201_Q[1];
@@ -294,7 +297,7 @@ module lspc2_a2(
 	
 	// LD1/2 signal generation. Those are used to tell NEO-B1 to reload the write address (X position)
 	// Get which buffer should have the rendering pulses, and which should have the reset pulse
-	FDM R50(LSPC_3M, nFLIP_Q, R50_Q, R50_nQ);
+	FDM R50(LSPC_3M, FLIP_nQ, R50_Q, R50_nQ);
 	
 	// Periodic signals
 	FDM R69(LSPC_3M, LSPC_1_5M, R69_Q, R69_nQ);
@@ -348,8 +351,8 @@ module lspc2_a2(
 	FDPCell S137(LSPC_1_5M, CHG_D, 1'b1, RESETP, CHG, );
 	
 	// SS1/2 outputs, periodic
-	FDPCell O69(CLK_24MB, nFLIP, RESETP, 1'b1, , nFLIP_Q);
-	FDPCell R63(PIXELC[2], nFLIP_Q, 1'b1, RESETP, CHG_D, nCHG_D);
+	FDPCell O69(CLK_24MB, nFLIP, RESETP, 1'b1, , FLIP_nQ);
+	FDPCell R63(PIXELC[2], FLIP_nQ, 1'b1, RESETP, CHG_D, nCHG_D);
 	FDM S48(LSPC_3M, R15_QD, , S48_nQ);
 	// S40A
 	assign SS1 = ~|{S48_nQ, CHG_D};
@@ -397,6 +400,7 @@ module lspc2_a2(
 	assign T185B_OUT = PCK1 | PCK2;
 	// Data select lines
 	FDM S183(T185B_OUT, S171_Q, S183_Q, );
+	BD3 P196(S183_Q, S183_Q_DELAYED);
 	FDM S171(U53_Q, LSPC_1_5M, S171_Q, S171_nQ);
 	
 	assign XPOS = PIPE_C[8:0];
@@ -422,7 +426,7 @@ module lspc2_a2(
 	// Output mux
 	// C250 A238A A232 A234A
 	// E271 E273A E268A D255
-	assign P_OUT_MUX[23:16] = ~S183_Q ? 
+	assign P_OUT_MUX[23:16] = ~S183_Q_DELAYED ? 
 										~S171_nQ ? 
 											{SPR_PAL}
 											:
@@ -437,7 +441,7 @@ module lspc2_a2(
 	// C256 B269A B273A B276A
 	// B220 C248 B217A B215
 	// B197A B130A B128 B148A
-	assign P_OUT_MUX[15:0] = ~S183_Q ?
+	assign P_OUT_MUX[15:0] = ~S183_Q_DELAYED ?
 										~S171_nQ ?
 											{P_MUX_HIGH, P_MUX_LOW}
 											:
@@ -459,7 +463,7 @@ module lspc2_a2(
 	assign SPR_Y_ADD = SPR_Y_LOOKAHEAD + SPR_Y[7:0];
 	// R216 R218 R238 R241
 	// R281 R283 Q289 Q291
-	assign SPR_TILE_A = SPR_Y_ADD[7:0] ^ {8{!P235_OUT}};
+	assign SPR_TILE_A = SPR_Y_ADD[7:0] ^ {8{~P235_OUT}};
 	assign P235_OUT = ~(SPR_Y[8] ^ SPR_Y_ADD[8]);
 	// Q237 R189
 	assign SPR_Y_SHRINK = SPR_TILE_A + ~YSHRINK;
