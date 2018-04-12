@@ -18,9 +18,6 @@
 
 // All pins listed OK
 
-// Signal to latch fix palette ? posedge 1MB + PCK2 ?
-// Signal to latch sprite palette ? posedge 1MB + PCK1 ?
-
 module neo_b1(
 	input CLK_6MB,				// 1px
 	input CLK_1MB,				// 3MHz 2px Even/odd pixel selection
@@ -33,7 +30,10 @@ module neo_b1(
 	input BNKB,					// For Watchdog and PA
 	input [3:0] GAD, GBD,	// 2 sprite pixels
 	input [3:0] WE,			// LB writes
-	input [3:0] CK,			// LB address counter clocks
+	input CK1,					// LB address counter clocks
+	input CK2,
+	input CK3,
+	input CK4,
 	input TMS0,					// LB flip, watchdog ?
 	input LD1, LD2,			// Load X positions
 	input SS1, SS2,			// Buffer select for output
@@ -47,152 +47,206 @@ module neo_b1(
 	input nAS,
 	input [21:17] M68K_ADDR_U,
 	input [12:1] M68K_ADDR_L,
-	output nHALT,				// Todo
+	output nHALT,
 	output nRESET,
 	input nRST
 );
 
-	// Delay registers
-	reg [7:0] SPR_PAL_REG;
-	reg [3:0] FIX_PAL_REG;
 	reg [7:0] FIXD_REG;
-	
-	// Line buffers address and data
-	wire [7:0] LB_EVEN_A_ADDR;
-	wire [7:0] LB_ODD_A_ADDR;
-	wire [7:0] LB_EVEN_B_ADDR;
-	wire [7:0] LB_ODD_B_ADDR;
-	
-	wire [11:0] LB_EVEN_DATA_IN;
-	wire [11:0] LB_ODD_DATA_IN;
-	
-	wire [11:0] LB_EVEN_A_DATA_IN;
-	wire [11:0] LB_ODD_A_DATA_IN;
-	wire [11:0] LB_EVEN_B_DATA_IN;
-	wire [11:0] LB_ODD_B_DATA_IN;
-	
-	wire [11:0] LB_EVEN_A_DATA_OUT;
-	wire [11:0] LB_ODD_A_DATA_OUT;
-	wire [11:0] LB_EVEN_B_DATA_OUT;
-	wire [11:0] LB_ODD_B_DATA_OUT;
-	
-	wire [7:0] X_LOAD_VALUE_A;
-	wire [7:0] X_LOAD_VALUE_B;
-
-	// Pixel mixing
-	wire [3:0] SPR_COLOR;
-	wire [7:0] SPR_PAL;
 	wire [3:0] FIX_COLOR;
-	wire [3:0] COLOR;
-	wire [7:0] PAL;
+	wire [3:0] SPR_COLOR;
+	wire [11:0] PA_MUX_A;
+	wire [11:0] PA_MUX_B;
+	wire [11:0] RAM_MUX_OUT;
+	reg [11:0] PA_VIDEO;
 	wire [1:0] MUX_BA;
-	wire [11:0] PA_VIDEO;
+	// Line buffers address and data
+	wire [7:0] RAMTL_ADDR;
+	wire [7:0] RAMTR_ADDR;
+	wire [7:0] RAMBL_ADDR;
+	wire [7:0] RAMBR_ADDR;
+	wire [11:0] RAMTL_WR;
+	wire [11:0] RAMTR_WR;
+	wire [11:0] RAMBL_WR;
+	wire [11:0] RAMBR_WR;
+	wire [11:0] RAMTL_RD;
+	wire [11:0] RAMTR_RD;
+	wire [11:0] RAMBL_RD;
+	wire [11:0] RAMBR_RD;
+	// Delay registers
+	reg [7:0] SPR_PAL_REG_A;
+	reg [3:0] FIX_PAL_REG;
+	// Buffer address counters
+	wire [7:0] MUX_A;
+	reg [7:0] COUNTER_A;
+	wire [7:0] MUX_B;
+	reg [7:0] COUNTER_B;
+	wire [7:0] MUX_C;
+	reg [7:0] COUNTER_C;
+	wire [7:0] MUX_D;
+	reg [7:0] COUNTER_D;
+	wire [3:0] GAD_GATED_A;
+	wire [3:0] GBD_GATED_A;
+	// Shift registers
+	reg [2:0] SR_WUDO_REG;
+	reg [2:0] SR_MAVO_REG;
 	
-	reg PAL_SWITCH;
-	
-	
-	// Note: nRESET is sync'd to frame start
-	// To check: BNKB might have to be inverted (see Alpha68k K7:A)
-	watchdog WD(nLDS, RW, A23Z, A22Z, M68K_ADDR_U, M68K_ADDR_L, BNKB, nHALT, nRESET, nRST);
+	assign nHALT = nRESET;	// Yup (also those are open-collector)
 
-
-	// Just renaming
-	assign BFLIP = TMS0;
-	
-	assign nWE_EVEN_A = WE[0];
-	assign nWE_ODD_A = WE[1];
-	assign nWE_EVEN_B = WE[2];
-	assign nWE_ODD_B = WE[3];
-	
-	// Fix stuff checked on DE1 board
-	// When are palettes latched from the P BUS ?
-	// PCK* are sharing the edges, so it can't be them
-	// CLK_1MB has just the right timing, but NEO-B1 must differentiate between SPR palette and FIX palette
-	// Is this done with a S/R latch using PCK1/2 ? Let's try...
-	assign PCK = (PCK1 | PCK2);
-	
-	always @(posedge PCK)
+	// 2px fix data reg
+	// BEKU AKUR...
+	always @(posedge CLK_1MB)		// negedge ?
 	begin
-		if (PCK1)
-			PAL_SWITCH <= 1'b0;	// Sprite palette comes next
-		else if (PCK2)
-			PAL_SWITCH <= 1'b1;	// Fix palette comes next
+		FIXD_REG <= FIXD;
 	end
 	
+	// Fix odd/even pixel select
+	// BEVU AWEQ...
+	assign FIX_COLOR = S1H1 ? FIXD_REG[7:4] : FIXD_REG[3:0];		// Swap ?
+
+	// IDUF
+	assign FIX_OPAQUE = |{FIX_COLOR};
+
+	// Fix/Sprite/Blanking select
+	// KUQA KUTU JARA...
+	assign PA_MUX_A = FIX_OPAQUE ? {4'b0000, FIX_PAL_REG, FIX_COLOR} : RAM_MUX_OUT;
+	assign PA_MUX_B = CHBL ? 12'h000 : PA_MUX_A;
+
+	// KAWE KESE...
+	always @(posedge CLK_6MB)
+	begin
+		PA_VIDEO <= PA_MUX_B;
+	end
+
+	// GETU FUCA...
 	always @(posedge PCK1)
 	begin
 		FIX_PAL_REG <= PBUS[19:16];
 	end
 	
+	// MESY NEPA...
 	always @(posedge PCK2)
 	begin
-		SPR_PAL_REG <= PBUS[23:16];
+		SPR_PAL_REG_A <= PBUS[23:16];
 	end
 	
-	// Fix data delay
-	always @(posedge ~S1H1)		// negedge
+	
+	// WUDO
+	always @(posedge TODO_CLK1)
 	begin
-		FIXD_REG <= FIXD;
+		SR_WUDO_REG <= {SR_WUDO_REG[2:1], ~SS2};
 	end
 	
-	assign X_LOAD_VALUE_A = PBUS[7:0];
-	assign X_LOAD_VALUE_B = PBUS[15:8];
+	// MOZA MAKO...
+	assign GAD_GATED_A = SR_WUDO_REG[2] ? GAD : 4'b0000;
 	
-	//assign DIR_OB_EA = 1;	//~(nBFLIP & 1);		// TODO: Probably whole display h-flip
-	//assign DIR_OA_EB = 1;	//~(BFLIP & 1);		// TODO: Probably whole display h-flip
+	// MAPE MUCA...
+	assign RAMTL_WR[3:0] = TODO_SW_A ? GAD_GATED_A : GBD;
 	
-	// LB address counters:
-	hc669_dual L12M13(CK[0], LD1, 1'b1, X_LOAD_VALUE_A, LB_EVEN_A_ADDR);
-	hc669_dual N13N12(CK[1], LD1, 1'b1, X_LOAD_VALUE_B, LB_ODD_A_ADDR);
 	
-	hc669_dual K12L13(CK[2], LD2, 1'b1, X_LOAD_VALUE_A, LB_EVEN_B_ADDR);
-	hc669_dual P13P12(CK[3], LD2, 1'b1, X_LOAD_VALUE_B, LB_ODD_B_ADDR);
+	// MAVO
+	always @(posedge TODO_CLK2)
+	begin
+		SR_MAVO_REG <= {SR_MAVO_REG[2:1], ~SS1};
+	end
 	
-	assign LB_EVEN_DATA_IN = {SPR_PAL_REG, GAD[2], GAD[3], GAD[0], GAD[1]};
-	assign LB_ODD_DATA_IN = {SPR_PAL_REG, GBD[2], GBD[3], GBD[0], GBD[1]};
+	// NEGA NACO...
+	assign GBD_GATED_A = SR_MAVO_REG[2] ? GBD : 4'b0000;
 	
-	// Switch between pixel (render) or backdrop (clear)
-	assign LB_EVEN_A_DATA_IN = BFLIP ? LB_EVEN_DATA_IN : 12'b111111111111;
-	assign LB_ODD_A_DATA_IN = BFLIP ? LB_ODD_DATA_IN : 12'b111111111111;
-	assign LB_EVEN_B_DATA_IN = BFLIP ? 12'b111111111111 : LB_EVEN_DATA_IN;
-	assign LB_ODD_B_DATA_IN = BFLIP ? 12'b111111111111 : LB_ODD_DATA_IN;
+	// NOFA NYKO...
+	assign RAMBR_WR[3:0] = TODO_SW_B ? GBD_GATED_A : GBD;		// Shouldn't this be GAD ?
 	
-	linebuffer LB1(nWE_EVEN_A, LB_EVEN_A_ADDR, LB_EVEN_A_DATA_IN, LB_EVEN_A_DATA_OUT);
-	linebuffer LB2(nWE_ODD_A, LB_ODD_A_ADDR, LB_ODD_A_DATA_IN, LB_ODD_A_DATA_OUT);
-	
-	linebuffer LB3(nWE_EVEN_B, LB_EVEN_B_ADDR, LB_EVEN_B_DATA_IN, LB_EVEN_B_DATA_OUT);
-	linebuffer LB4(nWE_ODD_B, LB_ODD_B_ADDR, LB_ODD_B_DATA_IN, LB_ODD_B_DATA_OUT);
-	
-	// SS1 high: output buffer A
-	// SS2 high: output buffer B
-	
-	// Maybe SS* instead of BFLIP
-	// Maybe S1H1 instead of BFLIP
-	assign MUX_BA = {SS1, S1H1};
-							
-	// K15, L15, N15, P15, K13, M15 Sprite color and palette muxes
-	assign {SPR_PAL, SPR_COLOR} = 
-							(MUX_BA == 2'b00) ? LB_EVEN_B_DATA_OUT :
-							(MUX_BA == 2'b01) ? LB_ODD_B_DATA_OUT :
-							(MUX_BA == 2'b10) ? LB_EVEN_A_DATA_OUT :
-							LB_ODD_A_DATA_OUT;
 
-	// $400000~$7FFFFF why not use nPAL ?
-	// Not sure about inclusion of nAS
-	assign nPAL_ACCESS = |{A23Z, ~A22Z, nAS};
 	
-	// Pixel mixing
-	assign FIX_COLOR = S1H1 ? FIXD_REG[7:4] : FIXD_REG[3:0];
-	assign FIX_OPAQUE = |{FIX_COLOR};
-	assign COLOR = FIX_OPAQUE ? FIX_COLOR : SPR_COLOR;
-	assign PAL = FIX_OPAQUE ? {4'b0000, FIX_PAL_REG} : SPR_PAL;
-	assign PA_VIDEO = CHBL ? 12'h000 : {PAL, COLOR};
+	// NUDE NOSY...
+	assign GAD_GATED_B = ~SS1 ? GAD : 4'b0000;
 	
+	// NODO NUJA...
+	assign RAMBL_WR[3:0] = TODO_SW_C ? GAD_GATED_B : ~SS1;	// WTF is up with ~SS1 ?
+	
+	
+	
+	// Output buffer select
+	// MEGA MAKA MEJU ORUG...
+	assign RAM_MUX_OUT = 
+							(MUX_BA == 2'b00) ? RAMTL_RD :
+							(MUX_BA == 2'b01) ? RAMTR_RD :
+							(MUX_BA == 2'b10) ? RAMBL_RD :
+							RAMBR_RD;
+
 	// Priority for palette address bus (PA):
 	// -CPU over everything else (?)
 	// -CHBL (priority over CPU ?)
-	// -FIX pixel if opaque
+	// -Fix pixel if opaque
 	// -Line buffer (sprites) output is last
-	assign PA = nPAL_ACCESS ? PA_VIDEO : M68K_ADDR_L;
+	assign PA = PAL_ACCESS ? M68K_ADDR_L : PA_VIDEO;
+
+	// Load/count select
+	// RUFY QAZU...
+	assign MUX_A = LD1 ? (COUNTER_A + 1) : PBUS[7:0];	// TODO: Check LD1, should be ok
+
+	// Address counter update
+	// REVA QEVU...
+	always @(posedge CK1)
+	begin
+		COUNTER_A <= MUX_A;
+	end
+
+	// Load/count select
+	// PECU QUNY...
+	assign MUX_B = LD1 ? (COUNTER_B + 1) : PBUS[15:8];
+
+	// Address counter update
+	// PAJE QATA...
+	always @(posedge CK2)
+	begin
+		COUNTER_B <= MUX_B;
+	end
+	
+	// Load/count select
+	// BAME CUNU...
+	assign MUX_C = LD2 ? (COUNTER_C + 1) : PBUS[7:0];
+
+	// Address counter update
+	// BEWA CENA...
+	always @(posedge CK3)
+	begin
+		COUNTER_C <= MUX_C;
+	end
+	
+	// Load/count select
+	// EGED DUGA...
+	assign MUX_D = LD2 ? (COUNTER_D + 1) : PBUS[15:8];
+
+	// Address counter update
+	// EPAQ DAFU...
+	always @(posedge CK4)
+	begin
+		COUNTER_D <= MUX_D;
+	end
+	
+	
+	
+	// Note: nRESET is sync'd to frame start
+	// To check: BNKB might have to be inverted (see Alpha68k K7:A)
+	watchdog WD(nLDS, RW, A23Z, A22Z, M68K_ADDR_U, M68K_ADDR_L, BNKB, nHALT, nRESET, nRST);
+	
+	// LB address counters:
+	//hc669_dual L12M13(CK[0], LD1, 1'b1, X_LOAD_VALUE_A, RAMTL_ADDR);
+	//hc669_dual N13N12(CK[1], LD1, 1'b1, X_LOAD_VALUE_B, RAMTR_ADDR);
+	//hc669_dual K12L13(CK[2], LD2, 1'b1, X_LOAD_VALUE_A, RAMBL_ADDR);
+	//hc669_dual P13P12(CK[3], LD2, 1'b1, X_LOAD_VALUE_B, RAMBR_ADDR);
+	
+	linebuffer RAMTL(RAMTL_ADDR, RAMTL_WR, RAMTL_RD, RAMTL_RE, RAMTL_WE);
+	linebuffer RAMTR(RAMTR_ADDR, RAMTR_WR, RAMTR_RD, RAMTR_RE, RAMTR_WE);
+	linebuffer RAMBL(RAMBL_ADDR, RAMBL_WR, RAMBL_RD, RAMBL_RE, RAMBL_WE);
+	linebuffer RAMBR(RAMBR_ADDR, RAMBR_WR, RAMBR_RD, RAMBR_RE, RAMBR_WE);
+	
+	// SS1 high: output buffer A
+	// SS2 high: output buffer B
+
+	// $400000~$7FFFFF why not use nPAL ?
+	// Not sure about inclusion of nAS
+	assign PAL_ACCESS = ~|{A23Z, ~A22Z, nAS};
 
 endmodule
