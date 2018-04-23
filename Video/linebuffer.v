@@ -27,11 +27,11 @@ module linebuffer(
 	reg [11:0] LB_RAM[0:255];	// TODO: Add a check, should never go over 191
 
 	// Read
-	assign #10 DATA_OUT = RE ? LB_RAM[ADDR] : 8'bzzzzzzzz;
+	assign #10 DATA_OUT = RE ? LB_RAM[ADDR] : 12'bzzzzzzzzzzzz;
 
 	// Write
 	always @(*)
 		if (WE)
-			#10 LB_RAM[ADDR] <= DATA_IN;
+			LB_RAM[ADDR] <= DATA_IN;	// #10
 
 endmodule

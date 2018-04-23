@@ -408,6 +408,7 @@ module lspc2_a2(
 	assign SPR_TILE_AA[2] = AUTOANIM3_EN ? AA_COUNT[2] : SPR_TILE[2];
 	assign SPR_TILE_AA[1:0] = AUTOANIM2_EN ? AA_COUNT[1:0] : SPR_TILE[1:0];
 	
+	// Q125 R120
 	assign XPOS_ROUND_UP = XPOS[8:1] + XPOS[0];
 	
 	// K143A K145A K147A K149A
@@ -420,7 +421,7 @@ module lspc2_a2(
 	
 	// R149A R149B R147A R147B
 	// Q149A Q120A Q121B Q149B
-	assign P_MUX_LOW = R88_Q ? XPOS_ROUND_UP : SPR_LINE_MUX;		// Might be swapped
+	assign P_MUX_LOW = R88_Q ? XPOS_ROUND_UP : SPR_LINE_MUX;
 	
 	
 	// Output mux

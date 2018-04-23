@@ -39,9 +39,9 @@ module neo_d0(
 	output SDRD0, SDRD1,
 	output n2610CS, n2610RD, n2610WR,
 	output nZRAMCS,
-	output reg [2:0] BNK,
-	output reg [2:0] P1_OUT,
-	output reg [2:0] P2_OUT
+	output [2:0] BNK,
+	output [2:0] P1_OUT,
+	output [2:0] P2_OUT
 );
 
 	// SIMULATION ONLY
@@ -51,6 +51,9 @@ module neo_d0(
 	always
 		#20.8 CLK_24M = !CLK_24M;		// 24MHz -> 20.8ns half period
 
+	reg [2:0] REG_BNK;
+	reg [5:0] REG_OUT;
+	
 	// Clock divider part
 	clocks CLK(CLK_24M, nRESETP, CLK_12M, CLK_68KCLK, CLK_68KCLKB, CLK_6MB, CLK_1MB);
 	
@@ -58,13 +61,16 @@ module neo_d0(
 	z80ctrl Z80CTRL(SDA_L, SDA_H, nSDRD, nSDWR, nMREQ, nIORQ, nSDW, nRESET, nZ80NMI, nSDZ80R, nSDZ80W,
 				nSDZ80CLR, nSDROM, nSDMRD, nSDMWR, SDRD0, SDRD1, n2610CS, n2610RD, n2610WR, nZRAMCS);
 	
-	// Todo: Maybe nRESET is used here ?
+	
+	assign {P2_OUT, P1_OUT} = nRESETP ? REG_OUT : 6'b000000;
+	assign BNK = nRESETP ? REG_BNK : 3'b000;
+
 	always @(negedge nBITWD0)
 	begin
 		if (M68K_ADDR_A4)
-			BNK <= M68K_DATA[2:0];					// REG_CRDBANK
+			REG_BNK <= M68K_DATA[2:0];
 		else
-			{P2_OUT, P1_OUT} <= M68K_DATA[5:0];	// REG_POUTPUT
+			REG_OUT <= M68K_DATA[5:0];
 	end
 	
 endmodule
