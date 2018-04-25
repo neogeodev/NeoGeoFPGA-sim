@@ -127,7 +127,7 @@ module lspc2_a2(
 	assign U112_OUT = ~&{U105A_OUT, U107_OUT, U109_OUT};
 	//assign #13 EVEN1 = U112_OUT;	// BD5 U162
 	assign EVEN1 = U112_OUT;
-	FD2 U144A(CLK_24M, EVEN1, EVEN2, );
+	FD2 U144A(CLK_24M, U112_OUT, EVEN2, );
 	
 	// Pixel parity select
 	assign nPARITY_INIT = ~&{nCHAINED, S53A_OUT};	// R42A
@@ -221,20 +221,20 @@ module lspc2_a2(
 	// NEO-B1 control signals
 	
 	// Latch for CK1/2 and WE1/2
-	LT4 T31(LSPC_12M, {T28_OUT, T38A_OUT, T20B_OUT, T29A_OUT}, T31_P, );
+	LT4 T31(LSPC_12M, {T38A_OUT, T28_OUT, T29A_OUT, T20B_OUT}, T31_P, );
 	// Latch for CK3/4 and WE3/4
-	LT4 U24(LSPC_12M, {U21B_OUT, U37B_OUT, U31A_OUT, U35A_OUT}, U24_P, );
+	LT4 U24(LSPC_12M, {U37B_OUT, U21B_OUT, U35A_OUT, U31A_OUT}, U24_P, );
 	
 	// CKs and WEs can only be low when LSPC_12M is high
-	assign WE1 = ~&{T31_P[1], LSPC_12M};
-	assign WE2 = ~&{T31_P[0], LSPC_12M};
-	assign WE3 = ~&{U24_P[3], LSPC_12M};
-	assign WE4 = ~&{U24_P[2], LSPC_12M};
+	assign WE1 = ~&{T31_P[0], LSPC_12M};	// TESTING
+	assign WE2 = ~&{T31_P[1], LSPC_12M};
+	assign CK1 = ~&{T31_P[2], LSPC_12M};
+	assign CK2 = ~&{T31_P[3], LSPC_12M};
 	
-	assign CK1 = ~&{T31_P[3], LSPC_12M};
-	assign CK2 = ~&{T31_P[2], LSPC_12M};
-	assign CK3 = ~&{U24_P[1], LSPC_12M};
-	assign CK4 = ~&{U24_P[0], LSPC_12M};
+	assign WE3 = ~&{U24_P[2], LSPC_12M};
+	assign WE4 = ~&{U24_P[3], LSPC_12M};
+	assign CK3 = ~&{U24_P[0], LSPC_12M};
+	assign CK4 = ~&{U24_P[1], LSPC_12M};
 	
 	assign WE = {WE4, WE3, WE2, WE1};
 	assign CK = {CK4, CK3, CK2, CK1};
@@ -267,13 +267,13 @@ module lspc2_a2(
 	assign U39B_OUT = ~&{WRITEPX_B, nCHG_D};
 	// Enable writes for opaque pixels only
 	assign U18A_OUT = ~&{DOTA, ~U51B_OUT};
-	assign U33A_OUT = ~&{DOTB, ~U39B_OUT};
+	assign U38A_OUT = ~&{DOTB, ~U39B_OUT};
 	// Merge writes with clearing write pulses
 	assign U21B_OUT = ~&{T20A_OUT, U18A_OUT};
-	assign U37B_OUT = ~&{U33B_OUT, U33A_OUT};
+	assign U37B_OUT = ~&{U33B_OUT, U38A_OUT};
 	// Merge clocks with LD1_D pulses
-	assign U31A_OUT = ~&{LD2_D, T20A_OUT, U51B_OUT};
 	assign U35A_OUT = ~&{LD2_D, U33B_OUT, U39B_OUT};
+	assign U31A_OUT = ~&{LD2_D, T20A_OUT, U51B_OUT};
 	
 	
 	// Buffer shift-out clocks, alternates between odd/even
@@ -343,7 +343,7 @@ module lspc2_a2(
 	
 	// Reload pulse for the h-shrink shift registers
 	// Perdiodic as all sprites take the same time to render regardless of h-shrink value
-	assign R48A_OUT = ~{S53A_OUT, R69_Q};
+	assign R48A_OUT = ~&{S53A_OUT, R69_Q};
 	FD2 R56A(CLK_24MB, R48A_OUT, LD_HSHRINK_REG, );
 	
 	

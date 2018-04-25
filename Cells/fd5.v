@@ -11,9 +11,9 @@ module FD5(
 	always @(posedge ~nCK or posedge ~nCL)
 	begin
 		if (!nCL)
-			Q <= 1'b0;
+			Q <= #1 1'b0;
 		else
-			Q <= D;
+			Q <= #1 D;
 	end
 	
 	assign nQ = ~Q;

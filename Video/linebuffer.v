@@ -30,8 +30,7 @@ module linebuffer(
 	assign #10 DATA_OUT = RE ? LB_RAM[ADDR] : 12'bzzzzzzzzzzzz;
 
 	// Write
-	always @(*)
-		if (WE)
+	always @(posedge WE)
 			LB_RAM[ADDR] <= DATA_IN;	// #10
 
 endmodule

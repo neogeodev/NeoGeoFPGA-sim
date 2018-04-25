@@ -97,16 +97,10 @@ module neo_b1(
 	wire [3:0] GAD_GATED_B;
 	wire [3:0] GBD_GATED_B;
 	// Debug
-	wire [3:0] GAD_REV;
-	wire [3:0] GBD_REV;
 	reg [7:0] LATCH_A;
 	reg [7:0] LATCH_B;
 	reg [7:0] LATCH_C;
 	reg [7:0] LATCH_D;
-	
-	// Wot ?
-	assign GAD_REV = {GAD[2], GAD[3], GAD[0], GAD[1]};
-	assign GBD_REV = {GBD[2], GBD[3], GBD[0], GBD[1]};
 	
 	parameter TEST_MODE = 0;	// "XMM" pin
 	
@@ -146,39 +140,39 @@ module neo_b1(
 	
 	
 	// MOZA MAKO...
-	assign GAD_GATED_A = GAD_REV | {4{SS2}};
+	assign GAD_GATED_A = GAD | {4{SS2}};
 	// MAPE MUCA...
-	assign RAMTL_WR[3:0] = TEST_MODE ? GBD_REV : GAD_GATED_A;
+	assign RAMTL_WR[3:0] = TEST_MODE ? GBD : GAD_GATED_A;
 	
 	// NEGA NACO...
-	assign GBD_GATED_A = GBD_REV | {4{SS1}};
+	assign GBD_GATED_A = GBD | {4{SS1}};
 	// NOFA NYKO...
-	assign RAMBR_WR[3:0] = TEST_MODE ? GBD_REV : GBD_GATED_A;
+	assign RAMBR_WR[3:0] = TEST_MODE ? GBD : GBD_GATED_A;
 
 	// NUDE NOSY...
-	assign GAD_GATED_B = GAD_REV | {4{SS1}};
+	assign GAD_GATED_B = GAD | {4{SS1}};
 	// NODO NUJA...
-	assign RAMBL_WR[3:0] = TEST_MODE ? GBD_REV : GAD_GATED_B;
+	assign RAMBL_WR[3:0] = TEST_MODE ? GBD : GAD_GATED_B;
 	
 	// NUDE NOSY...
-	assign GBD_GATED_B = GBD_REV | {4{SS2}};
+	assign GBD_GATED_B = GBD | {4{SS2}};
 	// LANO LODO...
-	assign RAMTR_WR[3:0] = TEST_MODE ? GBD_REV : GBD_GATED_B;
+	assign RAMTR_WR[3:0] = TEST_MODE ? GBD : GBD_GATED_B;
 	
 	
 	
 	always @(posedge PCK2)
 	begin
-		TR_PAL_REG <= PBUS[23:16];		// GENA HARU...
-		BR_PAL_REG <= PBUS[23:16];		// MESY NEPA...
 		BL_PAL_REG <= PBUS[23:16];		// MANA NAKA...
+		BR_PAL_REG <= PBUS[23:16];		// MESY NEPA...
 		TL_PAL_REG <= PBUS[23:16];		// JETU JUMA...
+		TR_PAL_REG <= PBUS[23:16];		// GENA HARU...
 	end
 	
-	assign RAMTR_WR[11:4] = TR_PAL_REG | {8{SS2}};	// GUSU HYKU...
-	assign RAMBR_WR[11:4] = BR_PAL_REG | {8{SS1}};	// MECY NUXA...
 	assign RAMBL_WR[11:4] = BL_PAL_REG | {8{SS1}};	// MORA NOKU...
+	assign RAMBR_WR[11:4] = BR_PAL_REG | {8{SS1}};	// MECY NUXA...
 	assign RAMTL_WR[11:4] = TL_PAL_REG | {8{SS2}};	// JEZA JODE...
+	assign RAMTR_WR[11:4] = TR_PAL_REG | {8{SS2}};	// GUSU HYKU...
 	
 	/*
 	assign VORU = S1H1 & TMS0;
@@ -186,8 +180,6 @@ module neo_b1(
 	assign VEZA = ~S1H1 & TMS0;
 	assign VOKE = ~S1H1 & ~TMS0;
 	*/
-	
-	assign MUX_BA = {TMS0, S1H1};
 
 	// Load/count select
 	// RUFY QAZU...
@@ -199,7 +191,7 @@ module neo_b1(
 		COUNTER_A <= MUX_A;
 	
 	// NACY OKYS...
-	always @(WE1)
+	always @(*)
 		if (WE1) LATCH_A <= COUNTER_A;
 
 	// Load/count select
@@ -212,7 +204,7 @@ module neo_b1(
 		COUNTER_B <= MUX_B;
 	
 	// PEXU QUVU...
-	always @(WE2)
+	always @(*)
 		if (WE2) LATCH_B <= COUNTER_B;
 	
 	// Load/count select
@@ -225,7 +217,7 @@ module neo_b1(
 		COUNTER_C <= MUX_C;
 	
 	// ERYV ENOG...
-	always @(WE3)
+	always @(*)
 		if (WE3) LATCH_C <= COUNTER_C;
 	
 	// Load/count select
@@ -238,7 +230,7 @@ module neo_b1(
 		COUNTER_D <= MUX_D;
 	
 	// EDYZ ASYX...
-	always @(WE4)
+	always @(*)
 		if (WE4) LATCH_D <= COUNTER_D;
 	
 	
@@ -254,13 +246,15 @@ module neo_b1(
 	linebuffer RAMTL(RAMTL_ADDR, RAMTL_WR, RAMTL_RD, RAMTL_RE, RAMTL_WE);
 	linebuffer RAMTR(RAMTR_ADDR, RAMTR_WR, RAMTR_RD, RAMTR_RE, RAMTR_WE);
 	
+	assign MUX_BA = {TMS0, S1H1};
+	
 	// Output buffer select
 	// MEGA MAKA MEJU ORUG...
 	assign RAM_MUX_OUT = 
-							(MUX_BA == 2'b00) ? RAMBL_RD :
-							(MUX_BA == 2'b01) ? RAMBR_RD :
-							(MUX_BA == 2'b10) ? RAMTL_RD :
-							RAMTR_RD;
+							(MUX_BA == 2'b00) ? RAMBR_RD :
+							(MUX_BA == 2'b01) ? RAMBL_RD :
+							(MUX_BA == 2'b10) ? RAMTR_RD :
+							RAMTL_RD;
 	
 	// Fix/Sprite/Blanking select
 	// KUQA KUTU JARA...

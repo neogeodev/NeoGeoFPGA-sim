@@ -11,11 +11,11 @@ module FDPCell(
 	always @(posedge CK or posedge ~S or posedge ~R)
 	begin
 		if (!S)
-			Q <= 1'b1;
+			Q <= #1 1'b1;
 		else if (!R)
-			Q <= 1'b0;
+			Q <= #1 1'b0;
 		else
-			Q <= D;
+			Q <= #1 D;
 	end
 	
 	assign nQ = ~Q;

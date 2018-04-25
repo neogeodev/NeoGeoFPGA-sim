@@ -7,6 +7,6 @@ module FDSCell(
 );
 
 	always @(posedge CK)
-		Q <= D;
+		Q <= #1 D;
 
 endmodule

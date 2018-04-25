@@ -21,9 +21,7 @@
 // furrtek, Charles MacDonald, Kyuusaku, freem and neogeodev contributors ~ 2016
 // https://github.com/neogeodev/NeoGeoFPGA-sim
 
-// Todo: Palette RAM CPU access (see alpha68k PCB)
 // Todo: VPA for interrupt ACK (NEO-C1)
-// Todo: HALT (NEO-B1)
 
 module neogeo(
 	input nRESET_BTN,		// VCCON on MVS

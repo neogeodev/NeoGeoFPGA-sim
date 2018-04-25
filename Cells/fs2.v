@@ -10,9 +10,9 @@ module FS2(
 	always @(posedge ~CK)	// negedge CK
 	begin
 		if (L)
-			Q <= P;					// Load
+			Q <= #1 P;					// Load
 		else
-			Q <= {Q[2:0], SD};	// Shift
+			Q <= #1 {Q[2:0], SD};	// Shift
 	end
 
 endmodule

@@ -11,7 +11,7 @@ module FDM(
 		Q <= 1'b0;
 
 	always @(posedge CK)
-		#2 Q <= D;
+		Q <= #2 D;
 	
 	assign nQ = ~Q;
 

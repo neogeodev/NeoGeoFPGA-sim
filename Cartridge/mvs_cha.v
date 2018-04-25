@@ -48,7 +48,9 @@ module mvs_cha(
 	assign C_ADDR = {C_LATCH[19:4], CA4, C_LATCH[3:0]};
 	assign S_ADDR = {S_LATCH[15:3], S2H1, S_LATCH[2:0]};
 	
-	assign CR = {C_EVEN_DATA, C_ODD_DATA};		// Other way around ?
+	// Todo: Byteswap the C ROMs correctly
+	// This should be {C_EVEN_DATA, C_ODD_DATA} :
+	assign CR = {C_EVEN_DATA[7:0], C_EVEN_DATA[15:8], C_ODD_DATA[7:0], C_ODD_DATA[15:8]};
 	
 	rom_c1 C1(C_ADDR, C_ODD_DATA, nPAIR0_CE);
 	rom_c2 C2(C_ADDR, C_EVEN_DATA, nPAIR0_CE);

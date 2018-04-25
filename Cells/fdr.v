@@ -10,9 +10,9 @@ module FDRCell(
 	always @(posedge CK or posedge ~nCL)
 	begin
 		if (!nCL)
-			Q <= 4'd0;
+			Q <= #1 4'd0;
 		else
-			Q <= D;
+			Q <= #1 D;
 	end
 
 endmodule

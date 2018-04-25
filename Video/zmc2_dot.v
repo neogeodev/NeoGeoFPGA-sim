@@ -36,6 +36,10 @@ module zmc2_dot(
 		else if (H) SR <= {SR[29:24], 2'b00, SR[21:16], 2'b00, SR[13:8], 2'b00, SR[5:0], 2'b00};
 		else SR <= {2'b00, SR[31:26], 2'b00, SR[23:18], 2'b00, SR[15:10], 2'b00, SR[7:2]};
 	end
+	
+	// Load:			FEDCBA98 76543210 FEDCBA98 76543210
+	// Shift H=0:	--FEDCBA --765432 --FEDCBA --765432 --> Two pixels right
+	// Shift H=1:  DCBA98-- 543210-- DCBA98-- 543210-- <-- Two pixels left
 
 	always @*
 	begin
@@ -48,5 +52,11 @@ module zmc2_dot(
 		
 		{DOTA, DOTB} <= {|GAD, |GBD};
 	end
+	
+	// EVEN H  FEDCBA98 76543210 FEDCBA98 76543210
+	//   0  0        BA       BA       BA       BA	Reverse shift, X is even
+	//   0  1  AB       AB       AB       AB			Normal shift, X is even
+	//   1  0        AB       AB       AB       AB	Reverse shift, X is odd
+	//   1  1  BA       BA       BA       BA			Normal shift, X is odd
 	
 endmodule

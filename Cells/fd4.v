@@ -12,11 +12,11 @@ module FD4(
 	always @(posedge ~CK or posedge ~PR or posedge ~CL)	// negedge CK
 	begin
 		if (~PR)
-			Q <= 1'b1;
+			Q <= #1 1'b1;
 		else if (~CL)
-			Q <= 1'b0;
+			Q <= #1 1'b0;
 		else
-			Q <= D;
+			Q <= #1 D;
 	end
 	
 	assign nQ = ~Q;

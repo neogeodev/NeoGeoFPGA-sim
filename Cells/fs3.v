@@ -10,9 +10,9 @@ module FS3(
 	always @(posedge CK or posedge ~nL)
 	begin
 		if (!nL)
-			Q <= P;					// Load
+			Q <= #2 P;					// Load
 		else
-			#1 Q <= {Q[2:0], SD};	// Shift
+			Q <= #1 {Q[2:0], SD};	// Shift
 	end
 
 endmodule

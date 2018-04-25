@@ -11,7 +11,7 @@ module FD2(
 		Q <= 1'b0;
 
 	always @(posedge ~nCK)	// negedge CK
-		#2 Q <= D;
+		Q <= #1 D;
 	
 	assign nQ = ~Q;
 

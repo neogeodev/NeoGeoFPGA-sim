@@ -114,7 +114,7 @@ module fast_cycle(
 	// B178B B173B B171B C180B
 	// C146B C144B C142B C149B
 	// E207B E207A E209B E209A
-	assign F_OUT_MUX = CLK_CPU_READ_HIGH ? VRAM_WRITE : {7'b0000000, J194_Q, J102_Q, E175_Q};	// Might be swapped 
+	assign F_OUT_MUX = CLK_CPU_READ_HIGH ? VRAM_WRITE : {7'b0000000, J194_Q, J102_Q, E175_Q};
 	
 	assign F = CWE ? 16'bzzzzzzzzzzzzzzzz : F_OUT_MUX;
 	

@@ -10,7 +10,7 @@ module LT4(
 	always @(*)
 	begin
 		if (!nG)
-			P <= D;			// Latch
+			P <= #1 D;			// Latch
 	end
 	
 	assign N = ~P;
