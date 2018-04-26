@@ -80,6 +80,7 @@ module neo_c1(
 	
 	// 200000~2FFFFF read/write
 	assign nPORT_ZONE = |{A23Z, A22Z, ~M68K_ADDR[21], M68K_ADDR[20]};
+	assign nPORTADRS = nPORT_ZONE;
 	
 	// 300000~3FFFFF read/write
 	assign nIO_ZONE = |{A23Z, A22Z, ~M68K_ADDR[21], ~M68K_ADDR[20]};

@@ -33,7 +33,8 @@ module lspc_regs(
 	output TIMER_IRQ_EN,				// Timer interrupt enable
 	output AA_DISABLE,				// Auto-animation disable
 	output TIMER_STOP,
-	output nVRAM_WRITE_REQ
+	output nVRAM_WRITE_REQ,
+	input D112B_OUT
 );
 
 	reg [7:0] WR_DECODED;		// CPU address decoder output

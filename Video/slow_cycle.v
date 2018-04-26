@@ -24,6 +24,7 @@ module slow_cycle(
 	input LSPC_12M,
 	input LSPC_6M,
 	input LSPC_3M,
+	input LSPC_1_5M,
 	input RESETP,
 	input [14:0] VRAM_ADDR,
 	input [15:0] VRAM_WRITE,

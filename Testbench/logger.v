@@ -47,7 +47,12 @@ module logger(
 		f_video = $fopen("log_video.txt", "w");
 		f_cab_io = $fopen("log_cab_io.txt", "w");
 		
-		#50000000	// Run for 50ms
+		#500000000	// Run for 500ms
+		#500000000	// Run for 500ms
+		#500000000	// Run for 500ms
+		#500000000	// Run for 500ms
+		#500000000	// Run for 500ms
+		#500000000	// Run for 500ms
 		
 		// Save backup RAM contents
 		f_ram = $fopen("raminit_sram_l.txt", "w");

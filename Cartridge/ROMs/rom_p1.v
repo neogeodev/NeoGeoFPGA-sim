@@ -13,10 +13,10 @@ module rom_p1(
 	wire [15:0] DATAOUT;
 
 	initial begin
-		$readmemh("data_p1.txt", ROMDATA);
+		$readmemh("data_p1_skipclear.txt", ROMDATA);
 	end
 
 	assign #120 DATAOUT = ROMDATA[ADDR];
-	assign OUT = (nCE | nOE) ? 16'bzzzzzzzzzzzzzzzz : DATAOUT;
+	assign OUT = (nCE | nOE) ? 16'bzzzzzzzzzzzzzzzz : {DATAOUT[7:0], DATAOUT[15:8]};
 
 endmodule

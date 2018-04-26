@@ -79,6 +79,7 @@ module testbench_1();
 		nROMOE, nSLOTCS,											// 2
 		nROMWAIT, nPWAIT0, nPWAIT1, PDTACK,					// 4
 		nPORTOEL, nPORTOEU, nPORTWEL, nPORTWEU,
+		nPORTADRS,
 		
 		SDRAD, SDRA_L, SDRA_U, SDRMPX, nSDROE,				// 7 + 2 + 4 + 2
 		SDPAD, SDPA, SDPMPX, nSDPOE,							// 7 + 4 + 2
@@ -190,13 +191,13 @@ module testbench_1();
 		if ({M68K_ADDR, 1'b0} == 24'hC17E26)
 		begin
 			$display("VICTOLY ! Going to eyecatcher.");
-			$stop;
+			//$stop;
 		end
 		
 		if ({M68K_ADDR, 1'b0} == 24'h000122)
 		begin
 			$display("VICTOLY ! Jump to game entry point.");
-			$stop;
+			//$stop;
 		end
 	end
 	

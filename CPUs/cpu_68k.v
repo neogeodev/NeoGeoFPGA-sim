@@ -31,7 +31,7 @@ module cpu_68k(
 wire [15:0] TG68K_DATAIN;
 wire [15:0] TG68K_DATAOUT;
 wire [31:0] TG68K_ADDR;
-wire [24:0] DEBUG_ADDR;							// TODO: Remove
+wire [23:0] DEBUG_ADDR;							// TODO: Remove
 wire [15:0] REG_D6;								// TODO: Remove
 
 assign M68K_DATA = M68K_RW ? 16'bzzzzzzzzzzzzzzzz : TG68K_DATAOUT;
@@ -40,6 +40,21 @@ assign TG68K_DATAIN = M68K_RW ? M68K_DATA : 16'bzzzzzzzzzzzzzzzz;
 assign M68K_ADDR = TG68K_ADDR[23:1];
 
 assign DEBUG_ADDR = {M68K_ADDR, 1'b0};		// TODO: Remove
+always @(DEBUG_ADDR)								// TODO: Remove
+begin
+	if (DEBUG_ADDR == 24'hC11B04) $display("WRAM check passed");
+	if (DEBUG_ADDR == 24'hC11B16) $display("BRAM check passed");
+	if (DEBUG_ADDR == 24'hC11B2C) $display("PAL BANK 1 check passed");
+	if (DEBUG_ADDR == 24'hC11B3E) $display("PAL BANK 0 check passed");
+	if (DEBUG_ADDR == 24'hC11B5C) $display("VRAM LOW check passed");
+	if (DEBUG_ADDR == 24'hC11B6A) $display("VRAM FAST check passed");
+	if (DEBUG_ADDR == 24'hC11BD6) $display("Testing RTC...");
+	if (DEBUG_ADDR == 24'hC11C66) $display("BIOS CRC check passed");
+	if (DEBUG_ADDR == 24'hC11F76) $display("Cart detected OK");
+	if (DEBUG_ADDR == 24'hC17F0E) $display("Eye-catch step 0 !");
+	if (DEBUG_ADDR == 24'hC18012) $display("Eye-catch step 1 !");
+	//if (DEBUG_ADDR == 24'hC11BEA) $stop;
+end
 
 tg68 TG68K(
 		.clk(CLK_68KCLK),
