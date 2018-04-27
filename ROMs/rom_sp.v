@@ -12,7 +12,7 @@ module rom_sps2(
 	wire [15:0] DATA;
 
 	initial begin
-		$readmemh("rom_sps2.txt", ROMDATA);
+		$readmemh("rom_sp-s2_fast.txt", ROMDATA);
 	end
 
 	assign #120 DATA = ROMDATA[ADDR][15:0];

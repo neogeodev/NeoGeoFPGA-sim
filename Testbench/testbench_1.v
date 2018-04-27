@@ -171,8 +171,9 @@ module testbench_1();
 		
 		if ({M68K_ADDR, 1'b0} == 24'hC12038)
 		begin
-			$display("Z80 ERROR !");
-			$stop;
+			// Disabled to let the patched SP-S2.SP1 work
+			//$display("Z80 ERROR !");
+			//$stop;
 		end
 		
 		if ({M68K_ADDR, 1'b0} == 24'hC11D46)

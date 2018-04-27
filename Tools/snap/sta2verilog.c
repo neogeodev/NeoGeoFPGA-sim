@@ -9,9 +9,9 @@
 // Last mod: furrtek 03/2018
 
 #define HEADER_LENGTH 	32
-#define SLOW_VRAM_START	0x4B51
-#define FAST_VRAM_START 0x14B51
-#define PALETTES_START 0x50775
+#define SLOW_VRAM_START	0x4BB8
+#define FAST_VRAM_START 0x14BB8
+#define PALETTES_START 0x2351
 
 int main(int argc, char *argv[]) {
 	unsigned int line = 0;
@@ -27,7 +27,7 @@ int main(int argc, char *argv[]) {
 		return 1;
 	}
 	
-	file_ptr = fopen(argv[1], "r");
+	file_ptr = fopen(argv[1], "rb");
 	if (file_ptr == NULL)
 		return 1;
 	fseek(file_ptr, 0, SEEK_END);
@@ -36,22 +36,22 @@ int main(int argc, char *argv[]) {
 	
 	in_buffer = (char*)malloc(in_size);
 	
-	fread(in_buffer, in_size, 1, file_ptr);
+	fread(in_buffer, 1, in_size, file_ptr);
 	fclose(file_ptr);
 	
+	printf("In: %lu\nOut: %lu\n", in_size, in_size - HEADER_LENGTH);
+	
 	file_ptr = fopen("sta_raw.bin", "wb");
-	fwrite(in_buffer + HEADER_LENGTH, in_size - HEADER_LENGTH, 1, file_ptr);
+	fwrite(in_buffer + HEADER_LENGTH, 1, in_size - HEADER_LENGTH, file_ptr);
 	fclose(file_ptr);
 	
 	remove("sta_raw_unpack.bin");
 	system("offzip sta_raw.bin");
 	
-	file_ptr = fopen("sta_raw_unpack.bin", "r");
+	file_ptr = fopen("sta_raw_unpack.bin", "rb");
 	fseek(file_ptr, 0, SEEK_END);
 	in_size = ftell(file_ptr);
 	rewind(file_ptr);
-	
-	printf("%lu", in_size);
 	
 	free(in_buffer);
 	in_buffer = (char*)malloc(in_size);

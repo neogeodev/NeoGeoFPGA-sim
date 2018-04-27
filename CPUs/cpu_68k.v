@@ -42,6 +42,9 @@ assign M68K_ADDR = TG68K_ADDR[23:1];
 assign DEBUG_ADDR = {M68K_ADDR, 1'b0};		// TODO: Remove
 always @(DEBUG_ADDR)								// TODO: Remove
 begin
+	if (DEBUG_ADDR == 24'hC11002) $display("Reset procedure !");
+	if (DEBUG_ADDR == 24'hC11046) $display("Clearing WRAM...");
+	if (DEBUG_ADDR == 24'hC11080) $display("Clearing Palettes...");
 	if (DEBUG_ADDR == 24'hC11B04) $display("WRAM check passed");
 	if (DEBUG_ADDR == 24'hC11B16) $display("BRAM check passed");
 	if (DEBUG_ADDR == 24'hC11B2C) $display("PAL BANK 1 check passed");
@@ -51,8 +54,11 @@ begin
 	if (DEBUG_ADDR == 24'hC11BD6) $display("Testing RTC...");
 	if (DEBUG_ADDR == 24'hC11C66) $display("BIOS CRC check passed");
 	if (DEBUG_ADDR == 24'hC11F76) $display("Cart detected OK");
+	if (DEBUG_ADDR == 24'hC125E6) $display("Formatting BRAM...");
 	if (DEBUG_ADDR == 24'hC17F0E) $display("Eye-catch step 0 !");
 	if (DEBUG_ADDR == 24'hC18012) $display("Eye-catch step 1 !");
+	if (DEBUG_ADDR == 24'hC1835E) $display("Call: FIX_CLEAR");
+	if (DEBUG_ADDR == 24'hC1839A) $display("Call: LSP_1ST");
 	//if (DEBUG_ADDR == 24'hC11BEA) $stop;
 end
 

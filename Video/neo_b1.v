@@ -104,8 +104,8 @@ module neo_b1(
 	
 	parameter TEST_MODE = 0;	// "XMM" pin
 	
-	//initial
-	//	nCPU_ACCESS <= 1'b1;		// Only useful when the 68k is disabled
+	initial
+		nCPU_ACCESS <= 1'b1;		// Only useful when the 68k is disabled
 	
 	assign nHALT = nRESET;		// Yup (also those are open-collector)
 
