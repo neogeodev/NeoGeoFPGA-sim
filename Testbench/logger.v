@@ -53,6 +53,10 @@ module logger(
 		#500000000	// Run for 500ms
 		#500000000	// Run for 500ms
 		#500000000	// Run for 500ms
+		#500000000	// Run for 500ms
+		#500000000	// Run for 500ms
+		#500000000	// Run for 500ms
+		#500000000	// Run for 500ms
 		
 		// Save backup RAM contents
 		f_ram = $fopen("raminit_sram_l.txt", "w");

@@ -53,7 +53,7 @@ module neo_f0(
 	// REG_DIPSW $300001~?, odd bytes
 	// REG_SYSTYPE $300081~?, odd bytes TODO (Test switch and stuff... Neutral for now)
 	assign M68K_DATA = (nDIPRD0) ? 8'bzzzzzzzz :
-								(M68K_ADDR[7]) ? 8'b1000000 :
+								(M68K_ADDR[7]) ? 8'b11000000 :
 								DIPSW;
 	
 	// REG_STATUS_A $320001~?, odd bytes TODO
