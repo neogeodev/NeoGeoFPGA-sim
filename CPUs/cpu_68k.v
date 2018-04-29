@@ -32,9 +32,9 @@ wire [15:0] M68K_DATA_BYTE_MASK;
 wire [15:0] TG68K_DATAIN;
 wire [15:0] TG68K_DATAOUT;
 wire [31:0] TG68K_ADDR;
-wire [23:0] DEBUG_ADDR;							// TODO: Remove
-wire [15:0] REG_D6;								// TODO: Remove
+wire [15:0] REG_D6;		// DEBUG
 
+// TG68K doesn't like byte masking with Z's, replace with 0's:
 assign M68K_DATA_BYTE_MASK = (~|{nLDS, nUDS}) ? M68K_DATA :
 										(~nLDS) ? {8'h00, M68K_DATA[7:0]} :
 										(~nUDS) ? {M68K_DATA[15:8], 8'h00} :
@@ -44,53 +44,6 @@ assign M68K_DATA = M68K_RW ? 16'bzzzzzzzzzzzzzzzz : TG68K_DATAOUT;
 assign TG68K_DATAIN = M68K_RW ? M68K_DATA_BYTE_MASK : 16'bzzzzzzzzzzzzzzzz;
 
 assign M68K_ADDR = TG68K_ADDR[23:1];
-
-assign DEBUG_ADDR = {M68K_ADDR, 1'b0};		// TODO: Remove
-always @(DEBUG_ADDR)								// TODO: Remove
-begin
-	if (DEBUG_ADDR == 24'hC18F74)
-	begin
-		$display("Going to BIOS menu !");
-		$stop;
-	end
-	
-	if (DEBUG_ADDR == 24'hC11002) $display("Reset procedure !");
-	if (DEBUG_ADDR == 24'hC11046) $display("Clearing WRAM...");
-	if (DEBUG_ADDR == 24'hC11080) $display("Clearing Palettes...");
-	if (DEBUG_ADDR == 24'hC11B04) $display("WRAM check passed");
-	if (DEBUG_ADDR == 24'hC11B16) $display("BRAM check passed");
-	if (DEBUG_ADDR == 24'hC11B2C) $display("PAL BANK 1 check passed");
-	if (DEBUG_ADDR == 24'hC11B3E) $display("PAL BANK 0 check passed");
-	if (DEBUG_ADDR == 24'hC11B5C) $display("VRAM LOW check passed");
-	if (DEBUG_ADDR == 24'hC11B6A) $display("VRAM FAST check passed");
-	if (DEBUG_ADDR == 24'hC11BD6) $display("Testing RTC...");
-	if (DEBUG_ADDR == 24'hC11C66) $display("BIOS CRC check passed");
-	if (DEBUG_ADDR == 24'hC11F76) $display("Cart detected OK");
-	if (DEBUG_ADDR == 24'hC125E6) $display("Formatting BRAM...");
-	if (DEBUG_ADDR == 24'hC1835E) $display("Call: FIX_CLEAR");
-	if (DEBUG_ADDR == 24'hC1839A) $display("Call: LSP_1ST");
-	/*if (DEBUG_ADDR == 24'hC1806C)
-	begin
-		$display("Eye-catch going to step 2 !");
-		$stop;
-	end
-	if (DEBUG_ADDR == 24'hC1807A)
-	begin
-		$display("Eye-catch going to step 3 !");
-		$stop;
-	end
-	if (DEBUG_ADDR == 24'hC180BA)
-	begin
-		$display("Eye-catch going to step 4 !");
-		$stop;
-	end
-	if (DEBUG_ADDR == 24'hC18112)
-	begin
-		$display("Eye-catch going to step 5 !");
-		$stop;
-	end*/
-	//if (DEBUG_ADDR == 24'hC11BEA) $stop;
-end
 
 tg68 TG68K(
 		.clk(CLK_68KCLK),

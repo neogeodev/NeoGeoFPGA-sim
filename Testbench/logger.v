@@ -95,23 +95,14 @@ module logger(
 	
 	always @(posedge CLK_6MB)
 	begin
-		// Stop at frame 1, raster #150
-		/*if ((neogeo.LSPC2.RASTERC == 9'h196) && (sim_frame == 1))
-			$stop;*/
-		
-		//if (neogeo.LSPC2.VS.PIXELC < 9'h1FF)
-		//begin
-			// Write each pixel
-			// 0RRRRRRR 0GGGGGGG 0BBBBBBB
-			$fwrite(f_video, "%06X ", {1'b0, LOG_VIDEO_R, 1'b0, LOG_VIDEO_G, 1'b0, LOG_VIDEO_B});
-		//end
-		//else
-		//begin
+		// Write each pixel
+		// 0RRRRRRR 0GGGGGGG 0BBBBBBB
+		$fwrite(f_video, "%06X ", {1'b0, LOG_VIDEO_R, 1'b0, LOG_VIDEO_G, 1'b0, LOG_VIDEO_B});
+
 		if (neogeo.LSPC2.VS.PIXELC == 9'h0F0)
 		begin
 			$fwrite(f_video, "YYYYYY ");
 			// $display("Line %d rendered", sim_line);
-			//if (sim_line == 263)
 			if (neogeo.LSPC2.VS.RASTERC == 9'd263)
 			begin
 				sim_line = 0;

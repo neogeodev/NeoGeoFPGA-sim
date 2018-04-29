@@ -60,6 +60,8 @@ module testbench_1();
 	wire [6:0] VIDEO_R;		// TB specific
 	wire [6:0] VIDEO_G;
 	wire [6:0] VIDEO_B;
+	
+	wire [23:0] DEBUG_ADDR;	// DEBUG
 
 	neogeo NG(
 		nRESET_BTN,
@@ -136,17 +138,41 @@ module testbench_1();
 		nTEST_BTN = 1;
 		DIPSW = 8'b11111111;			// Test mode DISABLED
 		
-		// Apply reset
-		#30
-		nRESET_BTN = 0;		// Press reset button during 1us
+		#30								// Press reset button during 1us
+		nRESET_BTN = 0;
 		#1000
 		nRESET_BTN = 1;
 	end
 	
+	assign DEBUG_ADDR = (~|{nLDS, nUDS}) ? {M68K_ADDR, 1'b0} :
+									(~nLDS) ? {M68K_ADDR, 1'b1} :
+									{M68K_ADDR, 1'b0};
+
 	always @(negedge nAS)
 	begin
-		// These addresses are only valid for the patched SP-S2.SP1 system ROM !
-		if ({M68K_ADDR, 1'b0} == 24'hC16ADA)
+		if (DEBUG_ADDR == 24'hC18F74)
+		begin
+			$display("Going to BIOS menu !");
+			$stop;
+		end
+		
+		if (DEBUG_ADDR == 24'hC11002) $display("Reset procedure !");
+		if (DEBUG_ADDR == 24'hC11046) $display("Clearing WRAM...");
+		if (DEBUG_ADDR == 24'hC11080) $display("Clearing Palettes...");
+		if (DEBUG_ADDR == 24'hC11B04) $display("WRAM check passed");
+		if (DEBUG_ADDR == 24'hC11B16) $display("BRAM check passed");
+		if (DEBUG_ADDR == 24'hC11B2C) $display("PAL BANK 1 check passed");
+		if (DEBUG_ADDR == 24'hC11B3E) $display("PAL BANK 0 check passed");
+		if (DEBUG_ADDR == 24'hC11B5C) $display("VRAM LOW check passed");
+		if (DEBUG_ADDR == 24'hC11B6A) $display("VRAM FAST check passed");
+		if (DEBUG_ADDR == 24'hC11BD6) $display("Testing RTC...");
+		if (DEBUG_ADDR == 24'hC11C66) $display("BIOS CRC check passed");
+		if (DEBUG_ADDR == 24'hC11F76) $display("Cart detected OK");
+		if (DEBUG_ADDR == 24'hC125E6) $display("Formatting BRAM...");
+		if (DEBUG_ADDR == 24'hC1835E) $display("Call: FIX_CLEAR");
+		if (DEBUG_ADDR == 24'hC1839A) $display("Call: LSP_1ST");
+	
+		if (DEBUG_ADDR == 24'hC16ADA)
 		begin
 /*			if (NG.M68KCPU.REG_D6 == 15'h0000)
 				$display("0 WORK RAM ERROR !");
@@ -166,40 +192,31 @@ module testbench_1();
 				$display("7 MEMORY CARD ERROR !");
 			else if (NG.M68KCPU.REG_D6 == 15'h0008)
 				$display("8 Z80 ERROR !");*/
+			$display("Self-test fail ! Check 68K D6 for error code.");
 			$stop;
 		end
 		
-		if ({M68K_ADDR, 1'b0} == 24'hC12038)
+		if (DEBUG_ADDR == 24'hC12038)
 		begin
 			// Disabled to let the patched SP-S2.SP1 work
 			//$display("Z80 ERROR !");
 			//$stop;
 		end
 		
-		if ({M68K_ADDR, 1'b0} == 24'hC11D46)
+		if (DEBUG_ADDR == 24'hC11D46)
 		begin
 			$display("SYSTEM ROM ERROR !");
 			$stop;
 		end
 		
-		if ({M68K_ADDR, 1'b0} == 24'hC11D8C)
+		if (DEBUG_ADDR == 24'hC11D8C)
 		begin
 			$display("CALENDAR ERROR ! (B)");
 			$stop;
 		end
 		
-		
-		if ({M68K_ADDR, 1'b0} == 24'hC17E26)
-		begin
-			$display("VICTOLY ! Going to eyecatcher.");
-			//$stop;
-		end
-		
-		if ({M68K_ADDR, 1'b0} == 24'h000122)
-		begin
-			$display("VICTOLY ! Jump to game entry point.");
-			//$stop;
-		end
+		if (DEBUG_ADDR == 24'hC17E26) $display("Going to eye-catcher !");
+		if (DEBUG_ADDR == 24'h000122) $display("Jump to game entry point !");
 	end
 	
 endmodule

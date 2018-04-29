@@ -39,7 +39,7 @@ module neo_b1(
 	input CK4,
 	input TMS0,					// LB flip
 	input LD1, LD2,			// Load LB addresses
-	input SS1, SS2,			// Buffer select for render/clearing
+	input SS1, SS2,			// Clearing enable for each LB
 	input S1H1,					// 3MHz offset from CLK_1MB
 	
 	input A23I, A22I,
@@ -57,13 +57,13 @@ module neo_b1(
 
 	reg nCPU_ACCESS;
 	reg [7:0] FIXD_REG;
+	reg [3:0] FIX_PAL_REG;
 	wire [3:0] FIX_COLOR;
 	wire [3:0] SPR_COLOR;
 	wire [11:0] RAMBL_OUT;
 	wire [11:0] RAMBR_OUT;
 	wire [11:0] RAMTL_OUT;
 	wire [11:0] RAMTR_OUT;
-	reg [3:0] FIX_PAL_REG;
 	wire [7:0] SPR_PAL;
 	wire [1:0] MUX_BA;
 	wire [11:0] PA_MUX_A;
@@ -83,7 +83,7 @@ module neo_b1(
 	always @(posedge CLK_1MB)
 		FIXD_REG <= FIXD;
 	
-	// Fix odd/even pixel select
+	// Switch between odd/even fix pixel
 	// BEVU AWEQ...
 	assign FIX_COLOR = S1H1 ? FIXD_REG[7:4] : FIXD_REG[3:0];
 
@@ -94,10 +94,6 @@ module neo_b1(
 	always @(posedge PCK1)
 		FIX_PAL_REG <= PBUS[19:16];
 
-	// BL: WE1 CK1 LD1 SS1 GAD|SS1
-	// BR: WE2 CK2 LD1 SS1 GBD|SS1
-	// TL: WE3 CK3 LD2 SS2 GAD|SS2
-	// TR: WE4 CK4 LD2 SS2 GBD|SS2
 	assign SPR_PAL = PBUS[23:16];
 	
 	linebuffer RAMBL(CK1, WE1, LD1, SS1, GAD, PCK2, SPR_PAL, PBUS[7:0], RAMBL_OUT);
