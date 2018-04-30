@@ -36,6 +36,7 @@ module linebuffer(
 	reg [7:0] ADDR_LATCH;
 	wire [7:0] ADDR_MUX;
 	wire [11:0] DATA_IN;
+	wire [3:0] COLOR_GATED;
 
 	assign RAM_WE = ~WE;
 	assign RAM_RE = ~RAM_WE;
@@ -74,7 +75,7 @@ module linebuffer(
 	// BR: PECU QUNY...
 	// TL: BAME CUNU...
 	// TR: EGED DUGA...
-	assign ADDR_MUX = LOAD ? (ADDR_COUNTER + 1) : ADDR_LOAD;
+	assign ADDR_MUX = LOAD ? (ADDR_COUNTER + 1'b1) : ADDR_LOAD;
 
 	// Address counter update
 	// BL: REVA QEVU...

@@ -57,7 +57,7 @@ module watchdog(
 			//WDCNT <= 4'b1000;		// Correct value
 		end
 		else
-			WDCNT <= WDCNT + 1;
+			WDCNT <= WDCNT + 1'b1;
 	end
 
 endmodule

@@ -112,7 +112,7 @@ module neogeo(
 	wire [2:0] P1_OUT;
 	wire [2:0] P2_OUT;
 	
-	wire [5:0] ANA;			// PSG audio level
+	wire [5:0] ANA;			// SSG audio level
 /*	wire [6:0] VIDEO_R;
 	wire [6:0] VIDEO_G;
 	wire [6:0] VIDEO_B;*/
@@ -186,7 +186,7 @@ module neogeo(
 	rom_sfix SFIX({G[15:3], S2H1, G[2:0]}, FIXD_SFIX, nSYSTEM);
 
 	// SFIX / Cart FIX switch
-	assign FIXD = nSYSTEM ? FIXD_CART : FIXD_SFIX;	// TESTING
+	assign FIXD = nSYSTEM ? FIXD_CART : FIXD_SFIX;
 	
 	ym2610 YM(CLK_8M, nRESET, SDD, SDA[1:0], nZ80INT, n2610CS, n2610WR, n2610RD, SDRAD, {SDRA_U, SDRA_L}, SDRMPX,
 				nSDROE, SDPAD, SDPA, SDPMPX, nSDPOE, ANA, SH1, SH2, OP0, PHI_S);
