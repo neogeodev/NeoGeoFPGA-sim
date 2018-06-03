@@ -17,7 +17,7 @@
 `timescale 1ns/1ns
 
 module c1_regs(
-	input nICOMZONE,
+	input nICOM_ZONE,
 	input RW,
 	inout [15:8] M68K_DATA,
 	inout [7:0] SDD,
@@ -39,10 +39,10 @@ module c1_regs(
 	end
 	
 	// REG_SOUND read
-	assign M68K_DATA = (RW & ~nICOMZONE) ? SDD_LATCH_REP : 8'bzzzzzzzz;
+	assign M68K_DATA = (RW & ~nICOM_ZONE) ? SDD_LATCH_REP : 8'bzzzzzzzz;
 	
 	// REG_SOUND write
-	assign nSDW = (RW | nICOMZONE);		// Tells Z80 that 68k sent a command
+	assign nSDW = (RW | nICOM_ZONE);		// Tells Z80 that 68k sent a command
 	
 	// DEBUG begin
 	always @(negedge nSDW)
@@ -50,7 +50,7 @@ module c1_regs(
 	// DEBUG end
 	
 	// REG_SOUND write
-	always @(negedge nICOMZONE or negedge nSDZ80CLR)		// Which one has priority ?
+	always @(negedge nICOM_ZONE or negedge nSDZ80CLR)		// Which one has priority ?
 	begin
 		if (!nSDZ80CLR)
 		begin
