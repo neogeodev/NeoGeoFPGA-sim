@@ -11,7 +11,7 @@ ROM initialization files aren't provided for obvious reasons. You can get them f
 
 The system's top file is neogeo.v, currently used testbench is testbench_1.v .
 
-Take a look in **LSPC2RE** for porn (main video chip's schematics). This was made possible by John McMaster.
+Take a look in **LSPC2RE** and **B1RE** for porn (main video chips internal schematics). This was made possible by tracing die pictures provided by John McMaster.
 
 # Progress
 
@@ -19,10 +19,10 @@ Take a look in **LSPC2RE** for porn (main video chip's schematics). This was mad
 |----|-----|-----|
 |CPUs|100%|Using 68000 and Z80 open cores for now, wrappers are working|
 |IRQs|90%|Logic is there, timer IRQ needs precise testing|
-|ROMs|100%|System ROM, S1 and M1 are working|
+|ROMs|100%|System ROM, S1, M1 and L0 are working|
 |RAMs|100%|Work RAM, Backup RAM, VRAM and memory card are working|
-|I/O|80%|Logic is there, no RTC for now, needs testing|
-|Video|95%|LSPC is pretty much done, NEO-B1 still has a few issues|
+|I/O|95%|No RTC for now|
+|Video|100%|LSPC and NEO-B1 video chips are fully tested and working|
 |Audio|5%|Lots of work needed on YM2610, no audio output at all for now|
 
 # Cartridge model (MVS for now)
