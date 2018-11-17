@@ -8,7 +8,7 @@ module rom_sps2(
 	input nOE
 );
 
-	reg [15:0] ROMDATA[0:131071];
+	reg [15:0] ROMDATA[0:65535];
 	wire [15:0] DATA;
 
 	initial begin
